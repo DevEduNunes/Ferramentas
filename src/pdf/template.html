@@ -91,7 +91,33 @@ input:focus-visible,select:focus-visible{outline:none;border-color:var(--accent)
 #toasts{position:fixed;right:18px;bottom:18px;display:flex;flex-direction:column;gap:8px;z-index:60;max-width:min(420px,calc(100vw - 36px))}
 .toast{background:var(--panel);border:1px solid var(--line2);border-left:3px solid var(--ok);padding:11px 15px;font-size:14px}
 .toast.err{border-left-color:var(--danger)}
+nav .grp{margin:18px 8px 6px;font-size:10.5px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--dim)}
+nav .grp:first-child{margin-top:4px}
+button.tb{font:inherit;font-size:12.5px;padding:8px 12px;border:1px solid var(--line2);background:transparent;color:var(--muted);cursor:pointer;transition:border-color .25s,color .25s,background .25s}
+button.tb:hover{color:#fff;border-color:var(--line2);background:var(--panel2)}
+button.tb[aria-pressed=true]{border-color:var(--accent);color:#fff;background:var(--panel3)}
+.tbar{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+textarea{font:inherit;font-size:14.5px;padding:10px 12px;border:1px solid var(--line2);background:var(--panel2);color:var(--text);width:100%;min-height:180px;resize:vertical;border-radius:0}
+textarea:focus-visible{outline:none;border-color:var(--accent);background:var(--panel3)}
+textarea.mono{font-family:ui-monospace,"Cascadia Mono",Consolas,monospace;font-size:13px;line-height:1.5}
+.cols2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.cols3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.add{background:rgba(78,201,160,.18);color:#8fe3c6}
+.del{background:rgba(229,100,107,.18);color:#f0969b;text-decoration:line-through}
+.diffbox{border:1px solid var(--line);background:var(--panel2);padding:12px 14px;white-space:pre-wrap;word-break:break-word;font-size:14px;line-height:1.7;max-height:360px;overflow:auto}
+.cv{max-width:100%;height:auto;border:1px solid var(--line);background:#fff;display:block}
+.stat{color:var(--muted);font-size:13px}
+.stat b{color:var(--text)}
+.ok{color:var(--ok)} .bad{color:var(--danger)}
+table.t{border-collapse:collapse;width:100%;font-size:14px}
+table.t th,table.t td{border-bottom:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+table.t th{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:500}
 @media (max-width:820px){
+  .cols2,.cols3{grid-template-columns:1fr}
+  nav .grp{grid-column:1/-1;margin:14px 8px 4px}
+  nav button{padding:8px 10px;font-size:14px}
+  main{min-width:0}
+  .app>*{min-width:0}
   .app{grid-template-columns:1fr}
   aside{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line);padding:20px 18px}
   nav{display:grid;grid-template-columns:repeat(2,1fr);gap:2px}
@@ -487,11 +513,21 @@ tools.push({ id: 'marca', icon: '🔖', title: 'Marca d\'água e numeração', d
     singlePdf(holder, c => { cur = c; go.disabled = false; opts.classList.remove('hide'); });
   } });
 
+/*__TOOLS__*/
+
 /* ---------- navegação ---------- */
+const MENU = [
+  ['Organizar', ['juntar', 'dividir', 'organizar', 'girar', 'recortar', 'numeros']],
+  ['Converter e criar', ['pdf2img', 'img2pdf', 'digitalizar', 'texto2pdf', 'pdf2texto', 'pdf2word', 'comprimir']],
+  ['Editar e revisar', ['editar', 'assinar', 'formularios', 'marca', 'ocultar', 'comparar']],
+  ['Segurança e reparo', ['proteger', 'desbloquear', 'metadados', 'reparar']],
+  ['Sobre', ['limites']],
+];
 const nav = document.getElementById('nav'), main = document.getElementById('main');
 let activeRoot = null;
+const menuTools = MENU.flatMap(([, ids]) => ids).map(id => tools.find(t => t.id === id)).filter(Boolean);
 function open(id) {
-  const t = tools.find(x => x.id === id) || tools[0];
+  const t = menuTools.find(x => x.id === id) || menuTools[0];
   activeRoot?.unmount?.();
   nav.querySelectorAll('button').forEach(b => b.classList.toggle('active', b.dataset.id === t.id));
   const root = h('div');
@@ -500,7 +536,15 @@ function open(id) {
   try { history.replaceState(null, '', '#' + t.id); } catch {}
   window.scrollTo(0, 0);
 }
-tools.forEach((t, i) => nav.append(h('button', { 'data-id': t.id, onclick: () => open(t.id) }, h('span', { class: 'ic' }, String(i + 1).padStart(2, '0')), t.title)));
+{
+  let n = 0;
+  for (const [grp, ids] of MENU) {
+    const ts = ids.map(id => tools.find(t => t.id === id)).filter(Boolean);
+    if (!ts.length) continue;
+    nav.append(h('div', { class: 'grp' }, grp));
+    ts.forEach(t => nav.append(h('button', { 'data-id': t.id, onclick: () => open(t.id) }, h('span', { class: 'ic' }, String(++n).padStart(2, '0')), t.title)));
+  }
+}
 open(location.hash.slice(1));
 window.addEventListener('dragover', e => e.preventDefault());
 window.addEventListener('drop', e => e.preventDefault());

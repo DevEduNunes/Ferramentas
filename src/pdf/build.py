@@ -14,6 +14,10 @@ for key, name in [("PDFLIB", "pdf-lib.min.js"), ("PDFJS", "pdf.min.js"),
                   ("JSZIP", "jszip.min.js"), ("PDFWORKER", "pdf.worker.min.js")]:
     html = html.replace(f"/*__{key}__*/", lib(name))
 
+# módulos de ferramentas (ordem importa: o núcleo vem primeiro)
+TOOL_FILES = ["tools-core.js", "tools-basic.js", "tools-convert.js", "tools-view.js", "tools-secure.js"]
+html = html.replace("/*__TOOLS__*/", "\n".join(lib(f) for f in TOOL_FILES if (here / f).exists()))
+
 import base64
 def font_face(family, weight, fname):
     data = base64.b64encode((here.parent.parent / "assets" / "fonts" / fname).read_bytes()).decode()

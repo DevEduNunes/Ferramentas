@@ -7,7 +7,7 @@ Publicado em **https://eduardonunes.dev/Ferramentas/**
 
 | Ferramenta | Endereço | O que faz |
 |---|---|---|
-| **PDF Local** | `/Ferramentas/pdf/` | Juntar, dividir, organizar páginas, comprimir, imagens ⇄ PDF e marca d'água. Funciona offline. |
+| **PDF Local** | `/Ferramentas/pdf/` | 24 ferramentas: juntar, dividir, organizar, girar, recortar, numerar, converter (imagens, texto/Markdown, Word básico), digitalizar, comprimir, editar, assinar, preencher formulários, marca d'água, ocultar (redação), comparar, proteger (AES-256), remover senha, metadados e reparar. Funciona offline; a página "O que não dá para fazer aqui" lista o que ficou de fora e por quê. |
 | **Fórmulas do Excel** | `/Ferramentas/excel/` | Receitas para preencher, catálogo de 100 funções e explicador/conversor de fórmulas entre português (`;`) e inglês (`,`). |
 | **Fórmulas DAX** | `/Ferramentas/dax/` | Receitas de medidas para Power BI, catálogo de 109 funções e formatador com conversão de separador (`,` ⇄ `;`). |
 | **Consultas SQL** | `/Ferramentas/sql/` | 35 receitas (consultar, agregar, juntar, janelas, datas, texto, criar e editar dados), catálogo de 73 comandos e formatador que explica a consulta passo a passo e converte entre SQLite, T-SQL e PostgreSQL. Não executa SQL: não há banco conectado. |
@@ -23,7 +23,7 @@ sql/index.html      Consultas SQL (HTML único, sem build)
 assets/tema.css     tema compartilhado (landing, Excel, DAX e SQL)
 assets/fonts/       Space Grotesk e Roboto Slab (as mesmas do eduardonunes.dev)
 assets/favicon.svg  ícone do site
-src/pdf/            código-fonte do PDF Local + bibliotecas + build.py
+src/pdf/            código-fonte do PDF Local: template.html, tools-*.js (módulos das ferramentas), bibliotecas e build.py
 .nojekyll           impede o GitHub de processar o site com Jekyll
 ```
 
