@@ -1,0 +1,625 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Nenhuma requisição de rede é permitida: tudo roda no navegador. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'">
+<title>Fórmulas DAX · Ferramentas</title>
+<meta name="description" content="Receitas, catálogo de funções e formatador de DAX para Power BI, com conversão de separador (vírgula e ponto e vírgula). Tudo no navegador, sem enviar nada a servidor.">
+<style>
+:root{
+  --bg:#f6f7f9; --panel:#fff; --text:#1c2230; --muted:#667085; --line:#e3e6ec;
+  --accent:#2f6fed; --accent-t:#fff; --accent-soft:#e8f0ff; --ok:#12b76a; --warn:#b54708; --warn-bg:#fff4e5; --bad:#d92d20;
+  --code:#f1f3f8; --shadow:0 1px 2px rgba(16,24,40,.06),0 4px 14px rgba(16,24,40,.06);
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#12151c; --panel:#1b1f29; --text:#e8eaf0; --muted:#98a2b3; --line:#2b3140;
+    --accent:#5b8cff; --accent-t:#0b1020; --accent-soft:#222c46; --ok:#32d583; --warn:#ffd28a; --warn-bg:#3a2c12; --bad:#f97066;
+    --code:#10131a; --shadow:0 1px 2px rgba(0,0,0,.4);}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+a{color:var(--accent)}
+.wrap{max-width:1040px;margin:0 auto;padding:0 20px 60px}
+header.top{display:flex;justify-content:space-between;align-items:center;padding:18px 0;gap:12px;flex-wrap:wrap}
+header.top a{color:var(--muted);text-decoration:none;font-size:14px}
+header.top a:hover{color:var(--text)}
+h1{margin:6px 0 4px;font-size:28px;letter-spacing:-.02em}
+.sub{color:var(--muted);margin:0 0 18px;max-width:720px}
+.bar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-bottom:16px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--panel)}
+.seg button{font:inherit;border:0;background:transparent;color:var(--muted);padding:8px 14px;cursor:pointer}
+.seg button[aria-pressed=true],.seg button[aria-selected=true]{background:var(--accent);color:var(--accent-t);font-weight:600}
+.seg button:focus-visible,.chip:focus-visible,.btn:focus-visible,.rbtn:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.hint{font-size:13px;color:var(--muted)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;box-shadow:var(--shadow);margin-bottom:14px}
+input[type=text],input[type=search],textarea{font:inherit;width:100%;padding:9px 11px;border-radius:9px;border:1px solid var(--line);background:var(--bg);color:var(--text)}
+textarea{font-family:ui-monospace,Consolas,"Courier New",monospace;min-height:150px;resize:vertical}
+input:focus-visible,textarea:focus-visible{outline:2px solid var(--accent)}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+label.f small{color:var(--muted);opacity:.85}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+.chip{font:inherit;font-size:13px;border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:99px;padding:5px 13px;cursor:pointer}
+.chip[aria-pressed=true]{background:var(--accent-soft);border-color:var(--accent);font-weight:600}
+.layout{display:grid;grid-template-columns:300px 1fr;gap:18px;align-items:start}
+.rlist{display:flex;flex-direction:column;gap:6px;max-height:70vh;overflow:auto;padding-right:4px}
+.rbtn{font:inherit;text-align:left;border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:10px;padding:9px 12px;cursor:pointer}
+.rbtn:hover{border-color:var(--accent)}
+.rbtn[aria-pressed=true]{background:var(--accent-soft);border-color:var(--accent)}
+.rbtn small{display:block;color:var(--muted);font-size:12px}
+.fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:14px 0}
+.out{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-family:ui-monospace,Consolas,"Courier New",monospace;font-size:14px;white-space:pre-wrap;word-break:break-word;margin:6px 0}
+.row{display:flex;gap:10px;align-items:flex-start;justify-content:space-between}
+.row .out{flex:1;margin:0;min-width:0}
+.btn{font:inherit;border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:9px;padding:7px 13px;cursor:pointer;white-space:nowrap}
+.btn:hover{background:var(--bg)}
+.btn.primary{background:var(--accent);color:var(--accent-t);border-color:var(--accent);font-weight:600}
+.variant{margin-top:16px}
+.variant h3{margin:0 0 2px;font-size:14px}
+.note{font-size:13.5px;color:var(--muted);margin:4px 0 0}
+.fn{border-top:1px solid var(--line);padding:14px 0}
+.fn:first-child{border-top:0}
+.fn h3{margin:0;font-size:16px;font-family:ui-monospace,Consolas,monospace}
+.fn h3 span{color:var(--muted);font-weight:400;font-size:12.5px;margin-left:8px;font-family:system-ui,sans-serif}
+.fn p{margin:4px 0}
+.tip{background:var(--warn-bg);color:var(--warn);border-radius:8px;padding:7px 10px;font-size:13.5px;margin:6px 0 0}
+.warn{background:var(--warn-bg);color:var(--warn);border-radius:10px;padding:10px 13px;font-size:14px;margin:8px 0}
+.err{color:var(--bad);font-weight:600}
+.ok{color:var(--ok);font-weight:600}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+details.guide{margin-bottom:16px}
+details.guide summary{cursor:pointer;font-weight:600}
+details.guide dl{margin:10px 0 0}
+details.guide dt{font-weight:600;margin-top:10px}
+details.guide dd{margin:2px 0 0;color:var(--muted)}
+footer{color:var(--muted);font-size:13px;margin-top:28px;border-top:1px solid var(--line);padding-top:16px}
+.hide{display:none!important}
+@media (max-width:820px){.layout,.grid2{grid-template-columns:1fr}.rlist{max-height:170px;flex-direction:row;flex-wrap:wrap;border:1px solid var(--line);border-radius:12px;padding:8px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="top"><a href="../">← Todas as ferramentas</a><a href="https://eduardonunes.dev">eduardonunes.dev</a></header>
+<h1>📈 Fórmulas DAX</h1>
+<p class="sub">Receitas de medidas prontas para preencher, catálogo de funções e um formatador que organiza o código e troca o separador. Tudo roda no seu navegador: nada do que você digita é enviado a lugar nenhum.</p>
+
+<details class="guide card">
+  <summary>Conceitos essenciais (leia uma vez, ajuda em tudo)</summary>
+  <dl>
+    <dt>Medida × coluna calculada</dt><dd>Medida é calculada na hora, conforme os filtros do visual (ex.: total de vendas). Coluna calculada é calculada linha a linha ao atualizar o modelo e ocupa memória. Prefira medidas para valores que somam, e colunas para categorizar linhas.</dd>
+    <dt>Contexto de filtro</dt><dd>São os filtros ativos em cada célula do visual (segmentações, linhas, colunas, filtros de página). A mesma medida dá resultados diferentes em cada contexto.</dd>
+    <dt>Contexto de linha</dt><dd>Existe dentro de colunas calculadas e de funções com X (SUMX, AVERAGEX...), que percorrem a tabela linha a linha.</dd>
+    <dt>CALCULATE</dt><dd>A função mais importante: recalcula uma expressão trocando ou adicionando filtros. Quase toda inteligência de tempo e todo "percentual do total" passa por ela.</dd>
+    <dt>Tabela calendário</dt><dd>Para funções de tempo (YTD, ano anterior, etc.), crie uma tabela de datas contínua, relacione com a tabela fato e marque como tabela de datas.</dd>
+    <dt>Separador de argumentos</dt><dd>Os nomes das funções DAX são sempre em inglês, mas o separador depende da configuração regional: em português (Brasil) costuma ser <code>;</code> (e decimal <code>,</code>); em inglês, <code>,</code> (e decimal <code>.</code>). Se o Power BI acusar erro de sintaxe ao colar, troque a chave abaixo.</dd>
+  </dl>
+</details>
+
+<div class="bar">
+  <div class="seg" role="tablist" aria-label="Seções">
+    <button role="tab" id="tab-receitas" aria-selected="true" data-tab="receitas">Receitas</button>
+    <button role="tab" id="tab-catalogo" aria-selected="false" data-tab="catalogo">Catálogo</button>
+    <button role="tab" id="tab-explicar" aria-selected="false" data-tab="explicar">Formatar e converter</button>
+  </div>
+  <div class="seg" role="group" aria-label="Separador de argumentos">
+    <button id="loc-br" aria-pressed="true">Separador ; (Power BI em português)</button>
+    <button id="loc-en" aria-pressed="false">Separador , (padrão inglês)</button>
+  </div>
+</div>
+
+<section id="p-receitas">
+  <div class="layout">
+    <div>
+      <input type="search" id="rq" placeholder="Buscar receita (ex.: ano anterior, ranking)…" aria-label="Buscar receita">
+      <div class="rlist" id="rlist" style="margin-top:10px"></div>
+    </div>
+    <div id="rpanel"></div>
+  </div>
+</section>
+
+<section id="p-catalogo" class="hide">
+  <input type="search" id="cq" placeholder="Buscar função pelo nome ou pelo que ela faz (ex.: calculate, ano anterior)…" aria-label="Buscar função">
+  <div class="chips" id="ccats"></div>
+  <div class="card" id="clist"></div>
+</section>
+
+<section id="p-explicar" class="hide">
+  <div class="card">
+    <label class="f">Cole uma medida ou expressão DAX
+      <textarea id="xin" spellcheck="false" placeholder="Margem % = VAR r = SUM(Vendas[Valor]) VAR c = SUM(Vendas[Custo]) RETURN DIVIDE(r - c, r)"></textarea>
+    </label>
+    <div class="row" style="margin-top:10px;justify-content:flex-start;flex-wrap:wrap">
+      <button class="btn primary" id="xgo">Formatar e converter</button>
+      <button class="btn" id="xex">Usar exemplo</button>
+      <span class="hint">O código é analisado aqui mesmo, no navegador.</span>
+    </div>
+  </div>
+  <div id="xout"></div>
+</section>
+
+<footer>As sugestões são orientações gerais; o melhor código DAX depende do seu modelo de dados. Funções de tempo exigem uma tabela de datas contínua e marcada como tabela de datas. Não afiliado à Microsoft.</footer>
+</div>
+
+<script>
+'use strict';
+/* ============ Catálogo ============
+   [nome, categoria, descrição, sintaxe, exemplo, dica] (separador canônico: vírgula) */
+const F=[
+// Agregação
+['SUM','Agregação','Soma os valores de uma coluna.','SUM(coluna)','Total Vendas = SUM(Vendas[Valor])','Só aceita uma coluna. Para somar uma expressão linha a linha, use SUMX.'],
+['SUMX','Agregação','Percorre uma tabela linha a linha, calcula uma expressão em cada uma e soma os resultados.','SUMX(tabela, expressão)','Receita = SUMX(Vendas, Vendas[Quantidade] * Vendas[Preço])','Funções com X criam contexto de linha.'],
+['AVERAGE','Agregação','Média dos valores de uma coluna.','AVERAGE(coluna)','Média = AVERAGE(Vendas[Valor])','Ignora células vazias.'],
+['AVERAGEX','Agregação','Média de uma expressão calculada linha a linha.','AVERAGEX(tabela, expressão)','Ticket = AVERAGEX(VALUES(Vendas[PedidoID]), [Total Vendas])','Útil para média de uma medida sobre uma lista de itens.'],
+['MIN','Agregação','Menor valor de uma coluna (ou entre duas expressões).','MIN(coluna)','Primeira Venda = MIN(Vendas[Data])','Para uma medida por item, use MINX.'],
+['MAX','Agregação','Maior valor de uma coluna (ou entre duas expressões).','MAX(coluna)','Última Venda = MAX(Vendas[Data])','',],
+['MINX','Agregação','Menor valor de uma expressão avaliada linha a linha.','MINX(tabela, expressão)','Menor Total = MINX(VALUES(Produtos[Produto]), [Total Vendas])','',],
+['MAXX','Agregação','Maior valor de uma expressão avaliada linha a linha.','MAXX(tabela, expressão)','Maior Total = MAXX(VALUES(Produtos[Produto]), [Total Vendas])','',],
+['COUNT','Agregação','Conta os valores numéricos de uma coluna.','COUNT(coluna)','Qtd = COUNT(Vendas[Valor])','Para contar qualquer tipo de valor, use COUNTA.'],
+['COUNTA','Agregação','Conta os valores não vazios de uma coluna (de qualquer tipo).','COUNTA(coluna)','Qtd = COUNTA(Clientes[Nome])','',],
+['COUNTROWS','Agregação','Conta as linhas de uma tabela (ou de uma tabela filtrada).','COUNTROWS(tabela)','Qtd Pedidos = COUNTROWS(Vendas)','É a forma mais comum de contar linhas.'],
+['COUNTBLANK','Agregação','Conta as células vazias de uma coluna.','COUNTBLANK(coluna)','Sem Email = COUNTBLANK(Clientes[Email])','',],
+['DISTINCTCOUNT','Agregação','Conta valores distintos de uma coluna (inclui o vazio, se existir).','DISTINCTCOUNT(coluna)','Clientes = DISTINCTCOUNT(Vendas[ClienteID])','Para ignorar o vazio, use DISTINCTCOUNTNOBLANK.'],
+['DISTINCTCOUNTNOBLANK','Agregação','Conta valores distintos de uma coluna, ignorando o vazio.','DISTINCTCOUNTNOBLANK(coluna)','Clientes = DISTINCTCOUNTNOBLANK(Vendas[ClienteID])','',],
+['MEDIAN','Agregação','Mediana dos valores de uma coluna.','MEDIAN(coluna)','Mediana = MEDIAN(Vendas[Valor])','',],
+// Filtro e contexto
+['CALCULATE','Filtro e contexto','Calcula uma expressão em um contexto de filtro modificado. É a função central do DAX.','CALCULATE(expressão, [filtro1], [filtro2], ...)','Vendas Norte = CALCULATE([Total Vendas], Regiao[Nome] = "Norte")','Filtros booleanos de uma coluna (Tabela[Col] = valor) são os mais eficientes. Dentro de um contexto de linha, CALCULATE transforma a linha em filtro.'],
+['CALCULATETABLE','Filtro e contexto','Igual ao CALCULATE, mas devolve uma tabela.','CALCULATETABLE(tabela, [filtro1], ...)','Top = CALCULATETABLE(Vendas, Vendas[Ano] = 2025)','',],
+['FILTER','Filtro e contexto','Devolve a tabela com apenas as linhas que atendem a uma condição.','FILTER(tabela, condição)','Caros = COUNTROWS(FILTER(Produtos, Produtos[Preço] > 100))','Filtrar uma tabela inteira pode ser lento; quando possível use filtros booleanos de coluna dentro do CALCULATE.'],
+['ALL','Filtro e contexto','Remove os filtros de uma tabela ou colunas (ou devolve todas as linhas).','ALL(tabela_ou_coluna, ...)','Total Geral = CALCULATE([Total Vendas], ALL(Vendas))','Dentro do CALCULATE, remove filtros. Em tabelas, devolve todas as linhas.'],
+['ALLEXCEPT','Filtro e contexto','Remove todos os filtros de uma tabela, exceto os das colunas indicadas.','ALLEXCEPT(tabela, coluna1, ...)','Total do Ano = CALCULATE([Total Vendas], ALLEXCEPT(Calendario, Calendario[Ano]))','',],
+['ALLSELECTED','Filtro e contexto','Remove os filtros do visual, mas mantém os de segmentações e filtros externos.','ALLSELECTED([tabela_ou_coluna])','% do Selecionado = DIVIDE([Total Vendas], CALCULATE([Total Vendas], ALLSELECTED(Produtos)))','Boa escolha para "percentual do total" que respeita segmentações.'],
+['REMOVEFILTERS','Filtro e contexto','Remove filtros de tabelas ou colunas. Só pode ser usada dentro do CALCULATE.','REMOVEFILTERS([tabela_ou_coluna], ...)','Sem Filtro = CALCULATE([Total Vendas], REMOVEFILTERS(Produtos[Categoria]))','Mais legível que ALL quando a intenção é só remover filtros.'],
+['KEEPFILTERS','Filtro e contexto','Em vez de substituir o filtro existente, combina o novo com ele.','KEEPFILTERS(filtro)','Norte = CALCULATE([Total Vendas], KEEPFILTERS(Regiao[Nome] = "Norte"))','',],
+['VALUES','Filtro e contexto','Devolve os valores distintos de uma coluna (ou as linhas distintas de uma tabela) no contexto atual.','VALUES(coluna_ou_tabela)','Produtos Vendidos = COUNTROWS(VALUES(Vendas[ProdutoID]))','',],
+['DISTINCT','Filtro e contexto','Devolve os valores distintos de uma coluna.','DISTINCT(coluna)','Qtd Distinta = COUNTROWS(DISTINCT(Vendas[ClienteID]))','Diferente de VALUES, não inclui a linha em branco criada por integridade referencial.'],
+['SELECTEDVALUE','Filtro e contexto','Devolve o valor de uma coluna quando só há um selecionado; senão, o valor alternativo.','SELECTEDVALUE(coluna, [valor_alternativo])','Título = "Região: " & SELECTEDVALUE(Regiao[Nome], "todas")','Ótima para títulos dinâmicos e parâmetros de segmentação.'],
+['HASONEVALUE','Filtro e contexto','Verdadeiro se a coluna tem exatamente um valor no contexto atual.','HASONEVALUE(coluna)','Ok = HASONEVALUE(Produtos[Produto])','',],
+['ISFILTERED','Filtro e contexto','Verdadeiro se há filtro direto na coluna.','ISFILTERED(coluna)','Filtrado = ISFILTERED(Produtos[Categoria])','',],
+['TREATAS','Filtro e contexto','Aplica os valores de uma tabela como filtro nas colunas indicadas (relacionamento virtual).','TREATAS(tabela, coluna1, ...)','Meta = CALCULATE(SUM(Metas[Valor]), TREATAS(VALUES(Produtos[Categoria]), Metas[Categoria]))','Útil quando não existe relacionamento físico no modelo.'],
+['USERELATIONSHIP','Filtro e contexto','Ativa um relacionamento inativo durante o cálculo.','USERELATIONSHIP(coluna1, coluna2)','Por Envio = CALCULATE([Total Vendas], USERELATIONSHIP(Vendas[DataEnvio], Calendario[Data]))','Só funciona dentro de CALCULATE.'],
+['RELATED','Filtro e contexto','Busca um valor da tabela do lado "um" de um relacionamento, em um contexto de linha.','RELATED(coluna)','Categoria = RELATED(Produtos[Categoria])','Use na tabela do lado "muitos" (ex.: em coluna calculada de Vendas).'],
+['RELATEDTABLE','Filtro e contexto','Devolve as linhas relacionadas do lado "muitos", a partir do lado "um".','RELATEDTABLE(tabela)','Qtd Compras = COUNTROWS(RELATEDTABLE(Vendas))','',],
+['LOOKUPVALUE','Filtro e contexto','Procura um valor em uma tabela, sem depender de relacionamento (como um PROCV).','LOOKUPVALUE(coluna_resultado, coluna_busca, valor_busca, ...)','Preço = LOOKUPVALUE(Produtos[Preço], Produtos[ProdutoID], Vendas[ProdutoID])','Prefira relacionamentos e RELATED quando possível.'],
+['TOPN','Filtro e contexto','Devolve as N primeiras linhas de uma tabela, segundo uma expressão.','TOPN(n, tabela, expressão_ordenação, [ordem])','Top 5 = CALCULATE([Total Vendas], TOPN(5, ALL(Produtos[Produto]), [Total Vendas]))','Ordem padrão: DESC (maiores primeiro).'],
+['RANKX','Filtro e contexto','Classifica um item entre os de uma tabela, segundo uma expressão (ranking).','RANKX(tabela, expressão, [valor], [ordem], [empates])','Ranking = RANKX(ALL(Produtos[Produto]), [Total Vendas], , DESC, Dense)','Empates: Skip pula posições; Dense não pula.'],
+// Tabelas
+['SUMMARIZE','Tabelas','Agrupa uma tabela por colunas, podendo adicionar colunas calculadas.','SUMMARIZE(tabela, coluna_agrupar, [nome, expressão], ...)','Resumo = SUMMARIZE(Vendas, Produtos[Categoria], "Total", SUM(Vendas[Valor]))','Para novos cálculos, prefira ADDCOLUMNS sobre o resultado.'],
+['SUMMARIZECOLUMNS','Tabelas','Agrupa por colunas e calcula expressões; é a base da maioria dos visuais.','SUMMARIZECOLUMNS(coluna_agrupar, ..., [filtros], nome, expressão, ...)','Resumo = SUMMARIZECOLUMNS(Produtos[Categoria], "Total", [Total Vendas])','Não pode ser usada dentro de medidas com contexto de linha.'],
+['ADDCOLUMNS','Tabelas','Adiciona colunas calculadas a uma tabela.','ADDCOLUMNS(tabela, nome, expressão, ...)','Com Margem = ADDCOLUMNS(Vendas, "Margem", Vendas[Valor] - Vendas[Custo])','',],
+['SELECTCOLUMNS','Tabelas','Devolve uma tabela só com as colunas/expressões escolhidas.','SELECTCOLUMNS(tabela, nome, expressão, ...)','Lista = SELECTCOLUMNS(Clientes, "Cliente", Clientes[Nome])','',],
+['UNION','Tabelas','Junta tabelas com as mesmas colunas, uma abaixo da outra.','UNION(tabela1, tabela2, ...)','Todos = UNION(Vendas2024, Vendas2025)','',],
+['EXCEPT','Tabelas','Devolve as linhas da primeira tabela que não existem na segunda.','EXCEPT(tabela1, tabela2)','Sem Compra = EXCEPT(VALUES(Clientes[ClienteID]), VALUES(Vendas[ClienteID]))','',],
+['INTERSECT','Tabelas','Devolve as linhas que existem nas duas tabelas.','INTERSECT(tabela1, tabela2)','Em Ambos = INTERSECT(VALUES(A[ID]), VALUES(B[ID]))','',],
+['CROSSJOIN','Tabelas','Combina todas as linhas de uma tabela com todas as da outra.','CROSSJOIN(tabela1, tabela2)','Combinações = CROSSJOIN(Produtos, Regiao)','Pode gerar tabelas enormes.'],
+['GENERATESERIES','Tabelas','Gera uma tabela com uma sequência de números.','GENERATESERIES(início, fim, [incremento])','Parâmetro = GENERATESERIES(0, 100, 5)','Muito usada em parâmetros "E se".'],
+['CALENDAR','Tabelas','Gera uma tabela de datas entre duas datas.','CALENDAR(data_inicial, data_final)','Calendario = CALENDAR(DATE(2020, 1, 1), DATE(2030, 12, 31))','Marque a tabela como "tabela de datas".'],
+['CALENDARAUTO','Tabelas','Gera uma tabela de datas cobrindo automaticamente todas as datas do modelo.','CALENDARAUTO([mês_fim_ano_fiscal])','Calendario = CALENDARAUTO()','Cobre anos completos com base nas colunas de data do modelo.'],
+['ROW','Tabelas','Cria uma tabela de uma linha.','ROW(nome, expressão, ...)','Linha = ROW("Total", [Total Vendas])','',],
+// Inteligência de tempo
+['TOTALYTD','Inteligência de tempo','Acumulado do ano até a data (year to date).','TOTALYTD(expressão, datas, [filtro], [fim_do_ano])','Vendas YTD = TOTALYTD([Total Vendas], Calendario[Data])','Exige tabela de datas contínua.'],
+['TOTALQTD','Inteligência de tempo','Acumulado do trimestre até a data.','TOTALQTD(expressão, datas, [filtro])','Vendas QTD = TOTALQTD([Total Vendas], Calendario[Data])','',],
+['TOTALMTD','Inteligência de tempo','Acumulado do mês até a data.','TOTALMTD(expressão, datas, [filtro])','Vendas MTD = TOTALMTD([Total Vendas], Calendario[Data])','',],
+['DATESYTD','Inteligência de tempo','Devolve as datas do início do ano até a data atual do contexto.','DATESYTD(datas, [fim_do_ano])','Vendas YTD = CALCULATE([Total Vendas], DATESYTD(Calendario[Data]))','É o que o TOTALYTD usa por baixo; permite combinar com outros filtros.'],
+['DATESQTD','Inteligência de tempo','Datas do início do trimestre até a data atual do contexto.','DATESQTD(datas)','Vendas QTD = CALCULATE([Total Vendas], DATESQTD(Calendario[Data]))','',],
+['DATESMTD','Inteligência de tempo','Datas do início do mês até a data atual do contexto.','DATESMTD(datas)','Vendas MTD = CALCULATE([Total Vendas], DATESMTD(Calendario[Data]))','',],
+['SAMEPERIODLASTYEAR','Inteligência de tempo','Devolve o mesmo período do ano anterior.','SAMEPERIODLASTYEAR(datas)','Vendas Ano Anterior = CALCULATE([Total Vendas], SAMEPERIODLASTYEAR(Calendario[Data]))','Exige datas contíguas.'],
+['DATEADD','Inteligência de tempo','Desloca as datas do contexto por um número de intervalos (dia, mês, trimestre, ano).','DATEADD(datas, n, intervalo)','Mês Anterior = CALCULATE([Total Vendas], DATEADD(Calendario[Data], -1, MONTH))','Intervalos: DAY, MONTH, QUARTER, YEAR. Use n negativo para voltar no tempo.'],
+['DATESINPERIOD','Inteligência de tempo','Devolve as datas de um período a partir de uma data, para frente ou para trás.','DATESINPERIOD(datas, data_inicial, n, intervalo)','Últimos 3 Meses = CALCULATE([Total Vendas], DATESINPERIOD(Calendario[Data], MAX(Calendario[Data]), -3, MONTH))','Base para médias móveis.'],
+['DATESBETWEEN','Inteligência de tempo','Devolve as datas entre duas datas (inclusive).','DATESBETWEEN(datas, início, fim)','Janela = CALCULATE([Total Vendas], DATESBETWEEN(Calendario[Data], DATE(2025, 1, 1), DATE(2025, 3, 31)))','',],
+['PARALLELPERIOD','Inteligência de tempo','Devolve períodos completos (mês, trimestre, ano) deslocados no tempo.','PARALLELPERIOD(datas, n, intervalo)','Ano Anterior = CALCULATE([Total Vendas], PARALLELPERIOD(Calendario[Data], -12, MONTH))','Diferente de DATEADD, devolve o período inteiro.'],
+['PREVIOUSMONTH','Inteligência de tempo','Devolve todas as datas do mês anterior.','PREVIOUSMONTH(datas)','Mês Anterior = CALCULATE([Total Vendas], PREVIOUSMONTH(Calendario[Data]))','',],
+['PREVIOUSYEAR','Inteligência de tempo','Devolve todas as datas do ano anterior.','PREVIOUSYEAR(datas, [fim_do_ano])','Ano Anterior = CALCULATE([Total Vendas], PREVIOUSYEAR(Calendario[Data]))','',],
+['FIRSTDATE','Inteligência de tempo','Devolve a primeira data do contexto, como tabela de uma data.','FIRSTDATE(datas)','Saldo Inicial = CALCULATE([Saldo], FIRSTDATE(Calendario[Data]))','Para obter a data como valor simples, use MIN.'],
+['LASTDATE','Inteligência de tempo','Devolve a última data do contexto, como tabela de uma data.','LASTDATE(datas)','Saldo Final = CALCULATE([Saldo], LASTDATE(Calendario[Data]))','Para a data como valor simples, use MAX.'],
+['ENDOFMONTH','Inteligência de tempo','Devolve a última data do mês no contexto.','ENDOFMONTH(datas)','Fim do Mês = CALCULATE([Saldo], ENDOFMONTH(Calendario[Data]))','',],
+['DATEDIFF','Inteligência de tempo','Calcula a diferença entre duas datas em um intervalo (dia, mês, ano etc.).','DATEDIFF(data1, data2, intervalo)','Idade = DATEDIFF(Clientes[Nascimento], TODAY(), YEAR)','',],
+['EOMONTH','Inteligência de tempo','Último dia do mês, antes ou depois de alguns meses.','EOMONTH(data, meses)','Fim = EOMONTH(Calendario[Data], 0)','',],
+['EDATE','Inteligência de tempo','Soma ou subtrai meses de uma data.','EDATE(data, meses)','Vencimento = EDATE(Vendas[Data], 3)','',],
+['TODAY','Inteligência de tempo','Devolve a data de hoje.','TODAY()','Hoje = TODAY()','Atualiza a cada recálculo do modelo.'],
+['NOW','Inteligência de tempo','Devolve a data e a hora atuais.','NOW()','Agora = NOW()','',],
+['DATE','Inteligência de tempo','Monta uma data a partir de ano, mês e dia.','DATE(ano, mês, dia)','Data = DATE(2025, 12, 31)','',],
+['YEAR','Inteligência de tempo','Extrai o ano de uma data.','YEAR(data)','Ano = YEAR(Vendas[Data])','',],
+['MONTH','Inteligência de tempo','Extrai o mês (1 a 12) de uma data.','MONTH(data)','Mês = MONTH(Vendas[Data])','',],
+['DAY','Inteligência de tempo','Extrai o dia do mês de uma data.','DAY(data)','Dia = DAY(Vendas[Data])','',],
+['WEEKDAY','Inteligência de tempo','Devolve o dia da semana como número.','WEEKDAY(data, [tipo])','Dia Semana = WEEKDAY(Vendas[Data], 2)','Tipo 2 numera de segunda (1) a domingo (7).'],
+['QUARTER','Inteligência de tempo','Devolve o trimestre (1 a 4) de uma data.','QUARTER(data)','Trimestre = "T" & QUARTER(Vendas[Data])','',],
+// Lógica
+['IF','Lógica','Devolve um valor se a condição for verdadeira e outro se for falsa.','IF(teste, valor_se_verdadeiro, [valor_se_falso])','Status = IF([Total Vendas] >= [Meta], "Meta atingida", "Abaixo da meta")','Sem o 3º argumento, devolve vazio quando falso.'],
+['SWITCH','Lógica','Compara uma expressão com vários valores e devolve o resultado do primeiro que combinar.','SWITCH(expressão, valor1, resultado1, ..., [senão])','Classe = SWITCH(TRUE(), [Total] >= 1000, "A", [Total] >= 500, "B", "C")','Com TRUE() como expressão, vira um "IF" em cascata legível.'],
+['IFERROR','Lógica','Devolve um valor alternativo se a expressão resultar em erro.','IFERROR(valor, valor_se_erro)','Seguro = IFERROR([Receita] / [Qtd], 0)','Para divisões, DIVIDE é melhor e mais rápida.'],
+['AND','Lógica','Verdadeiro se as duas condições forem verdadeiras.','AND(condição1, condição2)','Ok = AND([Total] > 0, [Margem] > 0)','Só aceita duas condições. Para mais, use o operador &&.'],
+['OR','Lógica','Verdadeiro se pelo menos uma das duas condições for verdadeira.','OR(condição1, condição2)','Alerta = OR([Total] < 0, [Margem] < 0)','Para mais condições, use o operador ||.'],
+['NOT','Lógica','Inverte um valor lógico.','NOT(condição)','Inativo = NOT([Ativo])','',],
+['TRUE','Lógica','Devolve o valor lógico verdadeiro.','TRUE()','Sim = TRUE()','No DAX é escrita com parênteses: TRUE().'],
+['FALSE','Lógica','Devolve o valor lógico falso.','FALSE()','Nao = FALSE()','',],
+['COALESCE','Lógica','Devolve o primeiro valor que não seja vazio.','COALESCE(valor1, valor2, ...)','Total ou Zero = COALESCE([Total Vendas], 0)','',],
+['ISBLANK','Lógica','Verdadeiro se o valor está vazio.','ISBLANK(valor)','Sem Venda = ISBLANK([Total Vendas])','',],
+['BLANK','Lógica','Devolve um valor vazio.','BLANK()','Vazio = BLANK()','Medidas que devolvem vazio não aparecem em visuais (útil para esconder linhas).'],
+['DIVIDE','Lógica','Divide dois valores tratando a divisão por zero (devolve vazio ou um valor alternativo).','DIVIDE(numerador, denominador, [valor_alternativo])','Margem % = DIVIDE([Lucro], [Receita])','Prefira sempre ao operador / em medidas.'],
+// Texto
+['CONCATENATE','Texto','Junta dois textos.','CONCATENATE(texto1, texto2)','Nome = CONCATENATE(Clientes[Nome], Clientes[Sobrenome])','Só aceita dois argumentos; o operador & é mais flexível.'],
+['CONCATENATEX','Texto','Junta o resultado de uma expressão para cada linha de uma tabela, com um delimitador.','CONCATENATEX(tabela, expressão, [delimitador], [ordenar_por], [ordem])','Lista = CONCATENATEX(VALUES(Produtos[Produto]), Produtos[Produto], ", ")','Ótima para mostrar listas selecionadas em cartões.'],
+['LEFT','Texto','Primeiros caracteres de um texto.','LEFT(texto, [núm_caract])','Sigla = LEFT(Clientes[Nome], 3)','',],
+['RIGHT','Texto','Últimos caracteres de um texto.','RIGHT(texto, [núm_caract])','Fim = RIGHT(Clientes[Codigo], 4)','',],
+['MID','Texto','Caracteres do meio de um texto.','MID(texto, início, núm_caract)','Meio = MID(Clientes[Codigo], 3, 2)','',],
+['LEN','Texto','Número de caracteres de um texto.','LEN(texto)','Tamanho = LEN(Clientes[Nome])','',],
+['UPPER','Texto','Converte para maiúsculas.','UPPER(texto)','Maiusculo = UPPER(Clientes[Nome])','',],
+['LOWER','Texto','Converte para minúsculas.','LOWER(texto)','Minusculo = LOWER(Clientes[Email])','',],
+['TRIM','Texto','Remove espaços extras.','TRIM(texto)','Limpo = TRIM(Clientes[Nome])','',],
+['SUBSTITUTE','Texto','Troca um texto por outro.','SUBSTITUTE(texto, antigo, novo, [ocorrência])','Sem Hifen = SUBSTITUTE(Clientes[CPF], "-", "")','',],
+['SEARCH','Texto','Posição de um texto dentro de outro, sem diferenciar maiúsculas.','SEARCH(procurado, texto, [início], [valor_se_não_achar])','Pos = SEARCH("@", Clientes[Email], , 0)','Informe o último argumento para evitar erro quando não encontra.'],
+['FIND','Texto','Posição de um texto dentro de outro, diferenciando maiúsculas.','FIND(procurado, texto, [início], [valor_se_não_achar])','Pos = FIND("-", Clientes[Codigo], , 0)','',],
+['FORMAT','Texto','Converte um valor em texto com um formato.','FORMAT(valor, formato, [localidade])','Mês Ano = FORMAT(Calendario[Data], "MMM/yyyy")','Devolve TEXTO: não serve para somar nem ordena cronologicamente (use uma coluna de ordenação).'],
+['VALUE','Texto','Converte um texto em número.','VALUE(texto)','Numero = VALUE(Clientes[CodigoTexto])','',],
+['REPT','Texto','Repete um texto várias vezes.','REPT(texto, vezes)','Barra = REPT("|", 10)','',],
+// Matemática
+['ROUND','Matemática','Arredonda para uma quantidade de casas.','ROUND(número, casas)','Arredondado = ROUND([Total Vendas], 2)','',],
+['ROUNDUP','Matemática','Arredonda sempre para cima.','ROUNDUP(número, casas)','Cima = ROUNDUP([Total Vendas], 0)','',],
+['ROUNDDOWN','Matemática','Arredonda sempre para baixo.','ROUNDDOWN(número, casas)','Baixo = ROUNDDOWN([Total Vendas], 0)','',],
+['INT','Matemática','Arredonda para baixo até o inteiro mais próximo.','INT(número)','Inteiro = INT([Total Vendas])','',],
+['ABS','Matemática','Valor absoluto (sem sinal).','ABS(número)','Desvio = ABS([Real] - [Meta])','',],
+['MOD','Matemática','Resto da divisão.','MOD(número, divisor)','Resto = MOD([Qtd], 2)','',],
+['POWER','Matemática','Eleva um número a uma potência.','POWER(número, potência)','Quadrado = POWER([Qtd], 2)','',],
+['SQRT','Matemática','Raiz quadrada.','SQRT(número)','Raiz = SQRT([Variancia])','',]
+];
+const CATS=['Agregação','Filtro e contexto','Tabelas','Inteligência de tempo','Lógica','Texto','Matemática'];
+const IDX={}; F.forEach(e=>IDX[e[0].toUpperCase()]=e);
+const norm=s=>s.normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase();
+
+/* ============ Conversão de separador (, ⇄ ;) ============
+   Placeholders de receita usam ⟨campo⟩ e nunca são alterados. */
+const isIdStart=c=>/[A-Za-zÀ-ÿ_]/.test(c), isIdChar=c=>/[A-Za-zÀ-ÿ0-9_]/.test(c);
+function readBracket(src,i){let j=i+1;const n=src.length;while(j<n){if(src[j]===']'){if(src[j+1]===']'){j+=2;continue;}break;}j++;}return Math.min(j,n-1);}
+function readQuoted(src,i,q){let j=i+1;const n=src.length;while(j<n){if(src[j]===q){if(src[j+1]===q){j+=2;continue;}break;}j++;}return Math.min(j,n-1);}
+function readComment(src,i){ if(src.startsWith('/*',i)){const j=src.indexOf('*/',i+2);return j<0?src.length-1:j+1;} const j=src.indexOf('\n',i);return j<0?src.length-1:j-1; }
+const isCommentStart=(s,i)=>s.startsWith('//',i)||s.startsWith('/*',i)||s.startsWith('--',i);
+function hasComment(src){for(let i=0;i<src.length;i++){const c=src[i];
+  if(c==='"'){i=readQuoted(src,i,'"');continue;} if(c==="'"){i=readQuoted(src,i,"'");continue;} if(c==='['){i=readBracket(src,i);continue;}
+  if(isCommentStart(src,i)) return true;} return false;}
+function detectLocale(src){
+  for(let i=0;i<src.length;i++){const c=src[i];
+    if(c==='"'){i=readQuoted(src,i,'"');continue;} if(c==="'"){i=readQuoted(src,i,"'");continue;} if(c==='['){i=readBracket(src,i);continue;}
+    if(isCommentStart(src,i)){i=readComment(src,i);continue;}
+    if(c===';') return 'br';}
+  return 'en';
+}
+function convert(src,from,to){
+  if(from===to) return src;
+  let out='',i=0;const n=src.length;
+  while(i<n){
+    const c=src[i];
+    if(c==='"'){const j=readQuoted(src,i,'"');out+=src.slice(i,j+1);i=j+1;continue;}
+    if(c==="'"){const j=readQuoted(src,i,"'");out+=src.slice(i,j+1);i=j+1;continue;}
+    if(c==='['){const j=readBracket(src,i);out+=src.slice(i,j+1);i=j+1;continue;}
+    if(c==='⟨'){const j=src.indexOf('⟩',i);const k=j<0?n-1:j;out+=src.slice(i,k+1);i=k+1;continue;}
+    if(isCommentStart(src,i)){const j=readComment(src,i);out+=src.slice(i,j+1);i=j+1;continue;}
+    if(isIdStart(c)){let j=i;while(j<n&&isIdChar(src[j]))j++;out+=src.slice(i,j);i=j;continue;}
+    if(/\d/.test(c)){
+      let j=i;while(j<n&&/\d/.test(src[j]))j++;
+      const dec=from==='en'?'.':',';
+      if(j+1<n&&src[j]===dec&&/\d/.test(src[j+1])){let m=j+1;while(m<n&&/\d/.test(src[m]))m++;out+=src.slice(i,j)+(to==='br'?',':'.')+src.slice(j+1,m);i=m;continue;}
+      out+=src.slice(i,j);i=j;continue;
+    }
+    if(from==='en'&&to==='br'&&c===','){out+=';';i++;continue;}
+    if(from==='br'&&to==='en'&&c===';'){out+=',';i++;continue;}
+    out+=c;i++;
+  }
+  return out;
+}
+
+/* ============ Estado e utilidades ============ */
+const $=s=>document.querySelector(s);
+const el=(t,a={},...k)=>{const e=document.createElement(t);for(const[x,v]of Object.entries(a)){if(x==='class')e.className=v;else if(x.startsWith('on'))e.addEventListener(x.slice(2),v);else if(v===true)e.setAttribute(x,'');else if(v!==false&&v!=null)e.setAttribute(x,v);}for(const c of k.flat())e.append(c&&c.nodeType?c:document.createTextNode(c??''));return e;};
+let loc='br';
+try{const s=localStorage.getItem('dax-loc'); if(s==='en'||s==='br') loc=s;}catch{}
+const L=src=>convert(src,'en',loc);
+function copy(text,btn){
+  const done=()=>{const o=btn.textContent;btn.textContent='Copiado!';setTimeout(()=>btn.textContent=o,1200);};
+  if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(text).then(done,fallback);} else fallback();
+  function fallback(){const t=el('textarea',{style:'position:fixed;opacity:0'});t.value=text;document.body.append(t);t.select();try{document.execCommand('copy');done();}catch{btn.textContent='Selecione e copie';}t.remove();}
+}
+const fmtOut=text=>{const b=el('button',{class:'btn',type:'button','aria-label':'Copiar código'},'Copiar');b.addEventListener('click',()=>copy(text,b));return el('div',{class:'row'},el('div',{class:'out'},text),b);};
+
+/* ============ Receitas ============
+   campos: [chave, rótulo, padrão, dica]  |  fórmulas em formato canônico (vírgula) com ⟨chave⟩ */
+const R=[
+{id:'total',cat:'Básico',title:'Total, média, máximo e contagem',goal:'As medidas mais simples sobre uma coluna ou tabela.',
+ fields:[['nome','Nome da medida','Total Vendas'],['col','Coluna','Vendas[Valor]'],['tab','Tabela (para contar linhas)','Vendas','contagem de linhas']],
+ main:{label:'Soma',tpl:'⟨nome⟩ = SUM(⟨col⟩)',note:'Medida = calculada conforme os filtros do visual.'},
+ alts:[{label:'Média',tpl:'⟨nome⟩ = AVERAGE(⟨col⟩)',note:''},{label:'Maior valor',tpl:'⟨nome⟩ = MAX(⟨col⟩)',note:''},{label:'Quantidade de linhas',tpl:'⟨nome⟩ = COUNTROWS(⟨tab⟩)',note:''}]},
+{id:'sumx',cat:'Básico',title:'Receita = quantidade × preço',goal:'Calcular uma expressão linha a linha e somar.',
+ fields:[['nome','Nome da medida','Receita'],['tab','Tabela','Vendas'],['a','Coluna A','Vendas[Quantidade]'],['b','Coluna B','Vendas[Preço]']],
+ main:{label:'Com SUMX (medida)',tpl:'⟨nome⟩ =\nSUMX(\n    ⟨tab⟩,\n    ⟨a⟩ * ⟨b⟩\n)',note:'SUMX percorre a tabela linha a linha e soma o resultado. SUM só soma uma coluna que já existe.'},
+ alts:[{label:'Coluna calculada (alternativa)',tpl:'⟨nome⟩ = ⟨a⟩ * ⟨b⟩',note:'Cria uma coluna fisicamente no modelo (ocupa memória). Prefira a medida, salvo se precisar da coluna em filtros.'}]},
+{id:'divide',cat:'Básico',title:'Divisão segura (margem %, taxa)',goal:'Dividir sem erro quando o denominador for zero.',
+ fields:[['nome','Nome da medida','Margem %'],['num','Numerador','[Lucro]'],['den','Denominador','[Receita]'],['alt','Valor se der zero (opcional)','0']],
+ main:{label:'DIVIDE (devolve vazio se der zero)',tpl:'⟨nome⟩ = DIVIDE(⟨num⟩, ⟨den⟩)',note:'Formate a medida como porcentagem na guia Ferramentas de medida.'},
+ alts:[{label:'DIVIDE com valor alternativo',tpl:'⟨nome⟩ = DIVIDE(⟨num⟩, ⟨den⟩, ⟨alt⟩)',note:''}]},
+{id:'ticket',cat:'Básico',title:'Ticket médio',goal:'Valor médio por pedido ou por cliente.',
+ fields:[['nome','Nome da medida','Ticket Médio'],['medida','Medida de valor','[Total Vendas]'],['ped','Coluna do pedido','Vendas[PedidoID]']],
+ main:{label:'Por pedido',tpl:'⟨nome⟩ = DIVIDE(⟨medida⟩, DISTINCTCOUNT(⟨ped⟩))',note:'Troque a coluna por ClienteID para obter o valor médio por cliente.'},alts:[]},
+{id:'calc',cat:'Filtros',title:'Aplicar um filtro fixo (CALCULATE)',goal:'Calcular uma medida só para um valor (ex.: região Norte).',
+ fields:[['nome','Nome da medida','Vendas Norte'],['medida','Medida base','[Total Vendas]'],['col','Coluna do filtro','Regiao[Nome]'],['val','Valor','"Norte"'],['col2','2ª coluna (opcional)','Produtos[Categoria]','dois filtros'],['val2','2º valor','"Bebidas"','dois filtros']],
+ main:{label:'Um filtro',tpl:'⟨nome⟩ =\nCALCULATE(\n    ⟨medida⟩,\n    ⟨col⟩ = ⟨val⟩\n)',note:'CALCULATE troca o contexto de filtro. Filtros de coluna como este são os mais eficientes.'},
+ alts:[{label:'Dois filtros (E)',tpl:'⟨nome⟩ =\nCALCULATE(\n    ⟨medida⟩,\n    ⟨col⟩ = ⟨val⟩,\n    ⟨col2⟩ = ⟨val2⟩\n)',note:'Vários filtros separados por vírgula/ponto e vírgula funcionam como E.'}]},
+{id:'contcond',cat:'Filtros',title:'Contar linhas com condição',goal:'Quantas linhas atendem a um critério.',
+ fields:[['nome','Nome da medida','Pedidos Pagos'],['tab','Tabela','Vendas'],['col','Coluna do filtro','Vendas[Status]'],['val','Valor','"Pago"']],
+ main:{label:'Com CALCULATE + COUNTROWS',tpl:'⟨nome⟩ =\nCALCULATE(\n    COUNTROWS(⟨tab⟩),\n    ⟨col⟩ = ⟨val⟩\n)',note:''},
+ alts:[{label:'Clientes distintos com a condição',tpl:'⟨nome⟩ =\nCALCULATE(\n    DISTINCTCOUNT(Vendas[ClienteID]),\n    ⟨col⟩ = ⟨val⟩\n)',note:'Ajuste a coluna do DISTINCTCOUNT.'}]},
+{id:'pct',cat:'Filtros',title:'Percentual do total',goal:'Quanto cada item representa do total.',
+ fields:[['nome','Nome da medida','% do Total'],['medida','Medida','[Total Vendas]'],['tab','Tabela do item','Produtos'],['col','Coluna do item','Produtos[Categoria]']],
+ main:{label:'Respeitando as segmentações (ALLSELECTED)',tpl:'⟨nome⟩ =\nDIVIDE(\n    ⟨medida⟩,\n    CALCULATE(⟨medida⟩, ALLSELECTED(⟨tab⟩))\n)',note:'O denominador ignora o item da linha, mas mantém as segmentações da página.'},
+ alts:[{label:'Sobre o total geral (ALL)',tpl:'⟨nome⟩ =\nDIVIDE(\n    ⟨medida⟩,\n    CALCULATE(⟨medida⟩, ALL(⟨tab⟩))\n)',note:'Ignora também as segmentações da tabela.'},
+       {label:'Removendo só uma coluna (REMOVEFILTERS)',tpl:'⟨nome⟩ =\nDIVIDE(\n    ⟨medida⟩,\n    CALCULATE(⟨medida⟩, REMOVEFILTERS(⟨col⟩))\n)',note:''}]},
+{id:'allexcept',cat:'Filtros',title:'Ignorar filtros (ou todos menos um)',goal:'Calcular sem o filtro de uma coluna ou mantendo apenas um.',
+ fields:[['nome','Nome da medida','Total Sem Filtro de Categoria'],['medida','Medida','[Total Vendas]'],['col','Coluna','Produtos[Categoria]'],['tab','Tabela','Calendario'],['manter','Coluna a manter','Calendario[Ano]','ALLEXCEPT']],
+ main:{label:'Remover o filtro de uma coluna',tpl:'⟨nome⟩ = CALCULATE(⟨medida⟩, REMOVEFILTERS(⟨col⟩))',note:''},
+ alts:[{label:'Manter só um filtro, remover os demais da tabela',tpl:'⟨nome⟩ =\nCALCULATE(\n    ⟨medida⟩,\n    ALLEXCEPT(⟨tab⟩, ⟨manter⟩)\n)',note:'Útil para "total do ano" dentro de um visual por mês.'}]},
+{id:'userel',cat:'Filtros',title:'Usar um relacionamento inativo',goal:'Analisar por outra data (ex.: data de envio em vez de data do pedido).',
+ fields:[['nome','Nome da medida','Vendas por Envio'],['medida','Medida','[Total Vendas]'],['a','Coluna na tabela fato','Vendas[DataEnvio]'],['b','Coluna da tabela calendário','Calendario[Data]']],
+ main:{label:'USERELATIONSHIP',tpl:'⟨nome⟩ =\nCALCULATE(\n    ⟨medida⟩,\n    USERELATIONSHIP(⟨a⟩, ⟨b⟩)\n)',note:'O relacionamento precisa existir no modelo (inativo).'},alts:[]},
+{id:'ytd',cat:'Tempo',title:'Acumulado do ano, trimestre ou mês',goal:'Soma desde o início do período até a data.',
+ fields:[['nome','Nome da medida','Vendas YTD'],['medida','Medida','[Total Vendas]'],['datas','Coluna de datas','Calendario[Data]']],
+ main:{label:'Ano até a data (YTD)',tpl:'⟨nome⟩ = TOTALYTD(⟨medida⟩, ⟨datas⟩)',note:'Exige tabela de datas contínua, marcada como tabela de datas.'},
+ alts:[{label:'Com CALCULATE + DATESYTD',tpl:'⟨nome⟩ = CALCULATE(⟨medida⟩, DATESYTD(⟨datas⟩))',note:'Equivalente; permite combinar com outros filtros.'},
+       {label:'Trimestre até a data (QTD)',tpl:'⟨nome⟩ = TOTALQTD(⟨medida⟩, ⟨datas⟩)',note:''},{label:'Mês até a data (MTD)',tpl:'⟨nome⟩ = TOTALMTD(⟨medida⟩, ⟨datas⟩)',note:''}]},
+{id:'ly',cat:'Tempo',title:'Ano anterior e variação %',goal:'Comparar com o mesmo período do ano passado.',
+ fields:[['nome','Nome da medida','Vendas Ano Anterior'],['medida','Medida','[Total Vendas]'],['datas','Coluna de datas','Calendario[Data]']],
+ main:{label:'Mesmo período do ano anterior',tpl:'⟨nome⟩ =\nCALCULATE(\n    ⟨medida⟩,\n    SAMEPERIODLASTYEAR(⟨datas⟩)\n)',note:'Exige datas contíguas.'},
+ alts:[{label:'Variação % contra o ano anterior',tpl:'Variação % =\nVAR _Atual = ⟨medida⟩\nVAR _Anterior =\n    CALCULATE(⟨medida⟩, SAMEPERIODLASTYEAR(⟨datas⟩))\nRETURN\n    DIVIDE(_Atual - _Anterior, _Anterior)',note:'Variáveis (VAR) evitam repetir cálculos e deixam o código legível.'},
+       {label:'Mês anterior',tpl:'Mês Anterior =\nCALCULATE(\n    ⟨medida⟩,\n    DATEADD(⟨datas⟩, -1, MONTH)\n)',note:'Intervalos: DAY, MONTH, QUARTER, YEAR.'}]},
+{id:'acum',cat:'Tempo',title:'Acumulado (running total)',goal:'Total que vai crescendo ao longo do tempo.',
+ fields:[['nome','Nome da medida','Acumulado'],['medida','Medida','[Total Vendas]'],['datas','Coluna de datas','Calendario[Data]']],
+ main:{label:'Acumulado desde o início dos dados',tpl:'⟨nome⟩ =\nCALCULATE(\n    ⟨medida⟩,\n    FILTER(\n        ALL(⟨datas⟩),\n        ⟨datas⟩ <= MAX(⟨datas⟩)\n    )\n)',note:'Para cada data, soma tudo que veio até ela.'},
+ alts:[{label:'Acumulado dentro do ano',tpl:'⟨nome⟩ = CALCULATE(⟨medida⟩, DATESYTD(⟨datas⟩))',note:''}]},
+{id:'mm',cat:'Tempo',title:'Média móvel',goal:'Suavizar uma série mostrando a média dos últimos N meses.',
+ fields:[['nome','Nome da medida','Média Móvel 3M'],['medida','Medida','[Total Vendas]'],['datas','Coluna de datas','Calendario[Data]'],['n','Número de meses','3']],
+ main:{label:'Média dos últimos N meses',tpl:'⟨nome⟩ =\nDIVIDE(\n    CALCULATE(\n        ⟨medida⟩,\n        DATESINPERIOD(⟨datas⟩, MAX(⟨datas⟩), -⟨n⟩, MONTH)\n    ),\n    ⟨n⟩\n)',note:'Divide a soma da janela por N; supõe que todos os meses tenham dados.'},alts:[]},
+{id:'lastdate',cat:'Tempo',title:'Última data e valor na última data',goal:'Saber a data mais recente e o saldo nessa data.',
+ fields:[['nome','Nome da medida','Última Venda'],['col','Coluna de data','Vendas[Data]'],['medida','Medida (saldo)','[Saldo]'],['datas','Coluna de datas','Calendario[Data]']],
+ main:{label:'Data mais recente',tpl:'⟨nome⟩ = MAX(⟨col⟩)',note:''},
+ alts:[{label:'Valor na última data do contexto',tpl:'Saldo Final =\nCALCULATE(\n    ⟨medida⟩,\n    LASTDATE(⟨datas⟩)\n)',note:'Típico para saldos e estoques (valores que não se somam no tempo).'}]},
+{id:'cal',cat:'Tempo',title:'Criar a tabela calendário',goal:'Tabela de datas para inteligência de tempo.',
+ fields:[['ini','Ano inicial','2020'],['fim','Ano final','2030']],
+ main:{label:'Automática (CALENDARAUTO)',tpl:'Calendario = CALENDARAUTO()',note:'Cobre os anos completos das datas do modelo.'},
+ alts:[{label:'Com colunas de ano, mês e trimestre',tpl:'Calendario =\nADDCOLUMNS(\n    CALENDAR(DATE(⟨ini⟩, 1, 1), DATE(⟨fim⟩, 12, 31)),\n    "Ano", YEAR([Date]),\n    "Mês", MONTH([Date]),\n    "Nome do Mês", FORMAT([Date], "MMMM"),\n    "Trimestre", "T" & QUARTER([Date])\n)',note:'Depois: Ferramentas de tabela > Marcar como tabela de datas, e relacione com a tabela fato. Ordene "Nome do Mês" pela coluna "Mês".'}]},
+{id:'idade',cat:'Tempo',title:'Idade ou tempo entre datas',goal:'Diferença entre duas datas em anos, meses ou dias.',
+ fields:[['nome','Nome da coluna','Idade'],['ini','Data inicial','Clientes[Nascimento]'],['fim','Data final','TODAY()'],['un','Intervalo (YEAR, MONTH, DAY)','YEAR']],
+ main:{label:'Coluna calculada',tpl:'⟨nome⟩ = DATEDIFF(⟨ini⟩, ⟨fim⟩, ⟨un⟩)',note:'Intervalos aceitos: DAY, MONTH, QUARTER, YEAR, entre outros.'},alts:[]},
+{id:'rank',cat:'Ranking',title:'Ranking de itens',goal:'Posição de cada item conforme uma medida.',
+ fields:[['nome','Nome da medida','Ranking Produto'],['col','Coluna dos itens','Produtos[Produto]'],['medida','Medida','[Total Vendas]']],
+ main:{label:'RANKX',tpl:'⟨nome⟩ =\nRANKX(\n    ALL(⟨col⟩),\n    ⟨medida⟩,\n    ,\n    DESC,\n    Dense\n)',note:'Dense não pula posições em empates; troque por Skip se preferir pular.'},
+ alts:[{label:'Só mostrar o ranking quando há um item no contexto',tpl:'⟨nome⟩ =\nIF(\n    HASONEVALUE(⟨col⟩),\n    RANKX(ALL(⟨col⟩), ⟨medida⟩, , DESC, Dense)\n)',note:'Evita mostrar ranking nas linhas de total.'}]},
+{id:'topn',cat:'Ranking',title:'Total dos N maiores',goal:'Somar apenas os N itens de maior valor.',
+ fields:[['nome','Nome da medida','Top 5 Produtos'],['medida','Medida','[Total Vendas]'],['col','Coluna dos itens','Produtos[Produto]'],['n','N','5']],
+ main:{label:'TOPN',tpl:'⟨nome⟩ =\nCALCULATE(\n    ⟨medida⟩,\n    TOPN(⟨n⟩, ALL(⟨col⟩), ⟨medida⟩)\n)',note:'TOPN escolhe os itens; CALCULATE soma o resultado só deles.'},alts:[]},
+{id:'switch',cat:'Lógica',title:'Classificar em faixas (A, B, C)',goal:'Devolver um texto conforme faixas de valor.',
+ fields:[['nome','Nome da medida','Classe'],['medida','Medida','[Total Vendas]'],['v1','Limite da classe A','1000'],['v2','Limite da classe B','500']],
+ main:{label:'SWITCH(TRUE(), ...)',tpl:'⟨nome⟩ =\nSWITCH(\n    TRUE(),\n    ⟨medida⟩ >= ⟨v1⟩, "A",\n    ⟨medida⟩ >= ⟨v2⟩, "B",\n    "C"\n)',note:'As condições são avaliadas em ordem; a primeira verdadeira vence. O último valor é o "senão".'},
+ alts:[{label:'Com IFs aninhados',tpl:'⟨nome⟩ =\nIF(\n    ⟨medida⟩ >= ⟨v1⟩,\n    "A",\n    IF(⟨medida⟩ >= ⟨v2⟩, "B", "C")\n)',note:'Fica ilegível rápido; prefira SWITCH.'}]},
+{id:'meta',cat:'Lógica',title:'Meta atingida?',goal:'Comparar um resultado com a meta.',
+ fields:[['nome','Nome da medida','Status da Meta'],['medida','Medida','[Total Vendas]'],['meta','Meta','[Meta]']],
+ main:{label:'Texto de status',tpl:'⟨nome⟩ =\nIF(\n    ⟨medida⟩ >= ⟨meta⟩,\n    "Meta atingida",\n    "Abaixo da meta"\n)',note:''},
+ alts:[{label:'% de atingimento',tpl:'⟨nome⟩ = DIVIDE(⟨medida⟩, ⟨meta⟩)',note:''}]},
+{id:'vars',cat:'Lógica',title:'Medida com variáveis (VAR / RETURN)',goal:'Evitar repetir cálculos e deixar o código legível.',
+ fields:[['nome','Nome da medida','Margem %'],['rec','Receita','SUM(Vendas[Valor])'],['custo','Custo','SUM(Vendas[Custo])']],
+ main:{label:'VAR / RETURN',tpl:'⟨nome⟩ =\nVAR _Receita = ⟨rec⟩\nVAR _Custo = ⟨custo⟩\nRETURN\n    DIVIDE(_Receita - _Custo, _Receita)',note:'Cada VAR é calculada uma única vez, no contexto em que foi definida.'},alts:[]},
+{id:'related',cat:'Colunas',title:'Trazer valor de outra tabela',goal:'Em uma coluna calculada, buscar um dado da tabela relacionada.',
+ fields:[['nome','Nome da coluna','Categoria'],['col','Coluna a trazer','Produtos[Categoria]'],['res','LOOKUPVALUE: coluna resultado','Produtos[Categoria]','LOOKUPVALUE'],['busca','LOOKUPVALUE: coluna de busca','Produtos[ProdutoID]','LOOKUPVALUE'],['val','LOOKUPVALUE: valor','Vendas[ProdutoID]','LOOKUPVALUE']],
+ main:{label:'Com RELATED (há relacionamento)',tpl:'⟨nome⟩ = RELATED(⟨col⟩)',note:'Use na tabela do lado "muitos" (ex.: Vendas) para buscar no lado "um" (Produtos).'},
+ alts:[{label:'Sem relacionamento (LOOKUPVALUE)',tpl:'⟨nome⟩ =\nLOOKUPVALUE(\n    ⟨res⟩,\n    ⟨busca⟩, ⟨val⟩\n)',note:'Funciona como PROCV, mas relacionamentos são mais rápidos.'}]},
+{id:'concat',cat:'Colunas',title:'Juntar textos e listas',goal:'Nome completo ou lista de itens selecionados.',
+ fields:[['nome','Nome','Nome Completo'],['a','Coluna A','Clientes[Nome]'],['b','Coluna B','Clientes[Sobrenome]'],['col','Coluna da lista','Produtos[Produto]']],
+ main:{label:'Nome completo (coluna calculada)',tpl:'⟨nome⟩ = ⟨a⟩ & " " & ⟨b⟩',note:''},
+ alts:[{label:'Lista dos itens selecionados (medida)',tpl:'Itens Selecionados =\nCONCATENATEX(\n    VALUES(⟨col⟩),\n    ⟨col⟩,\n    ", "\n)',note:'Boa para mostrar a seleção em um cartão.'}]},
+{id:'titulo',cat:'Colunas',title:'Título dinâmico',goal:'Texto que muda conforme a segmentação.',
+ fields:[['nome','Nome da medida','Título'],['col','Coluna da segmentação','Regiao[Nome]']],
+ main:{label:'SELECTEDVALUE',tpl:'⟨nome⟩ = "Vendas de " & SELECTEDVALUE(⟨col⟩, "todas as regiões")',note:'Se houver um único valor selecionado, mostra-o; senão usa o texto alternativo.'},alts:[]},
+{id:'formatdata',cat:'Colunas',title:'Formatar data como texto',goal:'Mostrar a data como "mar/2025" ou "05/03/2025".',
+ fields:[['nome','Nome','Mês Ano'],['col','Coluna de data','Calendario[Data]']],
+ main:{label:'mmm/aaaa',tpl:'⟨nome⟩ = FORMAT(⟨col⟩, "MMM/yyyy")',note:'FORMAT devolve texto: não ordena cronologicamente. Crie uma coluna numérica (ano*100+mês) para ordenar.'},
+ alts:[{label:'dd/mm/aaaa',tpl:'⟨nome⟩ = FORMAT(⟨col⟩, "dd/MM/yyyy")',note:'Em DAX, mês é MM maiúsculo (mm seria minutos).'},{label:'Nome do mês',tpl:'⟨nome⟩ = FORMAT(⟨col⟩, "MMMM")',note:'O idioma segue a configuração do modelo.'}]}
+];
+
+let curR=R[0].id,rFilter='';const vals={};
+function renderRList(){
+  const box=$('#rlist');box.replaceChildren();const q=norm(rFilter);
+  R.filter(r=>!q||norm(r.title+' '+r.goal+' '+r.cat).includes(q)).forEach(r=>{
+    box.append(el('button',{class:'rbtn',type:'button','aria-pressed':String(r.id===curR),onclick:()=>{curR=r.id;renderRList();renderRPanel();if(window.innerWidth<=820)$('#rpanel').scrollIntoView({behavior:'smooth',block:'start'});}},r.title,el('small',{},r.cat)));
+  });
+  if(!box.children.length)box.append(el('p',{class:'hint'},'Nenhuma receita encontrada. Veja o Catálogo.'));
+}
+function fill(tpl,r){
+  let s=L(tpl);const v=vals[r.id]||{};
+  r.fields.forEach(f=>{const x=(v[f[0]]??f[2]).trim()||f[2];s=s.split('⟨'+f[0]+'⟩').join(x);});
+  return s;
+}
+function renderRPanel(){
+  const r=R.find(x=>x.id===curR);const p=$('#rpanel');p.replaceChildren();
+  const v=vals[r.id]=vals[r.id]||{};const outBox=el('div');
+  const draw=()=>{outBox.replaceChildren();
+    const mk=(lab,tpl,note)=>el('div',{class:'variant'},el('h3',{},lab),fmtOut(fill(tpl,r)),note?el('p',{class:'note'},note):null);
+    outBox.append(mk(r.main.label,r.main.tpl,r.main.note));r.alts.forEach(a=>outBox.append(mk(a.label,a.tpl,a.note)));};
+  const fields=el('div',{class:'fields'},r.fields.map(f=>{
+    const inp=el('input',{type:'text',value:v[f[0]]??f[2],spellcheck:'false','aria-label':f[1]});
+    inp.addEventListener('input',()=>{v[f[0]]=inp.value;draw();});
+    return el('label',{class:'f'},f[1],f[3]?el('small',{},'usado em: '+f[3]):null,inp);
+  }));
+  p.append(el('div',{class:'card'},el('h2',{style:'margin:0 0 4px;font-size:19px'},r.title),el('p',{class:'note',style:'margin:0'},r.goal),outBox,el('h3',{style:'margin:18px 0 0;font-size:14px'},'Ajuste os nomes para o seu modelo'),fields));
+  draw();
+}
+
+/* ============ Catálogo ============ */
+let cCat='',cQ='';
+function renderCats(){
+  const box=$('#ccats');box.replaceChildren();
+  [['','Todas'],...CATS.map(c=>[c,c])].forEach(([v,t])=>box.append(el('button',{class:'chip',type:'button','aria-pressed':String(cCat===v),onclick:()=>{cCat=v;renderCats();renderCatalog();}},t)));
+}
+function renderCatalog(){
+  const box=$('#clist');box.replaceChildren();const q=norm(cQ);
+  const items=F.filter(e=>(!cCat||e[1]===cCat)&&(!q||norm(e[0]+' '+e[1]+' '+e[2]).includes(q)));
+  if(!items.length){box.append(el('p',{class:'hint'},'Nenhuma função encontrada.'));return;}
+  items.forEach(e=>box.append(el('div',{class:'fn'},
+    el('h3',{},e[0],el('span',{},e[1])),el('p',{},e[2]),
+    el('div',{class:'out',style:'margin:6px 0'},L(e[3])),fmtOut(L(e[4])),
+    e[5]?el('div',{class:'tip'},'💡 '+e[5]):null)));
+}
+
+/* ============ Formatar e converter ============ */
+function lex(src,from){
+  const t=[];let i=0;const n=src.length;
+  while(i<n){
+    const c=src[i];
+    if(/\s/.test(c)){let j=i;while(j<n&&/\s/.test(src[j]))j++;t.push({t:'o',v:' '});i=j;continue;}
+    if(c==='"'){const j=readQuoted(src,i,'"');t.push({t:'o',v:src.slice(i,j+1)});i=j+1;continue;}
+    if(c==="'"){const j=readQuoted(src,i,"'");t.push({t:'o',v:src.slice(i,j+1)});i=j+1;continue;}
+    if(c==='['){const j=readBracket(src,i);t.push({t:'o',v:src.slice(i,j+1)});i=j+1;continue;}
+    if(isIdStart(c)){let j=i;while(j<n&&isIdChar(src[j]))j++;let k=j;while(k<n&&src[k]===' ')k++;
+      if(src[k]==='('){t.push({t:'f',v:src.slice(i,j)});t.push({t:'(',v:'('});i=k+1;}else{t.push({t:'o',v:src.slice(i,j)});i=j;}continue;}
+    if(/\d/.test(c)){let j=i;while(j<n&&/\d/.test(src[j]))j++;const dec=from==='en'?'.':',';
+      if(j+1<n&&src[j]===dec&&/\d/.test(src[j+1])){let m=j+1;while(m<n&&/\d/.test(src[m]))m++;j=m;}
+      t.push({t:'o',v:src.slice(i,j)});i=j;continue;}
+    if(c==='('){t.push({t:'(',v:'('});i++;continue;}
+    if(c===')'){t.push({t:')',v:')'});i++;continue;}
+    if(c===';'||c===','){t.push({t:'s',v:c});i++;continue;}
+    t.push({t:'o',v:c});i++;
+  }
+  return t;
+}
+function parse(src,from){
+  const tk=lex(src,from);let p=0;const errors=[];
+  function call(name){
+    const args=[];let cur=[];
+    while(p<tk.length){
+      const x=tk[p];
+      if(x.t===')'){p++;args.push(cur);return{fn:name,args};}
+      if(x.t==='s'){p++;args.push(cur);cur=[];continue;}
+      if(x.t==='f'){p+=2;cur.push(call(x.v));continue;}
+      if(x.t==='('){p++;cur.push(call(''));continue;}
+      cur.push({txt:x.v});p++;
+    }
+    errors.push('Faltam parênteses de fechamento.');args.push(cur);return{fn:name,args};
+  }
+  const top=[];
+  while(p<tk.length){
+    const x=tk[p];
+    if(x.t==='f'){p+=2;top.push(call(x.v));continue;}
+    if(x.t==='('){p++;top.push(call(''));continue;}
+    if(x.t===')'){errors.push('Há um parêntese de fechamento sobrando.');p++;continue;}
+    if(x.t==='s'){top.push({txt:x.v});p++;continue;}
+    top.push({txt:x.v});p++;
+  }
+  return{top,errors:[...new Set(errors)]};
+}
+const isCall=x=>x.fn!==undefined;
+function flat(items,sep){return items.map(x=>isCall(x)?x.fn+'('+x.args.map(a=>flat(a,sep).trim()).join(sep+' ')+')':x.txt).join('');}
+function pretty(items,sep,ind){return items.map(x=>isCall(x)?prettyCall(x,sep,ind):x.txt).join('');}
+function prettyCall(c,sep,ind){
+  const one=flat([c],sep);
+  if(one.length<=64||!c.args.some(a=>a.some(isCall)))return one;
+  const pad='    '.repeat(ind+1);
+  return c.fn+'(\n'+c.args.map(a=>pad+pretty(a,sep,ind+1).trim()).join(sep+'\n')+'\n'+'    '.repeat(ind)+')';
+}
+const KW=x=>!isCall(x)&&['VAR','RETURN'].includes(x.txt.trim().toUpperCase());
+function prefixIndex(items){
+  for(let i=0;i<items.length;i++){
+    const x=items[i];if(isCall(x)||KW(x))return -1;
+    if(x.txt==='='){
+      let a=i-1;while(a>=0&&!isCall(items[a])&&items[a].txt===' ')a--;
+      let b=i+1;while(b<items.length&&!isCall(items[b])&&items[b].txt===' ')b++;
+      const prev=a>=0&&!isCall(items[a])?items[a].txt:'',next=b<items.length&&!isCall(items[b])?items[b].txt:'';
+      if(['<','>','!','='].includes(prev)||['=','>'].includes(next))continue;
+      return i;
+    }
+  }
+  return -1;
+}
+function formatBody(items,sep){
+  const idx=[];items.forEach((x,i)=>{if(KW(x))idx.push(i);});
+  if(!idx.length)return pretty(items,sep,0).trim();
+  const out=[];const pre=items.slice(0,idx[0]);if(flat(pre,sep).trim())out.push(pretty(pre,sep,0).trim());
+  idx.forEach((st,k)=>{
+    const end=idx[k+1]??items.length;const kw=items[st].txt.trim().toUpperCase();const body=pretty(items.slice(st+1,end),sep,0).trim();
+    out.push(kw==='VAR'?'VAR '+body:'RETURN\n'+body.split('\n').map(l=>'    '+l).join('\n'));
+  });
+  return out.join('\n');
+}
+function formatDax(src,from){
+  const sep=from==='br'?';':',';
+  const {top,errors}=parse(src,from);
+  const k=prefixIndex(top);
+  let text;
+  if(k>=0){
+    const prefix=flat(top.slice(0,k),sep).trim();const body=formatBody(top.slice(k+1),sep);
+    text=prefix+' ='+(body.includes('\n')||/^VAR\b/i.test(body)?'\n':' ')+body;
+  }else text=formatBody(top,sep);
+  return{text,top,errors};
+}
+function walk(items,fn,depth=0){items.forEach(x=>{if(isCall(x)){fn(x,depth);x.args.forEach(a=>walk(a,fn,depth+1));}});}
+function ifDepth(items){let best=0;(function rec(its,d){its.forEach(x=>{if(!isCall(x))return;const nd=x.fn.toUpperCase()==='IF'?d+1:d;best=Math.max(best,nd);x.args.forEach(a=>rec(a,nd));});})(items,0);return best;}
+function hasOperator(items,ch){let found=false;(function rec(its){its.forEach(x=>{if(isCall(x))x.args.forEach(rec);else if(x.txt===ch)found=true;});})(items);return found;}
+
+function explain(){
+  const out=$('#xout');out.replaceChildren();
+  const src=$('#xin').value.trim();
+  if(!src){out.append(el('p',{class:'hint'},'Cole uma medida ou expressão acima.'));return;}
+  const from=detectLocale(src);const comments=hasComment(src);
+  const {text,top,errors}=comments?{text:src,top:[],errors:parse(src,from).errors}:formatDax(src,from);
+  const card=el('div',{class:'card'});
+  card.append(el('p',{},'Separador detectado: ',el('b',{},from==='br'?'ponto e vírgula (;)':'vírgula (,)'),'. ',
+    errors.length?el('span',{class:'err'},'Atenção: '+errors.join(' ')):el('span',{class:'ok'},'Parênteses balanceados.')));
+  if(comments)card.append(el('div',{class:'warn'},'O código tem comentários (// ou --), então a organização automática foi pulada para não alterá-los. A conversão de separador continua disponível abaixo.'));
+  else card.append(el('h3',{style:'margin:14px 0 4px;font-size:15px'},'Código organizado'),fmtOut(text));
+  out.append(card);
+  const c2=el('div',{class:'card'});c2.append(el('h3',{style:'margin:0 0 8px;font-size:15px'},'Converter separador'));
+  const g=el('div',{class:'grid2'});
+  [['br','Separador ; (Power BI em português)'],['en','Separador , (padrão inglês)']].forEach(([lc,lab])=>g.append(el('div',{},el('div',{class:'hint'},lab+(lc===from?' (original)':'')),fmtOut(convert(text,from,lc)))));
+  c2.append(g,el('p',{class:'note'},'Só o separador de argumentos e o separador decimal mudam; textos entre aspas e nomes entre colchetes ficam intactos. Revise antes de usar.'));
+  out.append(c2);
+  if(!comments){
+    const used=[];walk(top,x=>{const u=x.fn.toUpperCase();if(x.fn&&!used.includes(u))used.push(u);});
+    const c3=el('div',{class:'card'});c3.append(el('h3',{style:'margin:0 0 4px;font-size:15px'},'Funções usadas'));
+    if(!used.length)c3.append(el('p',{class:'hint'},'Nenhuma função encontrada.'));
+    used.forEach(u=>{const e=IDX[u];
+      if(e)c3.append(el('div',{class:'fn'},el('h3',{},e[0],el('span',{},e[1])),el('p',{},e[2]),el('div',{class:'out',style:'margin:6px 0'},L(e[3])),e[5]?el('div',{class:'tip'},'💡 '+e[5]):null));
+      else c3.append(el('div',{class:'fn'},el('h3',{},u),el('p',{class:'hint'},'Não está no catálogo desta página (pode ser uma função válida, nova ou específica).')));});
+    out.append(c3);
+    const hints=[];
+    if(hasOperator(top,'/'))hints.push('Você usa o operador /. Em medidas, DIVIDE(numerador, denominador) evita erro de divisão por zero.');
+    walk(top,x=>{const u=x.fn.toUpperCase();
+      if(u==='FILTER'&&x.args[0]&&x.args[0].length===1&&!isCall(x.args[0][0])&&/^[A-Za-zÀ-ÿ_'][^\[\]]*$/.test(x.args[0][0].txt.trim())&&!x.args[0][0].txt.includes('['))hints.push('FILTER sobre uma tabela inteira pode ser lento. Se a condição for sobre uma coluna, use um filtro booleano direto no CALCULATE (ex.: Tabela[Coluna] = valor).');
+      if(u==='EARLIER'||u==='EARLIEST')hints.push('EARLIER é antigo: com variáveis (VAR) o código fica mais claro.');
+      if(u==='IFERROR')hints.push('IFERROR pode esconder problemas reais e prejudica o desempenho; para divisões prefira DIVIDE.');
+      if(u==='FORMAT')hints.push('FORMAT devolve texto: não use em medidas numéricas que serão somadas, comparadas ou ordenadas.');
+      if(u==='SUMX'&&x.args[1]&&x.args[1].length===1&&!isCall(x.args[1][0])&&x.args[1][0].txt.includes('[')&&!x.args[1][0].txt.includes('*'))hints.push('SUMX com uma única coluna como expressão equivale a SUM, que é mais simples.');
+    });
+    if(ifDepth(top)>=3)hints.push('Você tem 3 ou mais IF aninhados. SWITCH(TRUE(), ...) deixa o código mais legível.');
+    const uniq=[...new Set(hints)];
+    if(uniq.length){const c4=el('div',{class:'card'});c4.append(el('h3',{style:'margin:0 0 6px;font-size:15px'},'Sugestões'));uniq.forEach(h=>c4.append(el('div',{class:'warn'},h)));out.append(c4);}
+  }
+}
+
+/* ============ Abas e separador ============ */
+function setTab(id){
+  ['receitas','catalogo','explicar'].forEach(t=>{$('#p-'+t).classList.toggle('hide',t!==id);$('#tab-'+t).setAttribute('aria-selected',String(t===id));});
+  try{history.replaceState(null,'','#'+id);}catch{}
+}
+function setLoc(l){
+  loc=l;try{localStorage.setItem('dax-loc',l);}catch{}
+  $('#loc-br').setAttribute('aria-pressed',String(l==='br'));$('#loc-en').setAttribute('aria-pressed',String(l==='en'));
+  renderRPanel();renderCatalog();
+}
+document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>setTab(b.dataset.tab)));
+$('#loc-br').addEventListener('click',()=>setLoc('br'));
+$('#loc-en').addEventListener('click',()=>setLoc('en'));
+$('#rq').addEventListener('input',e=>{rFilter=e.target.value;renderRList();});
+$('#cq').addEventListener('input',e=>{cQ=e.target.value;renderCatalog();});
+$('#xgo').addEventListener('click',explain);
+$('#xex').addEventListener('click',()=>{$('#xin').value='Margem % = VAR r = SUM(Vendas[Valor]) VAR c = SUM(Vendas[Custo]) RETURN IF(r = 0, BLANK(), CALCULATE(DIVIDE(r - c, r), FILTER(Vendas, Vendas[Ano] = 2025), ALL(Calendario[Mês])) * 100)';explain();});
+$('#loc-br').setAttribute('aria-pressed',String(loc==='br'));$('#loc-en').setAttribute('aria-pressed',String(loc==='en'));
+renderRList();renderRPanel();renderCats();renderCatalog();
+const hsh=location.hash.slice(1);if(['receitas','catalogo','explicar'].includes(hsh))setTab(hsh);
+</script>
+</body>
+</html>
