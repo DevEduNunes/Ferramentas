@@ -1,45 +1,119 @@
 # Ferramentas
 
-Ferramentas gratuitas que rodam 100% no navegador: sem upload, sem cadastro, sem servidor.
-Publicado em **https://eduardonunes.dev/Ferramentas/**
+Ferramentas gratuitas que rodam **100% no navegador**: sem upload, sem cadastro, sem servidor.
 
-## Ferramentas disponíveis
+**Site:** https://eduardonunes.dev/Ferramentas/
+
+| | |
+|---|---|
+| **Privacidade** | Nada sai do seu computador. Cada página bloqueia requisições de rede (veja [Privacidade](#privacidade)). |
+| **Tecnologia** | HTML, CSS e JavaScript puros, sem framework e sem etapa de build (exceto o PDF Local). |
+| **Hospedagem** | GitHub Pages, no caminho `/Ferramentas`. |
+
+## Ferramentas
 
 | Ferramenta | Endereço | O que faz |
 |---|---|---|
-| **PDF Local** | `/Ferramentas/pdf/` | 24 ferramentas: juntar, dividir, organizar, girar, recortar, numerar, converter (imagens, texto/Markdown, Word básico), digitalizar, comprimir, editar, assinar, preencher formulários, marca d'água, ocultar (redação), comparar, proteger (AES-256), remover senha, metadados e reparar. Funciona offline; a página "O que não dá para fazer aqui" lista o que ficou de fora e por quê. |
-| **Fórmulas do Excel** | `/Ferramentas/excel/` | Receitas para preencher, catálogo de 100 funções e explicador/conversor de fórmulas entre português (`;`) e inglês (`,`). |
-| **Fórmulas DAX** | `/Ferramentas/dax/` | Receitas de medidas para Power BI, catálogo de 109 funções e formatador com conversão de separador (`,` ⇄ `;`). |
-| **Consultas SQL** | `/Ferramentas/sql/` | 35 receitas (consultar, agregar, juntar, janelas, datas, texto, criar e editar dados), catálogo de 73 comandos e formatador que explica a consulta passo a passo e converte entre SQLite, T-SQL e PostgreSQL. Não executa SQL: não há banco conectado. |
+| **PDF Local** | [`/pdf/`](https://eduardonunes.dev/Ferramentas/pdf/) | 24 ferramentas para PDF, ver [abaixo](#pdf-local). Funciona offline. |
+| **Fórmulas do Excel** | [`/excel/`](https://eduardonunes.dev/Ferramentas/excel/) | Receitas para preencher, catálogo de 100 funções e conversor de fórmulas entre português (`;`) e inglês (`,`). |
+| **Fórmulas DAX** | [`/dax/`](https://eduardonunes.dev/Ferramentas/dax/) | Receitas de medidas para Power BI, catálogo de 109 funções e formatador com conversão de separador (`,` ⇄ `;`). |
+| **Consultas SQL** | [`/sql/`](https://eduardonunes.dev/Ferramentas/sql/) | 35 receitas, catálogo de 73 comandos e formatador que explica a consulta passo a passo e converte entre SQLite, T-SQL e PostgreSQL. **Não executa SQL**: não há banco conectado. |
+
+As páginas de Excel, DAX e SQL aceitam links diretos, por exemplo `/excel/#receitas/ses`, `/dax/#catalogo` e `/sql/#explicar`.
+
+### PDF Local
+
+| Grupo | Ferramentas |
+|---|---|
+| Organizar | juntar, dividir, organizar páginas, girar, recortar, números de página |
+| Converter e criar | PDF → imagens, imagens → PDF, digitalizar (fotos → PDF), texto → PDF, PDF → texto / Markdown, PDF → Word (só o texto), comprimir |
+| Editar e revisar | editar (texto, formas, desenho, imagens, campos), assinar, preencher formulário, marca d'água, ocultar (redação definitiva), comparar |
+| Segurança e reparo | proteger com senha (AES-256), remover senha, metadados, reparar |
+
+**Fora do escopo de propósito** (dependem de servidor, de IA ou de modelos pesados): Word, PowerPoint e Excel → PDF, PDF → PowerPoint e Excel, OCR, resumir e traduzir com IA, HTML → PDF por URL e PDF/A. A própria página explica cada caso em "O que não dá para fazer aqui".
 
 ## Estrutura
 
 ```
 index.html          landing page com a lista de ferramentas
-pdf/index.html      PDF Local (gerado; arquivo único e offline)
+pdf/index.html      PDF Local (GERADO por build.py; arquivo único e offline)
 excel/index.html    Fórmulas do Excel (HTML único, sem build)
 dax/index.html      Fórmulas DAX (HTML único, sem build)
 sql/index.html      Consultas SQL (HTML único, sem build)
 assets/tema.css     tema compartilhado (landing, Excel, DAX e SQL)
 assets/fonts/       Space Grotesk e Roboto Slab (as mesmas do eduardonunes.dev)
 assets/favicon.svg  ícone do site
-src/pdf/            código-fonte do PDF Local: template.html, tools-*.js (módulos das ferramentas), bibliotecas e build.py
+src/pdf/            código-fonte do PDF Local (veja abaixo)
 .nojekyll           impede o GitHub de processar o site com Jekyll
 ```
+
+```
+src/pdf/
+  template.html     CSS, utilitários, ferramentas originais, menu (MENU) e navegação
+  tools-core.js     visualizador de página com camada de desenho, rasterização, texto invisível
+  tools-basic.js    girar, recortar, números, metadados, reparar, texto → PDF, digitalizar
+  tools-convert.js  PDF → texto / Markdown, PDF → Word
+  tools-view.js     editar, assinar, formulários, ocultar, comparar
+  tools-secure.js   proteger (AES-256), remover senha, página de limites
+  build.py          gera pdf/index.html
+  *.min.js          pdf-lib, pdf.js (+ worker) e JSZip
+```
+
+## Privacidade
+
+- Todo o processamento acontece no navegador. Não existe backend, banco de dados nem login.
+- Cada página declara uma Content-Security-Policy (`<meta http-equiv="Content-Security-Policy">`) que impede requisições de rede. As páginas de landing, Excel, DAX e SQL só carregam CSS e fontes do próprio site (`style-src 'self'`, `font-src 'self'`). O PDF Local não depende de nenhum arquivo externo: as bibliotecas e as fontes estão embutidas nele.
+- Para conferir: abra as ferramentas de desenvolvedor (F12), aba *Network*, e use uma ferramenta. Nenhum upload deve aparecer.
+- No console aparecem dois avisos de CSP do Cloudflare (`beacon.min.js` e `cdn-cgi/challenge-platform`). São esperados e inofensivos: a política os bloqueia de propósito, e por isso o Web Analytics do Cloudflare não conta visitas aqui.
 
 ## Visual
 
 O visual segue o eduardonunes.dev: fundo `#030305`, acento roxo `#8a5bd8` / `#a58be6`, cantos retos, bordas de 1px, títulos em Roboto Slab e rótulos em caixa-alta espaçada. As cores e fontes ficam em variáveis no início de `assets/tema.css`.
 
-- **Landing, Excel e DAX** usam o `assets/tema.css`. As páginas carregam o CSS e as fontes do próprio site, por isso a Content-Security-Policy delas permite `style-src 'self'` e `font-src 'self'` (ainda sem nenhuma requisição externa).
-- **PDF Local** continua sendo um único arquivo: o CSS fica dentro do `src/pdf/template.html` e o `build.py` embute as fontes (latin) em base64, então o arquivo funciona offline e fora do site.
-- Se mudar a paleta, atualize os dois lugares: `assets/tema.css` e o bloco `<style>` de `src/pdf/template.html`.
+- **Landing, Excel, DAX e SQL** usam o `assets/tema.css`.
+- **PDF Local** é um único arquivo: o CSS fica dentro do `src/pdf/template.html` e o `build.py` embute as fontes (latin) em base64.
+- Se mudar a paleta, atualize os dois lugares.
+- **Cache:** o CSS é carregado com versão (`tema.css?v=2`). Ao alterar o `tema.css`, incremente o número nas quatro páginas, senão alguns navegadores mostram o site sem estilo.
 
-## Privacidade
+## Rodar localmente
 
-- Todo o processamento acontece no navegador. Não existe backend, banco de dados nem login.
-- Cada página declara uma Content-Security-Policy (`<meta http-equiv="Content-Security-Policy">`) que impede requisições de rede. No PDF Local, as bibliotecas (pdf-lib, pdf.js e JSZip) estão embutidas no próprio arquivo.
-- Para conferir: abra as ferramentas de desenvolvedor (F12), aba *Network*, e use uma ferramenta. Nenhum upload deve aparecer.
+Qualquer servidor estático serve:
+
+```bash
+python -m http.server 8000
+```
+
+Depois abra `http://127.0.0.1:8000/`. Abrir os arquivos por `file://` não foi testado, exceto o `pdf/index.html`, que é autônomo.
+
+## Manter as ferramentas
+
+### PDF Local
+
+Edite o código-fonte em `src/pdf/` e rode, na raiz do repositório:
+
+```bash
+python src/pdf/build.py
+```
+
+Isso regenera `pdf/index.html` embutindo bibliotecas, fontes e módulos. **Não edite `pdf/index.html` à mão.**
+
+Para criar uma ferramenta nova: adicione `tools.push({ id, title, desc, mount(root) { ... } })` em um dos módulos, inclua o `id` na constante `MENU` do `template.html` e, se criar um módulo novo, acrescente-o à lista `TOOL_FILES` do `build.py`. Os módulos compartilham o escopo global da página, então `tools-core.js` (utilitários e visualizador) vem sempre primeiro.
+
+### Excel, DAX e SQL
+
+Arquivos únicos: edite `excel/index.html`, `dax/index.html` ou `sql/index.html` diretamente.
+
+- **Catálogo:** array `F` no início do script. No Excel, cada entrada traz o nome em inglês e em português (os nomes em português seguem o Excel do Brasil; confirme novos nomes na documentação da Microsoft, pois a lista oficial por ordem alfabética mistura nomes traduzidos e não traduzidos). No SQL, as entradas são criadas com `E(nome, categoria, dialetos, descrição, sintaxe, exemplo, dica, equivalentes)`, em que `dialetos` é uma string com `s` (SQLite), `t` (T-SQL) e `p` (PostgreSQL).
+- **Receitas:** array `R`. No Excel e no DAX as fórmulas ficam em formato canônico (inglês, vírgula) com marcadores `{campo}` (Excel) ou `⟨campo⟩` (DAX). No SQL, os modelos usam `⟨campo⟩` e podem ser um texto ou um objeto por dialeto (`s`, `t`, `p`, `sp`, `st`, `tp`, `c`).
+- **Conversão:** no Excel e no DAX, `convert()` troca nomes de função (só no Excel), separadores e decimais, sem mexer em textos entre aspas, nomes entre colchetes ou marcadores. No SQL, `convertSql()` cobre limite de linhas, funções de texto, nulos, data atual, concatenação e aspas de identificadores, e avisa sobre o que não converte.
+- **Verificação rápida** (console, antes de publicar): todos os exemplos do catálogo com parênteses balanceados; conversão de ida e volta devolvendo o mesmo texto (Excel e DAX); todas as receitas do SQL nos três dialetos sem sobrar `⟨`.
+
+### Nova ferramenta de página única
+
+1. Crie `nome/index.html` com a mesma Content-Security-Policy das páginas Excel, DAX e SQL.
+2. Carregue `../assets/tema.css` (com a mesma versão `?v=`), use o cabeçalho `header.topbar` e o "kicker" das outras e deixe o logo apontando para `../`.
+3. Em `index.html`, adicione um `<a class="tool" href="nome/">…</a>` copiando o formato dos existentes e inclua o link no menu das outras páginas.
+4. Atualize a numeração dos kickers (`01 / 04` e semelhantes) e este README.
 
 ## Publicar (GitHub Pages)
 
@@ -48,51 +122,22 @@ Pré-requisito: o site principal já é servido pelo GitHub Pages com o domínio
 1. Repositório chamado exatamente **`Ferramentas`** (a maiúscula vira parte da URL).
 2. *Settings → Pages → Deploy from a branch → `main` / `(root)`*. Em conta gratuita, o repositório precisa ser público.
 3. **Não crie `CNAME` aqui**: o repositório herda o domínio do site principal.
-4. No menu do site principal, link `/Ferramentas/`.
+4. No menu do site principal, link para `/Ferramentas/`.
 
-Cada `git push` na `main` republica o site em cerca de 1 minuto.
-
-## Testar localmente
-
-Qualquer servidor estático serve. Por exemplo:
-
-```bash
-python -m http.server 8000
-```
-
-Depois abra `http://127.0.0.1:8000/`.
-
-## Adicionar uma nova ferramenta
-
-1. Crie `nome/index.html` (HTML puro) na raiz, com a mesma Content-Security-Policy das páginas Excel/DAX.
-2. Carregue `<link rel="stylesheet" href="../assets/tema.css">` e use o cabeçalho (`header.topbar`) e o "kicker" das outras ferramentas.
-3. Inclua o link de volta `href="../"` no logo.
-4. Em `index.html`, adicione uma linha `<a class="tool" href="nome/">…</a>` copiando o formato das existentes, e atualize a numeração (`01 / 04`) nos kickers.
-
-## Manter as ferramentas
-
-### PDF Local
-Edite `src/pdf/template.html` e rode, na raiz do repositório:
-
-```bash
-python src/pdf/build.py
-```
-
-Isso regenera `pdf/index.html` embutindo as bibliotecas. Não edite `pdf/index.html` diretamente.
-
-### Fórmulas do Excel e DAX
-São arquivos únicos: edite `excel/index.html`, `dax/index.html` ou `sql/index.html` diretamente.
-
-- **Catálogo:** array `F` no início do script de cada página. No Excel, cada entrada traz o nome em inglês e em português; os nomes em português seguem o Excel em português do Brasil. Confirme novos nomes na documentação da Microsoft antes de incluir (a lista oficial por ordem alfabética mistura nomes traduzidos e não traduzidos, então não use como fonte única).
-- **Receitas:** array `R`. As fórmulas ficam em formato canônico (inglês, separador vírgula) com marcadores `{campo}` no Excel e `⟨campo⟩` no DAX. A página converte para o idioma ou separador escolhido na hora.
-- **Conversão:** a função `convert()` troca nomes de função (só no Excel), separadores e decimais, sem mexer em textos entre aspas, nomes entre colchetes ou marcadores de campo.
-- **Verificação rápida:** antes de publicar, abra a página e confira no console que todos os exemplos do catálogo têm parênteses balanceados e que a conversão de ida e volta devolve o mesmo texto.
+Cada `git push` na `main` republica o site em cerca de 1 a 3 minutos. Evite abrir uma URL nova antes do deploy terminar: a CDN pode guardar o 404 por alguns minutos (teste com `?x=aleatório`).
 
 ## Limitações conhecidas
 
-- **PDF Local:** não abre PDFs protegidos por senha. "Comprimir" converte páginas em imagens (o texto deixa de ser selecionável). A marca d'água usa a fonte Helvetica (letras latinas e acentos comuns).
+- **PDF Local:**
+  - "Remover senha", o plano B do "Reparar" e "Comprimir" refazem as páginas como imagem (o pdf-lib não abre PDF criptografado). As duas primeiras mantêm uma camada de texto invisível para busca; "Comprimir" não.
+  - "Ocultar" também rasteriza as páginas afetadas, de propósito, para o texto escondido sumir de verdade.
+  - "Proteger" usa uma implementação própria de AES-256 (revisão 6), conferida com o pdf.js; ainda não foi aberta no Adobe Reader.
+  - "PDF → Word" e "PDF → Texto" só extraem texto: tabelas, colunas e imagens não são reconstruídas.
+  - "Assinar" é uma assinatura visual, sem certificado digital.
+  - Textos novos usam fontes padrão do PDF (Helvetica, Times e Courier): letras latinas e acentos comuns.
 - **Excel:** os nomes em português foram conferidos na documentação, mas não em um Excel instalado. Funções marcadas como 365/2019 dependem da versão.
 - **DAX:** os exemplos não foram executados no Power BI. O formatador não reorganiza código com comentários (`//` ou `--`); ele só converte o separador.
+- **SQL:** nenhuma receita foi executada em SQLite, SQL Server ou PostgreSQL. A conversão entre dialetos cobre só os casos comuns; datas e tipos de coluna viram avisos.
 
 ## Licença das bibliotecas e fontes
 
