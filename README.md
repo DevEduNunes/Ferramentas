@@ -18,9 +18,20 @@ index.html          landing page com a lista de ferramentas
 pdf/index.html      PDF Local (gerado; arquivo único e offline)
 excel/index.html    Fórmulas do Excel (HTML único, sem build)
 dax/index.html      Fórmulas DAX (HTML único, sem build)
+assets/tema.css     tema compartilhado (landing, Excel e DAX)
+assets/fonts/       Space Grotesk e Roboto Slab (as mesmas do eduardonunes.dev)
+assets/favicon.svg  ícone do site
 src/pdf/            código-fonte do PDF Local + bibliotecas + build.py
 .nojekyll           impede o GitHub de processar o site com Jekyll
 ```
+
+## Visual
+
+O visual segue o eduardonunes.dev: fundo `#030305`, acento roxo `#8a5bd8` / `#a58be6`, cantos retos, bordas de 1px, títulos em Roboto Slab e rótulos em caixa-alta espaçada. As cores e fontes ficam em variáveis no início de `assets/tema.css`.
+
+- **Landing, Excel e DAX** usam o `assets/tema.css`. As páginas carregam o CSS e as fontes do próprio site, por isso a Content-Security-Policy delas permite `style-src 'self'` e `font-src 'self'` (ainda sem nenhuma requisição externa).
+- **PDF Local** continua sendo um único arquivo: o CSS fica dentro do `src/pdf/template.html` e o `build.py` embute as fontes (latin) em base64, então o arquivo funciona offline e fora do site.
+- Se mudar a paleta, atualize os dois lugares: `assets/tema.css` e o bloco `<style>` de `src/pdf/template.html`.
 
 ## Privacidade
 
@@ -51,9 +62,10 @@ Depois abra `http://127.0.0.1:8000/`.
 
 ## Adicionar uma nova ferramenta
 
-1. Crie `nome/index.html` (HTML puro) na raiz, com a mesma Content-Security-Policy das demais.
-2. Inclua um link de volta `href="../"` na nova página.
-3. Em `index.html`, adicione um card `<a class="card" href="nome/">…</a>` copiando o formato dos existentes (use a classe `card soon` para um "Em breve").
+1. Crie `nome/index.html` (HTML puro) na raiz, com a mesma Content-Security-Policy das páginas Excel/DAX.
+2. Carregue `<link rel="stylesheet" href="../assets/tema.css">` e use o cabeçalho (`header.topbar`) e o "kicker" das outras ferramentas.
+3. Inclua o link de volta `href="../"` no logo.
+4. Em `index.html`, adicione uma linha `<a class="tool" href="nome/">…</a>` copiando o formato das existentes, e atualize a numeração (`01 / 03`) nos kickers.
 
 ## Manter as ferramentas
 
@@ -80,6 +92,6 @@ São arquivos únicos: edite `excel/index.html` ou `dax/index.html` diretamente.
 - **Excel:** os nomes em português foram conferidos na documentação, mas não em um Excel instalado. Funções marcadas como 365/2019 dependem da versão.
 - **DAX:** os exemplos não foram executados no Power BI. O formatador não reorganiza código com comentários (`//` ou `--`); ele só converte o separador.
 
-## Licença das bibliotecas
+## Licença das bibliotecas e fontes
 
-O PDF Local embute pdf-lib (MIT), pdf.js (Apache-2.0) e JSZip (MIT ou GPL-3.0). Os arquivos originais ficam em `src/pdf/`.
+O PDF Local embute pdf-lib (MIT), pdf.js (Apache-2.0) e JSZip (MIT ou GPL-3.0). Os arquivos originais ficam em `src/pdf/`. As fontes Space Grotesk e Roboto Slab (SIL Open Font License) ficam em `assets/fonts/`.

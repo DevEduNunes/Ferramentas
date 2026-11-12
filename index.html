@@ -3,104 +3,136 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Nenhuma requisição de rede é permitida além dos arquivos do próprio site. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'none'">
 <title>Ferramentas · Eduardo Nunes</title>
-<meta name="description" content="Ferramentas gratuitas que rodam direto no navegador, sem upload e sem cadastro. Seus arquivos nunca saem do seu computador.">
-<meta name="theme-color" content="#2f6fed">
+<meta name="description" content="Ferramentas gratuitas que rodam no navegador, sem upload e sem cadastro: PDF Local, fórmulas do Excel e fórmulas DAX para Power BI.">
+<meta name="theme-color" content="#030305">
+<meta property="og:title" content="Ferramentas · Eduardo Nunes">
+<meta property="og:description" content="PDF Local, fórmulas do Excel e fórmulas DAX. Tudo no navegador, nada é enviado.">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/tema.css">
 <style>
-:root{
-  --bg:#f6f7f9; --panel:#fff; --text:#1c2230; --muted:#667085; --line:#e3e6ec;
-  --accent:#2f6fed; --accent-t:#fff; --accent-soft:#e8f0ff; --ok:#12b76a;
-  --shadow:0 1px 2px rgba(16,24,40,.06),0 8px 24px rgba(16,24,40,.08);
+.hero{padding:clamp(48px,10vh,120px) 0 clamp(40px,8vh,96px)}
+.hero h1{font-size:clamp(40px,7.2vw,96px);max-width:11em}
+.hero .sub{margin-top:30px}
+.cta{display:flex;flex-wrap:wrap;gap:12px 34px;margin-top:38px}
+
+.tools{border-top:1px solid var(--line)}
+.tool{display:grid;grid-template-columns:56px minmax(0,1fr) minmax(0,260px) 96px;gap:8px 28px;align-items:center;padding:30px 0;border-bottom:1px solid var(--line);text-decoration:none;position:relative;transition:background .4s}
+.tool::before{content:"";position:absolute;left:0;top:-1px;height:1px;width:100%;background:var(--accent);transform:scaleX(0);transform-origin:0 50%;transition:transform .7s var(--ease)}
+.tool:hover::before,.tool:focus-visible::before{transform:scaleX(1)}
+.tool:hover{background:linear-gradient(90deg,rgba(138,91,216,.06),transparent 70%)}
+.tool .n{font-size:12px;font-weight:500;letter-spacing:.14em;color:var(--dim);transition:color .3s;padding-left:2px}
+.tool:hover .n{color:var(--accent)}
+.tool h3{font-family:var(--serif);font-weight:600;font-size:clamp(24px,2.9vw,38px);line-height:1.15;color:var(--muted);transition:color .35s,transform .6s var(--ease)}
+.tool:hover h3,.tool:focus-visible h3{color:var(--head);transform:translateX(6px)}
+.tool p{margin-top:8px;color:var(--muted);font-size:15.5px;max-width:34em}
+.tool .ex{display:block;margin-top:14px;font-family:var(--mono);font-size:13px;color:var(--accent-soft);opacity:.9;white-space:pre-wrap;word-break:break-word}
+.tg{display:flex;flex-wrap:wrap;gap:6px}
+.tg li{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);border:1px solid var(--line);padding:3px 9px}
+.go{justify-self:end;font-size:12px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--text);white-space:nowrap}
+.go::after{content:"\2192";display:inline-block;margin-left:8px;color:var(--accent);transform:translateX(-6px);opacity:.4;transition:transform .5s var(--ease),opacity .3s}
+.tool:hover .go::after{transform:none;opacity:1}
+
+.facts{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-top:1px solid var(--line)}
+.fact{padding:26px 26px 26px 0;border-right:1px solid var(--line);margin-right:26px}
+.fact:last-child{border-right:0;margin-right:0}
+.fact h3{font-family:var(--serif);font-weight:600;font-size:19px;color:var(--head);line-height:1.25}
+.fact p{margin-top:8px;font-size:14.5px;color:var(--muted)}
+.verify{margin-top:34px;display:flex;flex-wrap:wrap;gap:10px 22px;align-items:center;padding:16px 18px;border:1px solid var(--line);border-left:3px solid var(--accent);background:var(--panel2)}
+.verify .k{font-size:11px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--accent-soft)}
+.verify code{color:var(--text);font-size:13.5px}
+
+.foot{margin-top:70px;padding-top:22px;border-top:1px solid var(--line);display:flex;flex-wrap:wrap;gap:12px 32px;justify-content:space-between;align-items:center;font-size:13px;color:var(--muted)}
+.foot nav{display:flex;gap:26px;flex-wrap:wrap}
+
+@media (max-width:900px){
+  .tool{grid-template-columns:40px minmax(0,1fr);padding:24px 0}
+  .tool .tg,.tool .go{grid-column:2}
+  .tool .go{justify-self:start;margin-top:6px}
+  .facts{grid-template-columns:1fr 1fr}
+  .fact{border-right:0;margin-right:0;padding:22px 16px 22px 0;border-bottom:1px solid var(--line)}
 }
-@media (prefers-color-scheme:dark){
-  :root{--bg:#12151c; --panel:#1b1f29; --text:#e8eaf0; --muted:#98a2b3; --line:#2b3140;
-    --accent:#5b8cff; --accent-t:#0b1020; --accent-soft:#222c46; --ok:#32d583; --shadow:0 1px 2px rgba(0,0,0,.4);}
-}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-a{color:inherit}
-.wrap{max-width:1000px;margin:0 auto;padding:0 20px}
-header{display:flex;justify-content:space-between;align-items:center;padding:20px 0}
-header .logo{font-weight:700;text-decoration:none}
-header a.back{color:var(--muted);text-decoration:none;font-size:14px}
-header a.back:hover{color:var(--text)}
-.hero{padding:48px 0 36px;text-align:center}
-.pill{display:inline-block;background:var(--accent-soft);color:var(--text);border-radius:99px;padding:5px 14px;font-size:13.5px;margin-bottom:18px}
-.pill b{color:var(--ok)}
-h1{font-size:clamp(30px,5vw,46px);line-height:1.15;margin:0 0 14px;letter-spacing:-.02em}
-.hero p{color:var(--muted);max-width:620px;margin:0 auto;font-size:18px}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:18px;padding:12px 0 40px}
-.card{display:flex;flex-direction:column;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:22px;box-shadow:var(--shadow);text-decoration:none;transition:transform .15s,border-color .15s}
-a.card:hover{transform:translateY(-3px);border-color:var(--accent)}
-a.card:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
-.card .ic{font-size:34px;line-height:1}
-.card h2{margin:0;font-size:20px}
-.card p{margin:0;color:var(--muted);font-size:15px;flex:1}
-.tags{display:flex;flex-wrap:wrap;gap:6px}
-.tags span{font-size:12px;background:var(--bg);border:1px solid var(--line);border-radius:99px;padding:2px 10px;color:var(--muted)}
-.cta{color:var(--accent);font-weight:600;font-size:15px}
-.card.soon{opacity:.65;border-style:dashed;box-shadow:none}
-.soon .cta{color:var(--muted)}
-.why{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px;padding:10px 0 50px}
-.why div{padding:4px 2px}
-.why h3{margin:0 0 4px;font-size:16px}
-.why p{margin:0;color:var(--muted);font-size:14.5px}
-footer{border-top:1px solid var(--line);padding:24px 0 40px;color:var(--muted);font-size:14px;display:flex;flex-wrap:wrap;gap:8px 20px;justify-content:space-between}
-footer a{text-decoration:none}
-footer a:hover{color:var(--text)}
+@media (max-width:520px){.facts{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <header>
-    <a class="logo" href="./">🧰 Ferramentas</a>
-    <a class="back" href="https://eduardonunes.dev">← eduardonunes.dev</a>
+  <header class="topbar">
+    <a class="logo" href="./">Ferramentas<i>.</i></a>
+    <nav style="display:flex;gap:26px;flex-wrap:wrap">
+      <a href="pdf/">PDF</a><a href="excel/">Excel</a><a href="dax/">DAX</a>
+      <a href="https://eduardonunes.dev">eduardonunes.dev ↗</a>
+    </nav>
   </header>
 
   <section class="hero">
-    <span class="pill"><b>100% no navegador.</b> Sem upload, sem cadastro.</span>
-    <h1>Ferramentas simples,<br>feitas para uso diário</h1>
-    <p>Tudo roda no seu computador. Seus arquivos e dados nunca são enviados para nenhum servidor.</p>
+    <div class="kicker"><span class="count">00</span><span class="bar"></span><span class="label">Caixa de ferramentas</span></div>
+    <h1>Ferramentas que ficam no <em>seu navegador</em>.</h1>
+    <p class="sub">Gratuitas, sem cadastro e <strong>sem upload</strong>. O que você arrasta ou cola é processado no seu computador e nunca chega a um servidor.</p>
+    <div class="cta">
+      <a class="tl" href="#ferramentas">Ver as ferramentas ↓</a>
+      <a class="tl" href="#como-funciona">Como funciona</a>
+      <a class="tl" href="https://github.com/DevEduNunes/Ferramentas">Código no GitHub ↗</a>
+    </div>
   </section>
 
-  <main>
-    <div class="grid">
-      <a class="card" href="pdf/">
-        <span class="ic" aria-hidden="true">📄</span>
-        <h2>PDF Local</h2>
-        <p>Alternativa ao iLovePDF que funciona offline. Ideal para documentos com dados sensíveis.</p>
-        <div class="tags"><span>Juntar</span><span>Dividir</span><span>Organizar</span><span>Comprimir</span><span>Imagens ⇄ PDF</span><span>Marca d'água</span></div>
-        <span class="cta">Abrir ferramenta →</span>
+  <section id="ferramentas">
+    <div class="kicker"><span class="count">01 / 02</span><span class="bar"></span><span class="label">Ferramentas</span></div>
+    <div class="tools">
+      <a class="tool" href="pdf/">
+        <span class="n">01</span>
+        <div>
+          <h3>PDF Local</h3>
+          <p>Alternativa ao iLovePDF para documentos sensíveis. Funciona até offline.</p>
+          <code class="ex">contrato.pdf + anexo.pdf  →  unido.pdf</code>
+        </div>
+        <ul class="tg"><li>Juntar</li><li>Dividir</li><li>Organizar</li><li>Comprimir</li><li>Imagens ⇄ PDF</li><li>Marca d'água</li></ul>
+        <span class="go">Abrir</span>
       </a>
-
-      <a class="card" href="excel/">
-        <span class="ic" aria-hidden="true">📊</span>
-        <h2>Fórmulas do Excel</h2>
-        <p>Receitas prontas para preencher, catálogo de funções e tradutor de fórmulas entre português e inglês.</p>
-        <div class="tags"><span>Receitas</span><span>Catálogo</span><span>PT ⇄ EN</span><span>Explicar fórmula</span></div>
-        <span class="cta">Abrir ferramenta →</span>
+      <a class="tool" href="excel/">
+        <span class="n">02</span>
+        <div>
+          <h3>Fórmulas do Excel</h3>
+          <p>Receitas para preencher, catálogo de funções e conversor entre Excel em português e em inglês.</p>
+          <code class="ex">=PROCV(A2;Dados!$A:$D;3;FALSO)</code>
+        </div>
+        <ul class="tg"><li>23 receitas</li><li>100 funções</li><li>PT ⇄ EN</li></ul>
+        <span class="go">Abrir</span>
       </a>
-
-      <a class="card" href="dax/">
-        <span class="ic" aria-hidden="true">📈</span>
-        <h2>Fórmulas DAX para Power BI</h2>
-        <p>Receitas de medidas prontas, catálogo de funções e formatador que organiza o código e troca o separador.</p>
-        <div class="tags"><span>Receitas</span><span>Catálogo</span><span>Formatar DAX</span><span>, ⇄ ;</span></div>
-        <span class="cta">Abrir ferramenta →</span>
+      <a class="tool" href="dax/">
+        <span class="n">03</span>
+        <div>
+          <h3>Fórmulas DAX</h3>
+          <p>Medidas prontas para Power BI, catálogo de funções e um formatador que troca o separador.</p>
+          <code class="ex">Variação % = DIVIDE(_Atual - _Anterior; _Anterior)</code>
+        </div>
+        <ul class="tg"><li>25 receitas</li><li>109 funções</li><li>Formatar</li></ul>
+        <span class="go">Abrir</span>
       </a>
     </div>
+  </section>
 
-    <section class="why" aria-label="Por que usar">
-      <div><h3>🔒 Privacidade de verdade</h3><p>Os arquivos são processados na memória do seu navegador. Não existe servidor para receber nada.</p></div>
-      <div><h3>✈️ Funciona offline</h3><p>Depois de carregada, a página não precisa de internet. Pode até salvar o arquivo e usar sem conexão.</p></div>
-      <div><h3>🆓 Gratuito e sem anúncios</h3><p>Sem limite de tamanho, sem conta e sem marca d'água indesejada.</p></div>
-    </section>
-  </main>
+  <section id="como-funciona" style="margin-top:84px">
+    <div class="kicker"><span class="count">02 / 02</span><span class="bar"></span><span class="label">Como funciona</span></div>
+    <div class="facts">
+      <div class="fact"><h3>Nada é enviado</h3><p>Sem servidor, banco de dados ou login. Cada página bloqueia requisições de rede.</p></div>
+      <div class="fact"><h3>Código aberto</h3><p>HTML e JavaScript puros, hospedados no GitHub Pages. Dá para auditar tudo.</p></div>
+      <div class="fact"><h3>Sem cadastro</h3><p>Abra e use. Gratuito e sem anúncios.</p></div>
+      <div class="fact"><h3>Funciona offline</h3><p>Depois de carregada, a página não precisa de internet.</p></div>
+    </div>
+    <div class="verify"><span class="k">Confira você mesmo</span><code>F12  →  aba Network  →  use uma ferramenta  →  nenhum upload aparece</code></div>
+  </section>
 
-  <footer>
-    <span>© <script>document.write(new Date().getFullYear())</script> Eduardo Nunes</span>
-    <a href="https://eduardonunes.dev">Voltar ao site principal</a>
+  <footer class="foot" style="max-width:none">
+    <span>© <span id="y">2026</span> Eduardo Nunes</span>
+    <nav>
+      <a class="tl" href="https://eduardonunes.dev">Site principal</a>
+      <a class="tl" href="https://github.com/DevEduNunes/Ferramentas">GitHub</a>
+    </nav>
   </footer>
 </div>
+<script>try{document.getElementById('y').textContent=new Date().getFullYear()}catch(e){}</script>
 </body>
 </html>
