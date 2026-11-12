@@ -7,7 +7,7 @@ out = here.parent.parent / "pdf" / "index.html"
 def lib(name):
     s = (here / name).read_text(encoding="utf-8")
     s = re.sub(r"</(script)", r"<\/\1", s, flags=re.I)   # não fechar a tag <script>
-    return s.replace("<!--", "<\!--")                     # evita o modo "script escaped" do parser HTML
+    return s.replace("<!--", "<\\!--")                   # evita o modo "script escaped" do parser HTML
 
 html = (here / "template.html").read_text(encoding="utf-8")
 for key, name in [("PDFLIB", "pdf-lib.min.js"), ("PDFJS", "pdf.min.js"),
