@@ -10,6 +10,7 @@ Publicado em **https://eduardonunes.dev/Ferramentas/**
 | **PDF Local** | `/Ferramentas/pdf/` | Juntar, dividir, organizar páginas, comprimir, imagens ⇄ PDF e marca d'água. Funciona offline. |
 | **Fórmulas do Excel** | `/Ferramentas/excel/` | Receitas para preencher, catálogo de 100 funções e explicador/conversor de fórmulas entre português (`;`) e inglês (`,`). |
 | **Fórmulas DAX** | `/Ferramentas/dax/` | Receitas de medidas para Power BI, catálogo de 109 funções e formatador com conversão de separador (`,` ⇄ `;`). |
+| **Consultas SQL** | `/Ferramentas/sql/` | 35 receitas (consultar, agregar, juntar, janelas, datas, texto, criar e editar dados), catálogo de 73 comandos e formatador que explica a consulta passo a passo e converte entre SQLite, T-SQL e PostgreSQL. Não executa SQL: não há banco conectado. |
 
 ## Estrutura
 
@@ -18,7 +19,8 @@ index.html          landing page com a lista de ferramentas
 pdf/index.html      PDF Local (gerado; arquivo único e offline)
 excel/index.html    Fórmulas do Excel (HTML único, sem build)
 dax/index.html      Fórmulas DAX (HTML único, sem build)
-assets/tema.css     tema compartilhado (landing, Excel e DAX)
+sql/index.html      Consultas SQL (HTML único, sem build)
+assets/tema.css     tema compartilhado (landing, Excel, DAX e SQL)
 assets/fonts/       Space Grotesk e Roboto Slab (as mesmas do eduardonunes.dev)
 assets/favicon.svg  ícone do site
 src/pdf/            código-fonte do PDF Local + bibliotecas + build.py
@@ -65,7 +67,7 @@ Depois abra `http://127.0.0.1:8000/`.
 1. Crie `nome/index.html` (HTML puro) na raiz, com a mesma Content-Security-Policy das páginas Excel/DAX.
 2. Carregue `<link rel="stylesheet" href="../assets/tema.css">` e use o cabeçalho (`header.topbar`) e o "kicker" das outras ferramentas.
 3. Inclua o link de volta `href="../"` no logo.
-4. Em `index.html`, adicione uma linha `<a class="tool" href="nome/">…</a>` copiando o formato das existentes, e atualize a numeração (`01 / 03`) nos kickers.
+4. Em `index.html`, adicione uma linha `<a class="tool" href="nome/">…</a>` copiando o formato das existentes, e atualize a numeração (`01 / 04`) nos kickers.
 
 ## Manter as ferramentas
 
@@ -79,7 +81,7 @@ python src/pdf/build.py
 Isso regenera `pdf/index.html` embutindo as bibliotecas. Não edite `pdf/index.html` diretamente.
 
 ### Fórmulas do Excel e DAX
-São arquivos únicos: edite `excel/index.html` ou `dax/index.html` diretamente.
+São arquivos únicos: edite `excel/index.html`, `dax/index.html` ou `sql/index.html` diretamente.
 
 - **Catálogo:** array `F` no início do script de cada página. No Excel, cada entrada traz o nome em inglês e em português; os nomes em português seguem o Excel em português do Brasil. Confirme novos nomes na documentação da Microsoft antes de incluir (a lista oficial por ordem alfabética mistura nomes traduzidos e não traduzidos, então não use como fonte única).
 - **Receitas:** array `R`. As fórmulas ficam em formato canônico (inglês, separador vírgula) com marcadores `{campo}` no Excel e `⟨campo⟩` no DAX. A página converte para o idioma ou separador escolhido na hora.

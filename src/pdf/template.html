@@ -495,7 +495,7 @@ function open(id) {
   activeRoot?.unmount?.();
   nav.querySelectorAll('button').forEach(b => b.classList.toggle('active', b.dataset.id === t.id));
   const root = h('div');
-  main.replaceChildren(h('div', { class: 'kicker' }, h('span', { class: 'count' }, '01 / 03'), h('span', { class: 'bar' }), h('span', { class: 'label' }, 'PDF Local')), h('h1', {}, t.title), h('p', { class: 'sub' }, t.desc), root);
+  main.replaceChildren(h('div', { class: 'kicker' }, h('span', { class: 'count' }, '01 / 04'), h('span', { class: 'bar' }), h('span', { class: 'label' }, 'PDF Local')), h('h1', {}, t.title), h('p', { class: 'sub' }, t.desc), root);
   activeRoot = root; t.mount(root);
   try { history.replaceState(null, '', '#' + t.id); } catch {}
   window.scrollTo(0, 0);

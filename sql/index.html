@@ -1,0 +1,1254 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#030305">
+<!-- Nenhuma requisição de rede é permitida: tudo roda no navegador. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'none'">
+<title>Consultas SQL · Ferramentas</title>
+<meta name="description" content="Receitas, catálogo, formatador e conversor de SQL entre SQLite, T-SQL (SQL Server) e PostgreSQL. Para criar, editar e aprender SQL. Tudo no navegador, sem enviar nada a servidor.">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../assets/tema.css?v=2">
+<style>
+.dia{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.dia span{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;border:1px solid var(--line);padding:2px 8px;color:var(--dim)}
+.dia span.on{color:var(--accent-soft);border-color:var(--line2)}
+.dia span.cur{border-color:var(--accent);background:var(--panel3);color:#fff}
+.step{border-top:1px solid var(--line);padding:14px 0}
+.step:first-child{border-top:0;padding-top:4px}
+.step h3{font-family:var(--serif);font-size:17px;font-weight:600;color:var(--head);display:flex;gap:10px;align-items:baseline}
+.step h3 i{font-style:normal;font-family:var(--sans);font-size:12px;color:var(--accent-soft);letter-spacing:.14em}
+.step p{margin:6px 0 0;color:var(--muted);font-size:14.5px;max-width:48em}
+.ctl .seg{margin-bottom:8px}
+textarea#xin{min-height:150px}
+.layout>*{min-width:0}
+.seg{max-width:100%;flex-wrap:wrap}
+@media (max-width:520px){.seg button{padding:9px 10px;letter-spacing:.08em}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="topbar"><a class="logo" href="../">Ferramentas<i>.</i></a><nav style="display:flex;gap:26px;flex-wrap:wrap"><a href="../pdf/">PDF</a><a href="../excel/">Excel</a><a href="../dax/">DAX</a><a href="../sql/">SQL</a><a href="https://eduardonunes.dev">eduardonunes.dev ↗</a></nav></header>
+<div class="kicker"><span class="count">04 / 04</span><span class="bar"></span><span class="label">Banco de dados</span></div>
+<h1>Consultas <em>SQL</em></h1>
+<p class="sub">Receitas prontas para criar e editar dados, catálogo de comandos e um formatador que explica a consulta passo a passo e converte entre SQLite, T-SQL e PostgreSQL. Tudo roda no seu navegador: nada do que você digita é enviado a lugar nenhum.</p>
+
+<details class="guide card">
+  <summary>Conceitos essenciais (leia uma vez, ajuda em tudo)</summary>
+  <dl>
+    <dt>Ordem de execução</dt><dd>Você escreve <code>SELECT</code> primeiro, mas o banco executa nesta ordem: <code>FROM / JOIN</code> → <code>WHERE</code> → <code>GROUP BY</code> → <code>HAVING</code> → <code>SELECT</code> → <code>DISTINCT</code> → <code>ORDER BY</code> → <code>LIMIT / TOP</code>. Por isso um apelido criado no SELECT normalmente não pode ser usado no WHERE, mas pode ser usado no ORDER BY.</dd>
+    <dt>WHERE × HAVING</dt><dd>WHERE filtra <b>linhas</b> antes de agrupar. HAVING filtra <b>grupos</b> depois de agrupar (é o lugar de COUNT, SUM, AVG…).</dd>
+    <dt>NULL</dt><dd>NULL significa "valor desconhecido", não zero nem texto vazio. <code>coluna = NULL</code> nunca é verdadeiro: use <code>IS NULL</code>. COUNT(coluna) ignora NULL; COUNT(*) conta linhas. Qualquer conta com NULL dá NULL (use COALESCE).</dd>
+    <dt>Tipos de JOIN</dt><dd><code>INNER</code>: só linhas com correspondência nos dois lados. <code>LEFT</code>: todas da esquerda, mesmo sem correspondência (a direita vem NULL). <code>FULL</code>: todas dos dois lados. <code>CROSS</code>: todas as combinações.</dd>
+    <dt>Dialetos</dt><dd>SELECT, JOIN, GROUP BY, CASE e funções de janela são praticamente iguais em todos os bancos. O que muda são nomes de funções, datas, limite de linhas e criação de tabelas. A chave abaixo troca as receitas e o catálogo entre <b>SQLite</b>, <b>T-SQL</b> (SQL Server) e <b>PostgreSQL</b>.</dd>
+    <dt>Editando dados com segurança</dt><dd><code>UPDATE</code> e <code>DELETE</code> sem WHERE afetam <b>todas</b> as linhas. Antes, rode um SELECT com o mesmo WHERE para ver o que será afetado, faça backup e use uma transação (<code>BEGIN</code> … <code>ROLLBACK</code> ou <code>COMMIT</code>).</dd>
+    <dt>Maiúsculas e minúsculas</dt><dd>Palavras-chave (SELECT, from…) não diferenciam maiúsculas. Textos entre aspas simples podem diferenciar, conforme o banco e a configuração (collation).</dd>
+  </dl>
+</details>
+
+<div class="ctl">
+  <div class="seg" role="tablist" aria-label="Seções">
+    <button role="tab" id="tab-receitas" aria-selected="true" data-tab="receitas">Receitas</button>
+    <button role="tab" id="tab-catalogo" aria-selected="false" data-tab="catalogo">Catálogo</button>
+    <button role="tab" id="tab-explicar" aria-selected="false" data-tab="explicar">Formatar, explicar e converter</button>
+  </div>
+  <div class="seg" role="group" aria-label="Dialeto">
+    <button id="dia-s" aria-pressed="true" data-dia="s">SQLite</button>
+    <button id="dia-t" aria-pressed="false" data-dia="t">T-SQL (SQL Server)</button>
+    <button id="dia-p" aria-pressed="false" data-dia="p">PostgreSQL</button>
+  </div>
+</div>
+
+<section id="p-receitas">
+  <div class="layout">
+    <div>
+      <input type="search" id="rq" placeholder="Buscar receita…" aria-label="Buscar receita">
+      <div class="rlist" id="rlist" style="margin-top:10px"></div>
+    </div>
+    <div id="rpanel"></div>
+  </div>
+</section>
+
+<section id="p-catalogo" class="hide">
+  <input type="search" id="cq" placeholder="Buscar comando (ex.: left join, coalesce, data)…" aria-label="Buscar comando">
+  <div class="chips" id="ccats"></div>
+  <div class="card" id="clist"></div>
+</section>
+
+<section id="p-explicar" class="hide">
+  <div class="card">
+    <label class="f">Cole uma consulta ou comando SQL
+      <textarea id="xin" spellcheck="false" placeholder="select c.nome, sum(v.valor) total from vendas v join clientes c on c.id = v.cliente_id group by c.nome order by total desc limit 10"></textarea>
+    </label>
+    <div class="row" style="margin-top:10px;justify-content:flex-start;flex-wrap:wrap">
+      <div class="seg" role="group" aria-label="Dialeto de entrada">
+        <button id="src-a" aria-pressed="true" data-src="a">Detectar</button>
+        <button id="src-s" aria-pressed="false" data-src="s">SQLite</button>
+        <button id="src-t" aria-pressed="false" data-src="t">T-SQL</button>
+        <button id="src-p" aria-pressed="false" data-src="p">PostgreSQL</button>
+      </div>
+      <button class="btn primary" id="xgo">Formatar e explicar</button>
+      <button class="btn" id="xex">Usar exemplo</button>
+      <span class="hint">O código é analisado aqui mesmo, no navegador.</span>
+    </div>
+  </div>
+  <div id="xout"></div>
+</section>
+
+<footer>Esta página não executa consultas: nenhum banco é conectado. A conversão entre dialetos cobre os casos mais comuns e pode precisar de ajuste manual; teste sempre em um ambiente de desenvolvimento antes de rodar em produção. Não afiliado à Microsoft, ao PostgreSQL nem ao SQLite.</footer>
+</div>
+
+<script>
+'use strict';
+const DN={s:'SQLite',t:'T-SQL (SQL Server)',p:'PostgreSQL'};
+const DS={s:'SQLite',t:'T-SQL',p:'PostgreSQL'};
+/* Valor por dialeto: string, ou objeto com chaves s, t, p, combinações (sp, st, tp) e c (comum). */
+function pick(x,d){
+  if(x==null)return '';
+  if(typeof x==='string')return x;
+  if(x[d]!=null)return x[d];
+  for(const k of ['sp','st','tp'])if(k.includes(d)&&x[k]!=null)return x[k];
+  return x.c!=null?x.c:'';
+}
+
+/* ============ Catálogo ============
+   E(nome, categoria, dialetos que têm, descrição, sintaxe, exemplo, dica, equivalentes) */
+const E=(n,c,av,d,syn,ex,tip='',eq=null)=>[n,c,av,d,syn,ex,tip,eq];
+const F=[
+// ---- Comandos
+E('SELECT','Comandos','stp','Escolhe as colunas (ou expressões) que aparecem no resultado.',`SELECT coluna1, coluna2 FROM tabela`,`SELECT nome, email FROM Clientes;`,'Evite SELECT * em consultas de produção: liste só o que precisa. Apelidos: coluna AS apelido.'),
+E('DISTINCT','Comandos','stp','Remove linhas repetidas do resultado.',`SELECT DISTINCT coluna FROM tabela`,`SELECT DISTINCT cidade FROM Clientes;`,'Vale para a combinação de todas as colunas escolhidas. Se precisa contar, use COUNT(DISTINCT ...).'),
+E('WHERE','Comandos','stp','Filtra linhas individuais, antes de qualquer agrupamento.',`SELECT colunas FROM tabela WHERE condição`,`SELECT * FROM Vendas WHERE valor > 100 AND status = 'pago';`,'Combine condições com AND, OR e parênteses. Para vazios, use IS NULL.'),
+E('ORDER BY','Comandos','stp','Ordena o resultado final.',`ORDER BY coluna [ASC | DESC], ...`,`SELECT * FROM Vendas ORDER BY data DESC, valor DESC;`,'Sem ORDER BY a ordem das linhas não é garantida. NULL: no PostgreSQL vem por último em ordem crescente; no SQLite e no T-SQL, primeiro.'),
+E('GROUP BY','Comandos','stp','Agrupa linhas com o mesmo valor para calcular agregações (soma, contagem…).',`SELECT coluna, AGREGAÇÃO(...) FROM tabela GROUP BY coluna`,`SELECT categoria, SUM(valor) AS total FROM Vendas GROUP BY categoria;`,'Toda coluna do SELECT que não é agregada precisa estar no GROUP BY.'),
+E('HAVING','Comandos','stp','Filtra grupos depois de agrupar.',`... GROUP BY coluna HAVING condição_com_agregação`,`SELECT cliente_id, COUNT(*) FROM Vendas GROUP BY cliente_id HAVING COUNT(*) >= 5;`,'Condições sobre linhas simples vão no WHERE; sobre agregações, no HAVING.'),
+E('INNER JOIN','Comandos','stp','Combina duas tabelas mantendo só as linhas com correspondência nos dois lados.',`FROM A INNER JOIN B ON A.chave = B.chave`,`SELECT v.id, c.nome FROM Vendas AS v INNER JOIN Clientes AS c ON c.id = v.cliente_id;`,'Escrever só JOIN equivale a INNER JOIN. Use apelidos de tabela (v, c) para deixar curto.'),
+E('LEFT JOIN','Comandos','stp','Mantém todas as linhas da tabela da esquerda; sem correspondência, as colunas da direita vêm NULL.',`FROM A LEFT JOIN B ON A.chave = B.chave`,`SELECT c.nome, v.id FROM Clientes AS c LEFT JOIN Vendas AS v ON v.cliente_id = c.id;`,'Com WHERE v.id IS NULL, mostra quem não tem correspondência (clientes sem compras).'),
+E('RIGHT JOIN','Comandos','stp','Igual ao LEFT JOIN, mas mantém todas as linhas da tabela da direita.',`FROM A RIGHT JOIN B ON A.chave = B.chave`,`SELECT c.nome, v.id FROM Vendas AS v RIGHT JOIN Clientes AS c ON c.id = v.cliente_id;`,'Quase sempre dá para inverter as tabelas e usar LEFT JOIN. No SQLite só existe a partir da versão 3.39.'),
+E('FULL OUTER JOIN','Comandos','stp','Mantém todas as linhas dos dois lados, com ou sem correspondência.',`FROM A FULL OUTER JOIN B ON A.chave = B.chave`,`SELECT a.id, b.id FROM TabelaA AS a FULL OUTER JOIN TabelaB AS b ON b.id = a.id;`,'No SQLite só existe a partir da versão 3.39.'),
+E('CROSS JOIN','Comandos','stp','Combina cada linha de uma tabela com todas as da outra (produto cartesiano).',`FROM A CROSS JOIN B`,`SELECT p.produto, m.mes FROM Produtos AS p CROSS JOIN Meses AS m;`,'Pode gerar tabelas enormes. Esquecer o ON em um JOIN também gera esse efeito sem querer.'),
+E('UNION / UNION ALL','Comandos','stp','Empilha o resultado de duas consultas com as mesmas colunas.',`SELECT ... UNION [ALL] SELECT ...`,`SELECT id, valor FROM Vendas2024 UNION ALL SELECT id, valor FROM Vendas2025;`,'UNION remove duplicados (mais lento); UNION ALL mantém tudo. Prefira UNION ALL quando possível.'),
+E('INTERSECT / EXCEPT','Comandos','stp','INTERSECT devolve linhas presentes nas duas consultas; EXCEPT, as da primeira que não estão na segunda.',`SELECT ... EXCEPT SELECT ...`,`SELECT cliente_id FROM Clientes EXCEPT SELECT cliente_id FROM Vendas;`,'As consultas precisam ter o mesmo número de colunas, com tipos compatíveis.'),
+E('IN','Comandos','stp','Verifica se o valor está em uma lista ou no resultado de uma subconsulta.',`coluna IN (valor1, valor2, ...)`,`SELECT * FROM Clientes WHERE estado IN ('SP', 'RJ', 'MG');`,'Cuidado com NOT IN (subconsulta): se a subconsulta tiver NULL, nada é devolvido. Prefira NOT EXISTS.'),
+E('EXISTS','Comandos','stp','Verdadeiro se a subconsulta devolve pelo menos uma linha.',`WHERE [NOT] EXISTS (SELECT 1 FROM ... WHERE ...)`,`SELECT * FROM Clientes c WHERE NOT EXISTS (SELECT 1 FROM Vendas v WHERE v.cliente_id = c.id);`,'Só importa se há linha, não o que o SELECT devolve (por isso o 1).'),
+E('BETWEEN','Comandos','stp','Verifica se o valor está entre dois limites (inclusive).',`coluna BETWEEN mínimo AND máximo`,`SELECT * FROM Vendas WHERE valor BETWEEN 100 AND 500;`,'Com datas e horas, prefira coluna >= início AND coluna < fim, que não perde o último dia.'),
+E('LIKE','Comandos','stp','Busca por padrão de texto: % = qualquer quantidade de caracteres, _ = um caractere.',`coluna LIKE 'padrão'`,`SELECT * FROM Clientes WHERE nome LIKE 'Mar%';`,'Maiúsculas: no SQLite ignora só as ASCII; no T-SQL depende da collation; no PostgreSQL diferencia (use ILIKE para ignorar). Começar com % impede o uso de índice.',{p:'ILIKE ignora maiúsculas e minúsculas: nome ILIKE \'mar%\''}),
+E('LIMIT','Comandos','sp','Limita quantas linhas voltam (e opcionalmente pula as primeiras).',`SELECT ... ORDER BY ... LIMIT n [OFFSET m]`,`SELECT * FROM Vendas ORDER BY valor DESC LIMIT 10;`,'Use sempre com ORDER BY, senão as "10 primeiras" são arbitrárias.',{t:'No T-SQL use SELECT TOP (n) ... ou OFFSET ... FETCH.'}),
+E('TOP','Comandos','t','Limita quantas linhas voltam, logo depois do SELECT.',`SELECT TOP (n) colunas FROM tabela ORDER BY ...`,`SELECT TOP (10) * FROM Vendas ORDER BY valor DESC;`,'Use com ORDER BY. TOP (n) PERCENT devolve uma porcentagem das linhas.',{s:'No SQLite use LIMIT n no fim da consulta.',p:'No PostgreSQL use LIMIT n no fim da consulta.'}),
+E('OFFSET / FETCH','Comandos','tp','Paginação no padrão SQL: pula m linhas e devolve as n seguintes.',`ORDER BY ... OFFSET m ROWS FETCH NEXT n ROWS ONLY`,`SELECT * FROM Vendas ORDER BY id OFFSET 20 ROWS FETCH NEXT 10 ROWS ONLY;`,'No T-SQL exige ORDER BY.',{s:'No SQLite use LIMIT n OFFSET m.'}),
+E('WITH (CTE)','Comandos','stp','Define uma consulta temporária com nome, para usar como se fosse uma tabela.',`WITH nome AS (SELECT ...) SELECT ... FROM nome`,`WITH totais AS (SELECT cliente_id, SUM(valor) AS total FROM Vendas GROUP BY cliente_id) SELECT * FROM totais WHERE total > 1000;`,'Deixa consultas complexas legíveis, em etapas. Pode haver várias, separadas por vírgula.'),
+E('INSERT','Comandos','stp','Adiciona linhas a uma tabela.',`INSERT INTO tabela (colunas) VALUES (valores)`,`INSERT INTO Clientes (nome, email) VALUES ('Maria', 'maria@exemplo.com');`,'Informe sempre as colunas, para não depender da ordem. Dá para inserir o resultado de um SELECT.'),
+E('UPDATE','Comandos','stp','Altera valores de linhas existentes.',`UPDATE tabela SET coluna = valor [, ...] WHERE condição`,`UPDATE Clientes SET status = 'inativo' WHERE id = 10;`,'Sem WHERE, TODAS as linhas são alteradas. Teste antes com SELECT e o mesmo WHERE.'),
+E('DELETE','Comandos','stp','Exclui linhas de uma tabela.',`DELETE FROM tabela WHERE condição`,`DELETE FROM Vendas WHERE id = 10;`,'Sem WHERE, apaga tudo. Use uma transação e confira o resultado antes de confirmar.'),
+// ---- Agregação
+E('COUNT','Agregação','stp','Conta linhas (COUNT(*)) ou valores não nulos de uma coluna.',`COUNT(*)  |  COUNT(coluna)  |  COUNT(DISTINCT coluna)`,`SELECT COUNT(*) AS pedidos, COUNT(DISTINCT cliente_id) AS clientes FROM Vendas;`,'COUNT(coluna) ignora NULL; COUNT(*) conta a linha inteira.'),
+E('SUM','Agregação','stp','Soma os valores de uma coluna (ignora NULL).',`SUM(coluna)`,`SELECT SUM(valor) AS total FROM Vendas;`,'Se todas as linhas forem NULL ou não houver linhas, devolve NULL (use COALESCE(SUM(...), 0)).'),
+E('AVG','Agregação','stp','Média dos valores de uma coluna (ignora NULL).',`AVG(coluna)`,`SELECT AVG(valor) AS media FROM Vendas;`,'Em colunas inteiras, o T-SQL devolve média inteira (divide como inteiros): use AVG(CAST(coluna AS DECIMAL(12,2))) ou multiplique por 1.0.'),
+E('MIN / MAX','Agregação','stp','Menor e maior valor de uma coluna (números, textos e datas).',`MIN(coluna)  |  MAX(coluna)`,`SELECT MIN(data) AS primeira, MAX(data) AS ultima FROM Vendas;`),
+E('STRING_AGG / GROUP_CONCAT','Agregação','stp','Junta os textos de várias linhas em um só, com um separador.',{s:`GROUP_CONCAT(coluna, separador)`,t:`STRING_AGG(coluna, separador) [WITHIN GROUP (ORDER BY ...)]`,p:`STRING_AGG(coluna, separador [ORDER BY ...])`},{s:`SELECT cliente_id, GROUP_CONCAT(produto, ', ') FROM Itens GROUP BY cliente_id;`,t:`SELECT cliente_id, STRING_AGG(produto, ', ') FROM Itens GROUP BY cliente_id;`,p:`SELECT cliente_id, STRING_AGG(produto, ', ' ORDER BY produto) FROM Itens GROUP BY cliente_id;`},'STRING_AGG exige SQL Server 2017+. No SQLite, a partir da 3.44 também existe STRING_AGG.'),
+// ---- Lógica e NULL
+E('CASE','Lógica e NULL','stp','Condicional: devolve o resultado do primeiro WHEN verdadeiro.',`CASE WHEN condição THEN valor ... ELSE valor_padrão END`,`SELECT valor, CASE WHEN valor >= 1000 THEN 'Alto' WHEN valor >= 500 THEN 'Médio' ELSE 'Baixo' END AS faixa FROM Vendas;`,'Os WHEN são avaliados em ordem. Sem ELSE, o que não casa vira NULL. Dentro de SUM, vira soma condicional.'),
+E('COALESCE','Lógica e NULL','stp','Devolve o primeiro valor que não é NULL.',`COALESCE(valor1, valor2, ...)`,`SELECT COALESCE(desconto, 0) AS desconto FROM Vendas;`,'Funciona em todos os bancos. É a forma mais portátil de tratar NULL.'),
+E('NULLIF','Lógica e NULL','stp','Devolve NULL se os dois valores forem iguais; senão, o primeiro.',`NULLIF(valor, comparado)`,`SELECT lucro / NULLIF(receita, 0) AS margem FROM Resumo;`,'Truque clássico contra divisão por zero.'),
+E('IIF','Lógica e NULL','st','Versão curta do CASE para duas saídas.',`IIF(condição, se_verdadeiro, se_falso)`,`SELECT IIF(valor > 100, 'Grande', 'Pequeno') FROM Vendas;`,'No SQLite existe a partir da 3.32.',{p:'No PostgreSQL use CASE WHEN condição THEN a ELSE b END.'}),
+E('ISNULL / IFNULL','Lógica e NULL','st','Troca NULL por um valor (apenas dois argumentos).',{s:`IFNULL(valor, substituto)`,t:`ISNULL(valor, substituto)`},{s:`SELECT IFNULL(desconto, 0) FROM Vendas;`,t:`SELECT ISNULL(desconto, 0) FROM Vendas;`},'COALESCE faz o mesmo e funciona em todos os bancos.',{p:'No PostgreSQL use COALESCE(valor, substituto).'}),
+E('CAST','Lógica e NULL','stp','Converte um valor para outro tipo de dado.',`CAST(valor AS tipo)`,`SELECT CAST(valor AS INTEGER) FROM Vendas;`,'Os nomes dos tipos variam: INTEGER/INT, TEXT/VARCHAR, REAL/DECIMAL. No PostgreSQL também existe valor::tipo. No T-SQL, TRY_CAST devolve NULL em vez de erro.'),
+E('IS NULL / IS NOT NULL','Lógica e NULL','stp','Testa se um valor é (ou não é) NULL.',`coluna IS NULL  |  coluna IS NOT NULL`,`SELECT * FROM Clientes WHERE email IS NULL;`,'coluna = NULL nunca retorna linhas.'),
+// ---- Texto
+E('UPPER / LOWER','Texto','stp','Converte o texto para maiúsculas ou minúsculas.',`UPPER(texto)  |  LOWER(texto)`,`SELECT UPPER(nome) FROM Clientes;`),
+E('TRIM','Texto','stp','Remove espaços do começo e do fim (LTRIM e RTRIM, de um lado só).',`TRIM(texto)  |  LTRIM(texto)  |  RTRIM(texto)`,`SELECT TRIM(nome) FROM Clientes;`,'No SQL Server, TRIM existe a partir de 2017; antes use LTRIM(RTRIM(texto)).'),
+E('LENGTH / LEN','Texto','stp','Quantidade de caracteres de um texto.',{s:`LENGTH(texto)`,t:`LEN(texto)`,p:`LENGTH(texto)`},{s:`SELECT LENGTH(nome) FROM Clientes;`,t:`SELECT LEN(nome) FROM Clientes;`,p:`SELECT LENGTH(nome) FROM Clientes;`},'O LEN do T-SQL ignora espaços no final.'),
+E('SUBSTR / SUBSTRING','Texto','stp','Extrai um pedaço do texto, a partir de uma posição (começa em 1).',{s:`SUBSTR(texto, início, [tamanho])`,t:`SUBSTRING(texto, início, tamanho)`,p:`SUBSTRING(texto, início, [tamanho])`},{s:`SELECT SUBSTR(cpf, 1, 3) FROM Clientes;`,t:`SELECT SUBSTRING(cpf, 1, 3) FROM Clientes;`,p:`SELECT SUBSTRING(cpf, 1, 3) FROM Clientes;`},'No T-SQL o tamanho é obrigatório.'),
+E('REPLACE','Texto','stp','Troca todas as ocorrências de um trecho por outro.',`REPLACE(texto, procurar, substituir)`,`SELECT REPLACE(telefone, '-', '') FROM Clientes;`),
+E('CONCAT / ||','Texto','stp','Junta textos.',{s:`texto1 || texto2   (CONCAT na 3.44+)`,t:`texto1 + texto2   |   CONCAT(texto1, texto2, ...)`,p:`texto1 || texto2   |   CONCAT(texto1, texto2, ...)`},{s:`SELECT nome || ' ' || sobrenome FROM Clientes;`,t:`SELECT nome + ' ' + sobrenome FROM Clientes;`,p:`SELECT nome || ' ' || sobrenome FROM Clientes;`},'Com ||, ou + no T-SQL, um NULL deixa o resultado NULL. CONCAT trata NULL como vazio (PostgreSQL e SQL Server).'),
+E('INSTR / CHARINDEX / STRPOS','Texto','stp','Posição de um trecho dentro do texto (0 se não achar).',{s:`INSTR(texto, procurado)`,t:`CHARINDEX(procurado, texto)`,p:`STRPOS(texto, procurado)`},{s:`SELECT INSTR(email, '@') FROM Clientes;`,t:`SELECT CHARINDEX('@', email) FROM Clientes;`,p:`SELECT STRPOS(email, '@') FROM Clientes;`},'Atenção: a ordem dos argumentos do T-SQL é invertida em relação aos outros dois.'),
+E('LEFT / RIGHT','Texto','tp','Pega os N primeiros (ou últimos) caracteres.',`LEFT(texto, n)  |  RIGHT(texto, n)`,`SELECT LEFT(cep, 5) FROM Clientes;`,'',{s:'No SQLite use SUBSTR(texto, 1, n) e SUBSTR(texto, -n).'}),
+// ---- Número
+E('ROUND','Número','stp','Arredonda um número para N casas decimais.',`ROUND(número, casas)`,`SELECT ROUND(valor * 0.1, 2) FROM Vendas;`,'No PostgreSQL, ROUND com casas exige tipo NUMERIC (use CAST se for FLOAT).'),
+E('CEIL / FLOOR','Número','stp','Arredonda para cima (teto) ou para baixo (piso) até o inteiro.',{s:`CEIL(número)  |  FLOOR(número)`,t:`CEILING(número)  |  FLOOR(número)`,p:`CEIL(número)  |  FLOOR(número)`},{s:`SELECT CEIL(valor) FROM Vendas;`,t:`SELECT CEILING(valor) FROM Vendas;`,p:`SELECT CEIL(valor) FROM Vendas;`},'No T-SQL o teto se chama CEILING. No SQLite exige a versão 3.35+.'),
+E('ABS','Número','stp','Valor absoluto (sem sinal).',`ABS(número)`,`SELECT ABS(saldo) FROM Contas;`),
+E('Resto da divisão (%)','Número','stp','Resto da divisão inteira.',{s:`a % b`,t:`a % b`,p:`MOD(a, b)  |  a % b`},{s:`SELECT id FROM Vendas WHERE id % 2 = 0;`,t:`SELECT id FROM Vendas WHERE id % 2 = 0;`,p:`SELECT id FROM Vendas WHERE MOD(id, 2) = 0;`},'Útil para separar pares e ímpares.'),
+E('POWER / SQRT','Número','stp','Potência e raiz quadrada.',`POWER(base, expoente)  |  SQRT(número)`,`SELECT POWER(2, 10), SQRT(81);`,'No SQLite essas funções exigem a versão 3.35+ com funções matemáticas habilitadas.'),
+E('RANDOM / RAND','Número','stp','Número aleatório (útil para amostras).',{s:`RANDOM()`,t:`RAND()`,p:`RANDOM()`},{s:`SELECT * FROM Vendas ORDER BY RANDOM() LIMIT 10;`,t:`SELECT TOP (10) * FROM Vendas ORDER BY NEWID();`,p:`SELECT * FROM Vendas ORDER BY RANDOM() LIMIT 10;`},'No T-SQL, ORDER BY RAND() dá o mesmo valor para todas as linhas; use NEWID() para sortear linhas.'),
+// ---- Data e hora
+E('Data e hora atuais','Data e hora','stp','Data e hora do momento da consulta.',{s:`DATE('now')  |  DATETIME('now')`,t:`GETDATE()  |  CAST(GETDATE() AS DATE)`,p:`NOW()  |  CURRENT_DATE`},{s:`SELECT DATE('now'), DATETIME('now');`,t:`SELECT GETDATE(), CAST(GETDATE() AS DATE);`,p:`SELECT NOW(), CURRENT_DATE;`},'CURRENT_TIMESTAMP funciona nos três.'),
+E('Somar a uma data','Data e hora','stp','Avança ou recua uma data em dias, meses ou anos.',{s:`DATE(data, '+N days' | '+N months' | '+N years')`,t:`DATEADD(DAY | MONTH | YEAR, N, data)`,p:`data + INTERVAL 'N days'`},{s:`SELECT DATE(data_pedido, '+30 days') FROM Pedidos;`,t:`SELECT DATEADD(DAY, 30, data_pedido) FROM Pedidos;`,p:`SELECT data_pedido + INTERVAL '30 days' FROM Pedidos;`},'Use valor negativo para voltar no tempo.'),
+E('Diferença entre datas','Data e hora','stp','Quantidade de dias (ou outra unidade) entre duas datas.',{s:`JULIANDAY(fim) - JULIANDAY(início)`,t:`DATEDIFF(DAY, início, fim)`,p:`fim::date - início::date`},{s:`SELECT JULIANDAY(data_entrega) - JULIANDAY(data_pedido) FROM Pedidos;`,t:`SELECT DATEDIFF(DAY, data_pedido, data_entrega) FROM Pedidos;`,p:`SELECT data_entrega::date - data_pedido::date FROM Pedidos;`},'O DATEDIFF do T-SQL conta as fronteiras cruzadas (de 31/12 para 01/01 é 1 ano).'),
+E('Extrair ano e mês','Data e hora','stp','Pega uma parte da data.',{s:`STRFTIME('%Y', data)  |  STRFTIME('%m', data)`,t:`YEAR(data)  |  MONTH(data)  |  DATEPART(parte, data)`,p:`EXTRACT(YEAR FROM data)  |  EXTRACT(MONTH FROM data)`},{s:`SELECT STRFTIME('%Y', data), STRFTIME('%m', data) FROM Vendas;`,t:`SELECT YEAR(data), MONTH(data) FROM Vendas;`,p:`SELECT EXTRACT(YEAR FROM data), EXTRACT(MONTH FROM data) FROM Vendas;`},'No SQLite o STRFTIME devolve texto; use CAST(... AS INTEGER) se precisar do número.'),
+E('Formatar data como texto','Data e hora','stp','Mostra a data em um formato, como 2025-03.',{s:`STRFTIME('%Y-%m', data)`,t:`FORMAT(data, 'yyyy-MM')`,p:`TO_CHAR(data, 'YYYY-MM')`},{s:`SELECT STRFTIME('%Y-%m', data) FROM Vendas;`,t:`SELECT FORMAT(data, 'yyyy-MM') FROM Vendas;`,p:`SELECT TO_CHAR(data, 'YYYY-MM') FROM Vendas;`},'O resultado é texto: bom para agrupar por mês, mas não use em filtros de intervalo.'),
+E('Primeiro dia do mês','Data e hora','stp','Leva uma data ao dia 1 do mesmo mês.',{s:`DATE(data, 'start of month')`,t:`DATEFROMPARTS(YEAR(data), MONTH(data), 1)`,p:`DATE_TRUNC('month', data)::date`},{s:`SELECT DATE(data, 'start of month') FROM Vendas;`,t:`SELECT DATEFROMPARTS(YEAR(data), MONTH(data), 1) FROM Vendas;`,p:`SELECT DATE_TRUNC('month', data)::date FROM Vendas;`},'Ótimo para agrupar por mês mantendo uma data de verdade.'),
+// ---- Janela
+E('ROW_NUMBER','Janela','stp','Numera as linhas (1, 2, 3...) dentro de uma partição, na ordem indicada.',`ROW_NUMBER() OVER ([PARTITION BY ...] ORDER BY ...)`,`SELECT *, ROW_NUMBER() OVER (PARTITION BY cliente_id ORDER BY data DESC) AS rn FROM Vendas;`,'Base de "pegar a última linha de cada grupo" e de remover duplicados. No SQLite exige a versão 3.25+.'),
+E('RANK / DENSE_RANK','Janela','stp','Classificação com empates: RANK pula posições depois do empate; DENSE_RANK não pula.',`RANK() OVER (ORDER BY ...)  |  DENSE_RANK() OVER (ORDER BY ...)`,`SELECT produto, RANK() OVER (ORDER BY total DESC) AS pos FROM Resumo;`),
+E('NTILE','Janela','stp','Divide as linhas em N grupos de tamanho parecido (quartis, decis).',`NTILE(n) OVER (ORDER BY ...)`,`SELECT cliente_id, NTILE(4) OVER (ORDER BY total DESC) AS quartil FROM Resumo;`),
+E('LAG / LEAD','Janela','stp','Valor da linha anterior (LAG) ou seguinte (LEAD), segundo a ordem.',`LAG(coluna, [n], [padrão]) OVER (ORDER BY ...)`,`SELECT mes, total, LAG(total) OVER (ORDER BY mes) AS mes_anterior FROM Resumo;`,'A primeira linha não tem anterior: vem NULL (ou o valor padrão).'),
+E('FIRST_VALUE / LAST_VALUE','Janela','stp','Primeiro ou último valor da janela.',`FIRST_VALUE(coluna) OVER (PARTITION BY ... ORDER BY ...)`,`SELECT *, FIRST_VALUE(valor) OVER (PARTITION BY cliente_id ORDER BY data) AS primeira_compra FROM Vendas;`,'LAST_VALUE exige definir o quadro (ROWS BETWEEN ... AND UNBOUNDED FOLLOWING), senão devolve a própria linha.'),
+E('SUM() OVER (acumulado)','Janela','stp','Agregação sem agrupar: soma acumulada, média móvel, total geral ao lado de cada linha.',`SUM(coluna) OVER (ORDER BY ... ROWS BETWEEN 6 PRECEDING AND CURRENT ROW)`,`SELECT data, valor, SUM(valor) OVER (ORDER BY data) AS acumulado FROM Vendas;`,'Sem ORDER BY dentro do OVER, soma o total de toda a partição.'),
+// ---- Estrutura
+E('CREATE TABLE','Estrutura','stp','Cria uma tabela com colunas, tipos e regras.',`CREATE TABLE nome (coluna tipo [restrições], ...)`,{s:`CREATE TABLE Clientes (id INTEGER PRIMARY KEY AUTOINCREMENT, nome TEXT NOT NULL);`,t:`CREATE TABLE Clientes (id INT IDENTITY(1,1) PRIMARY KEY, nome NVARCHAR(100) NOT NULL);`,p:`CREATE TABLE Clientes (id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY, nome VARCHAR(100) NOT NULL);`},'Os tipos e a coluna numerada automaticamente mudam em cada banco. Veja a receita "Criar tabela".'),
+E('ALTER TABLE','Estrutura','stp','Altera uma tabela existente (adicionar, renomear ou remover colunas).',`ALTER TABLE tabela ADD [COLUMN] coluna tipo`,{s:`ALTER TABLE Clientes ADD COLUMN telefone TEXT;`,t:`ALTER TABLE Clientes ADD telefone NVARCHAR(20);`,p:`ALTER TABLE Clientes ADD COLUMN telefone VARCHAR(20);`},'No T-SQL, ADD não leva a palavra COLUMN. Renomear coluna também varia: veja a receita.'),
+E('DROP TABLE','Estrutura','stp','Apaga a tabela e todos os dados dela.',`DROP TABLE [IF EXISTS] tabela`,`DROP TABLE IF EXISTS Temporaria;`,'Irreversível sem backup. IF EXISTS evita erro quando a tabela não existe (T-SQL 2016+).'),
+E('TRUNCATE','Estrutura','tp','Esvazia a tabela inteira, de forma rápida.',`TRUNCATE TABLE tabela`,`TRUNCATE TABLE Log;`,'Não aceita WHERE. Mantém a estrutura da tabela.',{s:'No SQLite use DELETE FROM tabela (sem WHERE).'}),
+E('CREATE INDEX','Estrutura','stp','Cria um índice para acelerar buscas e junções em uma coluna.',`CREATE [UNIQUE] INDEX nome ON tabela (colunas)`,`CREATE INDEX idx_vendas_cliente ON Vendas (cliente_id);`,'Índice acelera leitura, mas deixa inserções e atualizações um pouco mais lentas. Indexe colunas usadas em WHERE e JOIN.'),
+E('CREATE VIEW','Estrutura','stp','Guarda uma consulta com nome, que se usa como uma tabela.',`CREATE VIEW nome AS SELECT ...`,`CREATE VIEW vw_total_cliente AS SELECT cliente_id, SUM(valor) AS total FROM Vendas GROUP BY cliente_id;`,'A view não guarda dados: executa a consulta a cada uso. No T-SQL precisa ser o primeiro comando do lote.'),
+E('PRIMARY KEY / FOREIGN KEY','Estrutura','stp','Chave primária identifica cada linha; chave estrangeira liga uma coluna à chave de outra tabela.',`PRIMARY KEY (coluna)  |  FOREIGN KEY (coluna) REFERENCES outra (coluna)`,`CREATE TABLE Vendas (id INT PRIMARY KEY, cliente_id INT, FOREIGN KEY (cliente_id) REFERENCES Clientes (id));`,'No SQLite, chaves estrangeiras só são verificadas depois de PRAGMA foreign_keys = ON.'),
+E('UNIQUE / CHECK / DEFAULT','Estrutura','stp','Regras da coluna: sem repetição, com condição, com valor padrão.',`coluna tipo UNIQUE CHECK (condição) DEFAULT valor`,`saldo NUMERIC(12,2) NOT NULL DEFAULT 0 CHECK (saldo >= 0)`,'Regras no banco protegem os dados mesmo se o aplicativo falhar.'),
+E('Transações','Estrutura','stp','Agrupa comandos para confirmar tudo junto (COMMIT) ou desfazer tudo (ROLLBACK).',{s:`BEGIN; ... COMMIT;  |  ROLLBACK;`,t:`BEGIN TRANSACTION; ... COMMIT;  |  ROLLBACK;`,p:`BEGIN; ... COMMIT;  |  ROLLBACK;`},{s:`BEGIN; DELETE FROM Vendas WHERE id = 10; ROLLBACK;`,t:`BEGIN TRANSACTION; DELETE FROM Vendas WHERE id = 10; ROLLBACK;`,p:`BEGIN; DELETE FROM Vendas WHERE id = 10; ROLLBACK;`},'Rode o comando, confira o resultado e só então dê COMMIT.'),
+E('ON CONFLICT / MERGE','Estrutura','stp','Inserir ou atualizar: se a linha já existe, atualiza; senão, insere (upsert).',{s:`INSERT ... ON CONFLICT (chave) DO UPDATE SET ...`,t:`MERGE tabela AS t USING ... ON t.chave = s.chave WHEN MATCHED ... WHEN NOT MATCHED ...`,p:`INSERT ... ON CONFLICT (chave) DO UPDATE SET ...`},{s:`INSERT INTO Clientes (id, nome) VALUES (1, 'Maria') ON CONFLICT (id) DO UPDATE SET nome = excluded.nome;`,t:`MERGE Clientes AS t USING (VALUES (1, 'Maria')) AS s (id, nome) ON t.id = s.id WHEN MATCHED THEN UPDATE SET nome = s.nome WHEN NOT MATCHED THEN INSERT (id, nome) VALUES (s.id, s.nome);`,p:`INSERT INTO Clientes (id, nome) VALUES (1, 'Maria') ON CONFLICT (id) DO UPDATE SET nome = excluded.nome;`},'No SQLite exige a versão 3.24+. O MERGE do T-SQL precisa terminar com ponto e vírgula.'),
+E('RETURNING / OUTPUT','Estrutura','stp','Devolve as linhas afetadas por um INSERT, UPDATE ou DELETE.',{s:`INSERT ... RETURNING colunas`,t:`INSERT ... OUTPUT inserted.coluna ... VALUES ...`,p:`INSERT ... RETURNING colunas`},{s:`INSERT INTO Clientes (nome) VALUES ('Ana') RETURNING id;`,t:`INSERT INTO Clientes (nome) OUTPUT inserted.id VALUES ('Ana');`,p:`INSERT INTO Clientes (nome) VALUES ('Ana') RETURNING id;`},'Útil para saber o id gerado. No SQLite exige a versão 3.35+.')
+];
+const CATS=['Comandos','Agregação','Lógica e NULL','Texto','Número','Data e hora','Janela','Estrutura'];
+const IDX={};F.forEach(e=>e[0].split(' / ').forEach(n=>{IDX[n.trim().toUpperCase()]=e;}));
+['LEN','CEILING','STRPOS','CHARINDEX','INSTR','SUBSTR','SUBSTRING','IFNULL','ISNULL','GROUP_CONCAT','STRING_AGG','RAND','RANDOM','CEIL','FLOOR','DENSE_RANK','LEAD','LAG'].forEach(n=>{if(!IDX[n]){const e=F.find(x=>x[0].toUpperCase().split(/[ /]+/).includes(n));if(e)IDX[n]=e;}});
+const norm=s=>s.normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase();
+
+/* ============ Utilitários de interface ============ */
+const $=s=>document.querySelector(s);
+const el=(t,a={},...k)=>{const e=document.createElement(t);for(const[x,v]of Object.entries(a)){if(x==='class')e.className=v;else if(x.startsWith('on'))e.addEventListener(x.slice(2),v);else if(v===true)e.setAttribute(x,'');else if(v!==false&&v!=null)e.setAttribute(x,v);}for(const c of k.flat())e.append(c&&c.nodeType?c:document.createTextNode(c??''));return e;};
+let dia='s';
+try{const s=localStorage.getItem('sql-dia'); if(s==='s'||s==='t'||s==='p') dia=s;}catch{}
+function copy(text,btn){
+  const done=()=>{const o=btn.textContent;btn.textContent='Copiado!';setTimeout(()=>btn.textContent=o,1200);};
+  if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(text).then(done,fallback);} else fallback();
+  function fallback(){const t=el('textarea',{style:'position:fixed;opacity:0'});t.value=text;document.body.append(t);t.select();try{document.execCommand('copy');done();}catch{btn.textContent='Selecione e copie';}t.remove();}
+}
+const fmtOut=text=>{const b=el('button',{class:'btn',type:'button','aria-label':'Copiar código'},'Copiar');b.addEventListener('click',()=>copy(text,b));return el('div',{class:'row'},el('div',{class:'out'},text),b);};
+function setHash(h){try{history.replaceState(null,'','#'+h);}catch{}}
+
+/* ============ Receitas ============
+   campos: [chave, rótulo, padrão, dica]  |  modelos com ⟨chave⟩; texto ou objeto por dialeto (s, t, p, sp, st, tp, c) */
+const R=[
+// ---------- Consultar
+{id:'select',cat:'Consultar',title:'Selecionar e filtrar linhas',goal:'Escolher colunas, filtrar com WHERE e ordenar o resultado.',
+ fields:[['tab','Tabela','Vendas'],['cols','Colunas','id, cliente_id, valor'],['cond','Condição (WHERE)','valor > 100'],['ord','Ordenar por','valor DESC']],
+ main:{label:'SELECT com WHERE e ORDER BY',tpl:`SELECT ⟨cols⟩
+FROM ⟨tab⟩
+WHERE ⟨cond⟩
+ORDER BY ⟨ord⟩;`,note:'O banco executa começando pelo FROM, depois WHERE, SELECT e ORDER BY.'},
+ alts:[{label:'Sem filtro',tpl:`SELECT ⟨cols⟩
+FROM ⟨tab⟩
+ORDER BY ⟨ord⟩;`,note:'Sem WHERE, todas as linhas voltam.'},{label:'Com duas condições',tpl:`SELECT ⟨cols⟩
+FROM ⟨tab⟩
+WHERE ⟨cond⟩
+  AND status = 'pago'
+ORDER BY ⟨ord⟩;`,note:'AND exige as duas; OR, uma delas. Ao misturar, use parênteses.'}]},
+{id:'topn',cat:'Consultar',title:'Primeiras N linhas e paginação',goal:'Limitar o resultado (as 10 maiores vendas, por exemplo) e paginar.',
+ fields:[['tab','Tabela','Vendas'],['cols','Colunas','id, cliente_id, valor'],['ord','Ordenar por','valor DESC'],['n','Quantidade de linhas','10'],['pular','Linhas a pular (página)','20']],
+ main:{label:'Primeiras N linhas',tpl:{sp:`SELECT ⟨cols⟩
+FROM ⟨tab⟩
+ORDER BY ⟨ord⟩
+LIMIT ⟨n⟩;`,t:`SELECT TOP (⟨n⟩) ⟨cols⟩
+FROM ⟨tab⟩
+ORDER BY ⟨ord⟩;`},note:{sp:'LIMIT vai no fim da consulta. Sem ORDER BY, as "primeiras" linhas são arbitrárias.',t:'TOP vem logo depois do SELECT. Sem ORDER BY, as "primeiras" linhas são arbitrárias.'}},
+ alts:[{label:'Paginação',tpl:{sp:`SELECT ⟨cols⟩
+FROM ⟨tab⟩
+ORDER BY ⟨ord⟩
+LIMIT ⟨n⟩ OFFSET ⟨pular⟩;`,t:`SELECT ⟨cols⟩
+FROM ⟨tab⟩
+ORDER BY ⟨ord⟩
+OFFSET ⟨pular⟩ ROWS FETCH NEXT ⟨n⟩ ROWS ONLY;`},note:{sp:'Página 3 de 10 em 10: pular 20.',t:'No T-SQL, OFFSET/FETCH exige ORDER BY.'}}]},
+{id:'distinct',cat:'Consultar',title:'Valores distintos e contagem por valor',goal:'Ver quais valores existem em uma coluna e quantas vezes cada um aparece.',
+ fields:[['tab','Tabela','Clientes'],['col','Coluna','cidade']],
+ main:{label:'Valores distintos',tpl:`SELECT DISTINCT ⟨col⟩
+FROM ⟨tab⟩
+ORDER BY ⟨col⟩;`,note:''},
+ alts:[{label:'Distintos com a contagem de cada um',tpl:`SELECT ⟨col⟩, COUNT(*) AS qtd
+FROM ⟨tab⟩
+GROUP BY ⟨col⟩
+ORDER BY qtd DESC;`,note:'Ótimo para conhecer os dados e achar valores digitados de forma diferente.'}]},
+{id:'like',cat:'Consultar',title:'Buscar texto (LIKE)',goal:'Achar linhas cujo texto contém ou começa com algo.',
+ fields:[['tab','Tabela','Clientes'],['col','Coluna','nome'],['txt','Texto procurado','mar']],
+ main:{label:'Contém o texto',tpl:`SELECT *
+FROM ⟨tab⟩
+WHERE ⟨col⟩ LIKE '%⟨txt⟩%';`,note:'% = qualquer quantidade de caracteres; _ = exatamente um.'},
+ alts:[{label:'Começa com',tpl:`SELECT *
+FROM ⟨tab⟩
+WHERE ⟨col⟩ LIKE '⟨txt⟩%';`,note:'Sem % no início, o banco consegue usar um índice.'},{label:'Ignorando maiúsculas e minúsculas',tpl:{p:`SELECT *
+FROM ⟨tab⟩
+WHERE ⟨col⟩ ILIKE '%⟨txt⟩%';`,c:`SELECT *
+FROM ⟨tab⟩
+WHERE LOWER(⟨col⟩) LIKE LOWER('%⟨txt⟩%');`},note:{p:'ILIKE é exclusivo do PostgreSQL.',s:'O LIKE do SQLite já ignora maiúsculas só para letras ASCII (sem acentos); LOWER ajuda em parte.',t:'No SQL Server depende da collation; com a mais comum (CI) o LIKE já ignora maiúsculas.'}}]},
+{id:'faixas',cat:'Consultar',title:'Lista, faixa e valores vazios',goal:'Filtrar com IN, BETWEEN e IS NULL.',
+ fields:[['tab','Tabela','Vendas'],['col','Coluna de texto','status'],['lista','Valores da lista',`'pago', 'pendente'`],['num','Coluna numérica','valor'],['min','Mínimo','100'],['max','Máximo','500']],
+ main:{label:'Valor em uma lista (IN)',tpl:`SELECT *
+FROM ⟨tab⟩
+WHERE ⟨col⟩ IN (⟨lista⟩);`,note:'Textos vão entre aspas simples.'},
+ alts:[{label:'Dentro de uma faixa (BETWEEN)',tpl:`SELECT *
+FROM ⟨tab⟩
+WHERE ⟨num⟩ BETWEEN ⟨min⟩ AND ⟨max⟩;`,note:'Inclui os dois extremos.'},{label:'Vazios (NULL)',tpl:`SELECT *
+FROM ⟨tab⟩
+WHERE ⟨col⟩ IS NULL;`,note:'Nunca use = NULL. Para o contrário, IS NOT NULL.'}]},
+{id:'case',cat:'Consultar',title:'Classificar com CASE',goal:'Criar uma coluna de faixas ou rótulos a partir de condições.',
+ fields:[['tab','Tabela','Vendas'],['col','Coluna','valor'],['nome','Nome da nova coluna','faixa'],['cond','Condição (soma condicional)',`status = 'pago'`]],
+ main:{label:'CASE com faixas',tpl:`SELECT ⟨col⟩,
+       CASE
+           WHEN ⟨col⟩ >= 1000 THEN 'Alto'
+           WHEN ⟨col⟩ >= 500 THEN 'Médio'
+           ELSE 'Baixo'
+       END AS ⟨nome⟩
+FROM ⟨tab⟩;`,note:'Os WHEN são testados em ordem; vale o primeiro verdadeiro.'},
+ alts:[{label:'Soma condicional (CASE dentro do SUM)',tpl:`SELECT SUM(CASE WHEN ⟨cond⟩ THEN ⟨col⟩ ELSE 0 END) AS total_condicional,
+       SUM(⟨col⟩) AS total
+FROM ⟨tab⟩;`,note:'Permite calcular vários totais em uma única passada, como uma tabela dinâmica.'}]},
+{id:'nulos',cat:'Consultar',title:'Tratar valores vazios (NULL)',goal:'Trocar NULL por um valor e evitar divisão por zero.',
+ fields:[['tab','Tabela','Vendas'],['col','Coluna','desconto'],['pad','Valor substituto','0'],['num','Numerador','lucro'],['den','Denominador','receita']],
+ main:{label:'COALESCE (funciona em todos)',tpl:`SELECT COALESCE(⟨col⟩, ⟨pad⟩) AS ⟨col⟩
+FROM ⟨tab⟩;`,note:'Devolve o primeiro argumento que não for NULL.'},
+ alts:[{label:'Atalho do dialeto',tpl:{s:`SELECT IFNULL(⟨col⟩, ⟨pad⟩) AS ⟨col⟩
+FROM ⟨tab⟩;`,t:`SELECT ISNULL(⟨col⟩, ⟨pad⟩) AS ⟨col⟩
+FROM ⟨tab⟩;`,p:`SELECT COALESCE(⟨col⟩, ⟨pad⟩) AS ⟨col⟩
+FROM ⟨tab⟩;`},note:'Prefira COALESCE: é padrão e aceita mais de dois argumentos.'},{label:'Divisão sem erro',tpl:`SELECT ⟨num⟩ / NULLIF(⟨den⟩, 0) AS razao
+FROM ⟨tab⟩;`,note:'Se o denominador for 0, vira NULL em vez de dar erro. Em colunas inteiras, multiplique por 1.0 para não perder as casas decimais.'}]},
+// ---------- Agregar
+{id:'group',cat:'Agregar',title:'Agrupar e somar',goal:'Total, média e quantidade por categoria.',
+ fields:[['tab','Tabela','Vendas'],['grp','Coluna do grupo','categoria'],['val','Coluna de valor','valor']],
+ main:{label:'GROUP BY',tpl:`SELECT ⟨grp⟩,
+       COUNT(*) AS qtd,
+       SUM(⟨val⟩) AS total,
+       AVG(⟨val⟩) AS media
+FROM ⟨tab⟩
+GROUP BY ⟨grp⟩
+ORDER BY total DESC;`,note:'Toda coluna do SELECT que não está dentro de uma agregação precisa estar no GROUP BY.'},
+ alts:[{label:'Agrupar por duas colunas',tpl:`SELECT ⟨grp⟩, status,
+       SUM(⟨val⟩) AS total
+FROM ⟨tab⟩
+GROUP BY ⟨grp⟩, status
+ORDER BY ⟨grp⟩, status;`,note:''}]},
+{id:'having',cat:'Agregar',title:'Filtrar grupos (HAVING)',goal:'Mostrar só os grupos que passam de um limite.',
+ fields:[['tab','Tabela','Vendas'],['grp','Coluna do grupo','cliente_id'],['val','Coluna de valor','valor'],['min','Total mínimo','1000'],['cond','Filtro de linhas (WHERE)',`data >= '2025-01-01'`]],
+ main:{label:'HAVING',tpl:`SELECT ⟨grp⟩, SUM(⟨val⟩) AS total
+FROM ⟨tab⟩
+GROUP BY ⟨grp⟩
+HAVING SUM(⟨val⟩) > ⟨min⟩
+ORDER BY total DESC;`,note:'HAVING age sobre o grupo já calculado.'},
+ alts:[{label:'WHERE e HAVING juntos',tpl:`SELECT ⟨grp⟩, SUM(⟨val⟩) AS total
+FROM ⟨tab⟩
+WHERE ⟨cond⟩
+GROUP BY ⟨grp⟩
+HAVING SUM(⟨val⟩) > ⟨min⟩;`,note:'Primeiro WHERE descarta linhas; depois agrupa; por fim HAVING descarta grupos.'}]},
+{id:'contar',cat:'Agregar',title:'Contar distintos e contar com condição',goal:'Quantos clientes diferentes compraram; quantos pedidos pagos.',
+ fields:[['tab','Tabela','Vendas'],['col','Coluna','cliente_id'],['cond','Condição',`status = 'pago'`]],
+ main:{label:'Valores distintos',tpl:`SELECT COUNT(*) AS pedidos,
+       COUNT(DISTINCT ⟨col⟩) AS clientes
+FROM ⟨tab⟩;`,note:'COUNT(*) conta linhas; COUNT(DISTINCT coluna) conta valores diferentes não nulos.'},
+ alts:[{label:'Contar só as linhas que atendem a condição',tpl:{sp:`SELECT COUNT(*) AS total,
+       COUNT(*) FILTER (WHERE ⟨cond⟩) AS atendem
+FROM ⟨tab⟩;`,t:`SELECT COUNT(*) AS total,
+       SUM(CASE WHEN ⟨cond⟩ THEN 1 ELSE 0 END) AS atendem
+FROM ⟨tab⟩;`},note:{sp:'FILTER existe no PostgreSQL e no SQLite 3.30+. Em qualquer banco, SUM(CASE WHEN ... THEN 1 ELSE 0 END) faz o mesmo.',t:'O T-SQL não tem FILTER; use SUM(CASE ...).'}}]},
+{id:'pcttotal',cat:'Agregar',title:'Percentual do total',goal:'Quanto cada categoria representa do total geral.',
+ fields:[['tab','Tabela','Vendas'],['grp','Coluna do grupo','categoria'],['val','Coluna de valor','valor']],
+ main:{label:'SUM com OVER ()',tpl:`SELECT ⟨grp⟩,
+       SUM(⟨val⟩) AS total,
+       ROUND(100.0 * SUM(⟨val⟩) / SUM(SUM(⟨val⟩)) OVER (), 1) AS pct
+FROM ⟨tab⟩
+GROUP BY ⟨grp⟩
+ORDER BY total DESC;`,note:'OVER () calcula o total geral sem colapsar as linhas. Funções de janela exigem SQLite 3.25+.'},alts:[]},
+// ---------- Juntar
+{id:'join',cat:'Juntar',title:'Juntar duas tabelas (JOIN)',goal:'Trazer dados de outra tabela ligando pela chave.',
+ fields:[['a','Tabela principal','Vendas'],['b','Tabela relacionada','Clientes'],['ca','Chave na principal','cliente_id'],['cb','Chave na relacionada','id'],['cols','Colunas','v.id, c.nome, v.valor']],
+ main:{label:'INNER JOIN (só quem tem correspondência)',tpl:`SELECT ⟨cols⟩
+FROM ⟨a⟩ AS v
+INNER JOIN ⟨b⟩ AS c
+    ON c.⟨cb⟩ = v.⟨ca⟩;`,note:'v e c são apelidos das tabelas. A condição do ON liga a chave estrangeira à chave primária.'},
+ alts:[{label:'LEFT JOIN (mantém todas as da esquerda)',tpl:`SELECT ⟨cols⟩
+FROM ⟨a⟩ AS v
+LEFT JOIN ⟨b⟩ AS c
+    ON c.⟨cb⟩ = v.⟨ca⟩;`,note:'Linhas sem correspondência aparecem com NULL nas colunas de c.'}]},
+{id:'semcorresp',cat:'Juntar',title:'Linhas sem correspondência',goal:'Clientes que nunca compraram (ou itens órfãos).',
+ fields:[['a','Tabela de vendas','Vendas'],['b','Tabela de clientes','Clientes'],['ca','Chave nas vendas','cliente_id'],['cb','Chave em clientes','id']],
+ main:{label:'NOT EXISTS (mais seguro com NULL)',tpl:`SELECT c.*
+FROM ⟨b⟩ AS c
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM ⟨a⟩ AS v
+    WHERE v.⟨ca⟩ = c.⟨cb⟩
+);`,note:'Evite NOT IN (subconsulta): se houver NULL, não devolve nada.'},
+ alts:[{label:'LEFT JOIN com IS NULL',tpl:`SELECT c.*
+FROM ⟨b⟩ AS c
+LEFT JOIN ⟨a⟩ AS v
+    ON v.⟨ca⟩ = c.⟨cb⟩
+WHERE v.⟨ca⟩ IS NULL;`,note:'Mesmo resultado; algumas pessoas acham mais fácil de ler.'}]},
+{id:'union',cat:'Juntar',title:'Empilhar resultados (UNION)',goal:'Juntar duas tabelas com as mesmas colunas uma embaixo da outra.',
+ fields:[['a','Primeira tabela','Vendas2024'],['b','Segunda tabela','Vendas2025'],['cols','Colunas','id, cliente_id, valor']],
+ main:{label:'UNION ALL (mantém tudo)',tpl:`SELECT ⟨cols⟩ FROM ⟨a⟩
+UNION ALL
+SELECT ⟨cols⟩ FROM ⟨b⟩;`,note:'As consultas precisam ter o mesmo número de colunas, na mesma ordem e com tipos compatíveis.'},
+ alts:[{label:'UNION (remove duplicados)',tpl:`SELECT ⟨cols⟩ FROM ⟨a⟩
+UNION
+SELECT ⟨cols⟩ FROM ⟨b⟩;`,note:'Mais lento, porque compara as linhas para eliminar repetidas.'}]},
+{id:'cte',cat:'Juntar',title:'Consulta em etapas (CTE)',goal:'Quebrar uma consulta complexa em partes com nome. Exemplo: clientes acima da média.',
+ fields:[['tab','Tabela','Vendas'],['grp','Coluna do grupo','cliente_id'],['val','Coluna de valor','valor']],
+ main:{label:'WITH',tpl:`WITH totais AS (
+    SELECT ⟨grp⟩, SUM(⟨val⟩) AS total
+    FROM ⟨tab⟩
+    GROUP BY ⟨grp⟩
+)
+SELECT ⟨grp⟩, total
+FROM totais
+WHERE total > (SELECT AVG(total) FROM totais)
+ORDER BY total DESC;`,note:'A CTE funciona como uma tabela temporária que só existe durante a consulta.'},alts:[]},
+// ---------- Janelas
+{id:'rank',cat:'Janelas',title:'Ranking (ROW_NUMBER, RANK)',goal:'Classificar linhas, no geral ou por grupo.',
+ fields:[['tab','Tabela','Resumo'],['grp','Coluna do grupo','categoria'],['val','Coluna de valor','total']],
+ main:{label:'RANK (empates dividem a posição)',tpl:`SELECT ⟨grp⟩, ⟨val⟩,
+       RANK() OVER (ORDER BY ⟨val⟩ DESC) AS pos
+FROM ⟨tab⟩;`,note:'RANK pula posições depois de um empate (1, 1, 3). DENSE_RANK não pula (1, 1, 2).'},
+ alts:[{label:'ROW_NUMBER (sem empates)',tpl:`SELECT ⟨grp⟩, ⟨val⟩,
+       ROW_NUMBER() OVER (ORDER BY ⟨val⟩ DESC) AS pos
+FROM ⟨tab⟩;`,note:'Sempre numera 1, 2, 3... mesmo em empates.'},{label:'Ranking dentro de cada grupo',tpl:`SELECT ⟨grp⟩, produto, ⟨val⟩,
+       RANK() OVER (PARTITION BY ⟨grp⟩ ORDER BY ⟨val⟩ DESC) AS pos
+FROM ⟨tab⟩;`,note:'PARTITION BY reinicia a contagem para cada grupo.'}]},
+{id:'topgrupo',cat:'Janelas',title:'Top N por grupo',goal:'As 3 maiores vendas de cada cliente, por exemplo.',
+ fields:[['tab','Tabela','Vendas'],['grp','Coluna do grupo','cliente_id'],['ord','Ordenar por','valor DESC'],['n','N','3']],
+ main:{label:'ROW_NUMBER em uma CTE',tpl:`WITH numeradas AS (
+    SELECT *,
+           ROW_NUMBER() OVER (PARTITION BY ⟨grp⟩ ORDER BY ⟨ord⟩) AS rn
+    FROM ⟨tab⟩
+)
+SELECT *
+FROM numeradas
+WHERE rn <= ⟨n⟩;`,note:'Com N = 1, pega a última (ou maior) linha de cada grupo. Funções de janela não podem ir direto no WHERE, por isso a CTE.'},alts:[]},
+{id:'acum',cat:'Janelas',title:'Total acumulado',goal:'Soma que vai crescendo linha a linha.',
+ fields:[['tab','Tabela','Vendas'],['data','Coluna de data','data'],['val','Coluna de valor','valor']],
+ main:{label:'SUM OVER com ORDER BY',tpl:`SELECT ⟨data⟩, ⟨val⟩,
+       SUM(⟨val⟩) OVER (
+           ORDER BY ⟨data⟩
+           ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+       ) AS acumulado
+FROM ⟨tab⟩
+ORDER BY ⟨data⟩;`,note:'Se houver várias linhas na mesma data, agrupe por data antes (em uma CTE).'},alts:[]},
+{id:'lag',cat:'Janelas',title:'Variação em relação ao período anterior',goal:'Comparar cada mês com o anterior, em valor e em %.',
+ fields:[['tab','Tabela (um registro por mês)','Resumo_Mensal'],['per','Coluna do período','mes'],['val','Coluna de valor','total']],
+ main:{label:'LAG',tpl:`SELECT ⟨per⟩, ⟨val⟩,
+       LAG(⟨val⟩) OVER (ORDER BY ⟨per⟩) AS anterior,
+       ⟨val⟩ - LAG(⟨val⟩) OVER (ORDER BY ⟨per⟩) AS variacao,
+       ROUND(100.0 * (⟨val⟩ - LAG(⟨val⟩) OVER (ORDER BY ⟨per⟩))
+             / NULLIF(LAG(⟨val⟩) OVER (ORDER BY ⟨per⟩), 0), 1) AS variacao_pct
+FROM ⟨tab⟩
+ORDER BY ⟨per⟩;`,note:'A primeira linha não tem anterior e vem NULL. NULLIF evita divisão por zero.'},alts:[]},
+{id:'movel',cat:'Janelas',title:'Média móvel',goal:'Suavizar uma série: média dos últimos 7 registros.',
+ fields:[['tab','Tabela (um registro por dia)','Vendas_Dia'],['data','Coluna de data','data'],['val','Coluna de valor','valor']],
+ main:{label:'AVG com janela de 7 linhas',tpl:`SELECT ⟨data⟩, ⟨val⟩,
+       AVG(⟨val⟩) OVER (
+           ORDER BY ⟨data⟩
+           ROWS BETWEEN 6 PRECEDING AND CURRENT ROW
+       ) AS media_7
+FROM ⟨tab⟩
+ORDER BY ⟨data⟩;`,note:'Conta linhas, não dias: se faltarem dias, a janela cobre um período maior.'},alts:[]},
+// ---------- Datas
+{id:'periodo',cat:'Datas',title:'Filtrar por período',goal:'Vendas de um mês específico ou do mês atual.',
+ fields:[['tab','Tabela','Vendas'],['col','Coluna de data','data'],['ini','Início (inclusive)','2025-03-01'],['fim','Fim (exclusive)','2025-04-01']],
+ main:{label:'Intervalo semiaberto (recomendado)',tpl:`SELECT *
+FROM ⟨tab⟩
+WHERE ⟨col⟩ >= '⟨ini⟩'
+  AND ⟨col⟩ <  '⟨fim⟩';`,note:'Use >= no início e < no dia seguinte ao fim. Assim não perde as horas do último dia e funciona com data ou data e hora.'},
+ alts:[{label:'Mês atual',tpl:{s:`SELECT *
+FROM ⟨tab⟩
+WHERE ⟨col⟩ >= DATE('now', 'start of month')
+  AND ⟨col⟩ <  DATE('now', 'start of month', '+1 month');`,t:`SELECT *
+FROM ⟨tab⟩
+WHERE ⟨col⟩ >= DATEFROMPARTS(YEAR(GETDATE()), MONTH(GETDATE()), 1)
+  AND ⟨col⟩ <  DATEADD(MONTH, 1, DATEFROMPARTS(YEAR(GETDATE()), MONTH(GETDATE()), 1));`,p:`SELECT *
+FROM ⟨tab⟩
+WHERE ⟨col⟩ >= DATE_TRUNC('month', CURRENT_DATE)
+  AND ⟨col⟩ <  DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '1 month';`},note:'Evite aplicar função à coluna (YEAR(col) = 2025): isso impede o uso de índice.'}]},
+{id:'pormes',cat:'Datas',title:'Agrupar por mês',goal:'Total de vendas mês a mês.',
+ fields:[['tab','Tabela','Vendas'],['col','Coluna de data','data'],['val','Coluna de valor','valor']],
+ main:{label:'Soma por mês',tpl:{s:`SELECT STRFTIME('%Y-%m', ⟨col⟩) AS mes,
+       SUM(⟨val⟩) AS total
+FROM ⟨tab⟩
+GROUP BY STRFTIME('%Y-%m', ⟨col⟩)
+ORDER BY mes;`,t:`SELECT YEAR(⟨col⟩) AS ano,
+       MONTH(⟨col⟩) AS mes,
+       SUM(⟨val⟩) AS total
+FROM ⟨tab⟩
+GROUP BY YEAR(⟨col⟩), MONTH(⟨col⟩)
+ORDER BY ano, mes;`,p:`SELECT DATE_TRUNC('month', ⟨col⟩)::date AS mes,
+       SUM(⟨val⟩) AS total
+FROM ⟨tab⟩
+GROUP BY DATE_TRUNC('month', ⟨col⟩)::date
+ORDER BY mes;`},note:{s:'STRFTIME devolve texto no formato AAAA-MM, que ordena corretamente.',t:'Ano e mês em colunas separadas ordenam direito. Para uma data única, use DATEFROMPARTS(YEAR(col), MONTH(col), 1).',p:'DATE_TRUNC leva a data ao primeiro dia do mês, mantendo o tipo data.'}},alts:[]},
+{id:'diasentre',cat:'Datas',title:'Dias entre duas datas',goal:'Prazo de entrega, idade de um registro.',
+ fields:[['tab','Tabela','Pedidos'],['ini','Data inicial','data_pedido'],['fim','Data final','data_entrega']],
+ main:{label:'Diferença em dias',tpl:{s:`SELECT ⟨ini⟩, ⟨fim⟩,
+       CAST(JULIANDAY(⟨fim⟩) - JULIANDAY(⟨ini⟩) AS INTEGER) AS dias
+FROM ⟨tab⟩;`,t:`SELECT ⟨ini⟩, ⟨fim⟩,
+       DATEDIFF(DAY, ⟨ini⟩, ⟨fim⟩) AS dias
+FROM ⟨tab⟩;`,p:`SELECT ⟨ini⟩, ⟨fim⟩,
+       ⟨fim⟩::date - ⟨ini⟩::date AS dias
+FROM ⟨tab⟩;`},note:{s:'JULIANDAY converte a data em número de dias.',t:'O DATEDIFF conta fronteiras cruzadas, não períodos completos.',p:'Subtrair datas (tipo date) dá o número de dias.'}},alts:[]},
+{id:'somardias',cat:'Datas',title:'Somar dias ou meses a uma data',goal:'Calcular vencimentos e prazos.',
+ fields:[['tab','Tabela','Pedidos'],['col','Coluna de data','data_pedido'],['n','Quantidade de dias','30']],
+ main:{label:'Data + N dias',tpl:{s:`SELECT ⟨col⟩,
+       DATE(⟨col⟩, '+⟨n⟩ days') AS vencimento
+FROM ⟨tab⟩;`,t:`SELECT ⟨col⟩,
+       DATEADD(DAY, ⟨n⟩, ⟨col⟩) AS vencimento
+FROM ⟨tab⟩;`,p:`SELECT ⟨col⟩,
+       ⟨col⟩ + INTERVAL '⟨n⟩ days' AS vencimento
+FROM ⟨tab⟩;`},note:'Troque days por months ou years (DAY, MONTH, YEAR no T-SQL). Use valor negativo para voltar no tempo.'},alts:[]},
+// ---------- Texto
+{id:'concat',cat:'Texto',title:'Juntar textos',goal:'Nome completo, endereço em uma coluna.',
+ fields:[['tab','Tabela','Clientes'],['a','Coluna A','nome'],['b','Coluna B','sobrenome']],
+ main:{label:'Concatenação',tpl:{sp:`SELECT ⟨a⟩ || ' ' || ⟨b⟩ AS nome_completo
+FROM ⟨tab⟩;`,t:`SELECT ⟨a⟩ + ' ' + ⟨b⟩ AS nome_completo
+FROM ⟨tab⟩;`},note:{sp:'Com ||, se um dos lados for NULL, o resultado é NULL.',t:'Com +, se um dos lados for NULL, o resultado é NULL.'}},
+ alts:[{label:'CONCAT (trata NULL como vazio)',tpl:`SELECT CONCAT(⟨a⟩, ' ', ⟨b⟩) AS nome_completo
+FROM ⟨tab⟩;`,note:'Funciona no PostgreSQL e no SQL Server. No SQLite, só a partir da 3.44.'}]},
+{id:'textofunc',cat:'Texto',title:'Limpar e extrair texto',goal:'Tirar espaços, mudar a caixa, trocar caracteres, pegar um pedaço.',
+ fields:[['tab','Tabela','Clientes'],['col','Coluna de texto','cpf']],
+ main:{label:'Funções de texto',tpl:{sp:`SELECT TRIM(⟨col⟩) AS limpo,
+       UPPER(⟨col⟩) AS maiusculo,
+       REPLACE(⟨col⟩, '-', '') AS sem_hifen,
+       SUBSTR(⟨col⟩, 1, 3) AS inicio,
+       LENGTH(⟨col⟩) AS tamanho
+FROM ⟨tab⟩;`,t:`SELECT LTRIM(RTRIM(⟨col⟩)) AS limpo,
+       UPPER(⟨col⟩) AS maiusculo,
+       REPLACE(⟨col⟩, '-', '') AS sem_hifen,
+       SUBSTRING(⟨col⟩, 1, 3) AS inicio,
+       LEN(⟨col⟩) AS tamanho
+FROM ⟨tab⟩;`},note:'Posições começam em 1. No T-SQL, TRIM só existe a partir do SQL Server 2017.'},alts:[]},
+// ---------- Criar e editar dados
+{id:'insert',cat:'Criar e editar dados',title:'Inserir linhas',goal:'Adicionar uma ou várias linhas a uma tabela.',
+ fields:[['tab','Tabela','Clientes'],['cols','Colunas','nome, email'],['v1','Valores da linha 1',`'Maria', 'maria@exemplo.com'`],['v2','Valores da linha 2',`'João', 'joao@exemplo.com'`],['orig','Tabela de origem','Clientes_Importados']],
+ main:{label:'Uma linha',tpl:`INSERT INTO ⟨tab⟩ (⟨cols⟩)
+VALUES (⟨v1⟩);`,note:'Informe sempre as colunas: o código não quebra se a tabela ganhar colunas novas.'},
+ alts:[{label:'Várias linhas',tpl:`INSERT INTO ⟨tab⟩ (⟨cols⟩)
+VALUES
+    (⟨v1⟩),
+    (⟨v2⟩);`,note:'No SQL Server, até 1000 linhas por comando.'},{label:'A partir de outra tabela',tpl:`INSERT INTO ⟨tab⟩ (⟨cols⟩)
+SELECT ⟨cols⟩
+FROM ⟨orig⟩;`,note:'Dá para acrescentar um WHERE para copiar só parte das linhas.'}]},
+{id:'update',cat:'Criar e editar dados',title:'Atualizar linhas',goal:'Alterar valores de linhas existentes, com segurança.',
+ fields:[['tab','Tabela','Clientes'],['set','Novo valor',`status = 'inativo'`],['cond','Condição (WHERE)','id = 10'],['col','Coluna a copiar','preco'],['orig','Tabela de origem','Precos_Novos']],
+ main:{label:'UPDATE com WHERE',tpl:`UPDATE ⟨tab⟩
+SET ⟨set⟩
+WHERE ⟨cond⟩;`,note:'⚠ Sem WHERE, TODAS as linhas são alteradas. Dica: troque o UPDATE por um SELECT com o mesmo WHERE e confira antes.'},
+ alts:[{label:'Conferir antes (SELECT)',tpl:`SELECT *
+FROM ⟨tab⟩
+WHERE ⟨cond⟩;`,note:'Se essas são as linhas certas, rode o UPDATE.'},{label:'Atualizar com dados de outra tabela',tpl:{sp:`UPDATE ⟨tab⟩
+SET ⟨col⟩ = o.⟨col⟩
+FROM ⟨orig⟩ AS o
+WHERE o.id = ⟨tab⟩.id;`,t:`UPDATE t
+SET t.⟨col⟩ = o.⟨col⟩
+FROM ⟨tab⟩ AS t
+INNER JOIN ⟨orig⟩ AS o
+    ON o.id = t.id;`},note:{sp:'UPDATE ... FROM existe no PostgreSQL e no SQLite 3.33+.',t:'No T-SQL, o alvo do UPDATE é o apelido; o FROM traz o JOIN.'}}]},
+{id:'delete',cat:'Criar e editar dados',title:'Excluir linhas',goal:'Apagar linhas específicas ou esvaziar a tabela.',
+ fields:[['tab','Tabela','Vendas'],['cond','Condição (WHERE)','id = 10']],
+ main:{label:'DELETE com WHERE',tpl:`DELETE FROM ⟨tab⟩
+WHERE ⟨cond⟩;`,note:'⚠ Sem WHERE, apaga tudo. Rode antes um SELECT com o mesmo WHERE.'},
+ alts:[{label:'Dentro de uma transação (dá para desfazer)',tpl:{s:`BEGIN;
+DELETE FROM ⟨tab⟩
+WHERE ⟨cond⟩;
+-- confira o resultado e então:
+COMMIT;   -- ou ROLLBACK; para desfazer`,t:`BEGIN TRANSACTION;
+DELETE FROM ⟨tab⟩
+WHERE ⟨cond⟩;
+-- confira o resultado e então:
+COMMIT;   -- ou ROLLBACK; para desfazer`,p:`BEGIN;
+DELETE FROM ⟨tab⟩
+WHERE ⟨cond⟩;
+-- confira o resultado e então:
+COMMIT;   -- ou ROLLBACK; para desfazer`},note:'Enquanto não houver COMMIT, nada é definitivo.'},{label:'Esvaziar a tabela',tpl:{s:`DELETE FROM ⟨tab⟩;`,tp:`TRUNCATE TABLE ⟨tab⟩;`},note:{s:'O SQLite não tem TRUNCATE; DELETE sem WHERE faz o mesmo.',tp:'TRUNCATE é mais rápido, mas não aceita WHERE.'}}]},
+{id:'createtable',cat:'Criar e editar dados',title:'Criar tabela',goal:'Definir colunas, tipos, chave primária e regras.',
+ fields:[['tab','Nome da tabela','Clientes']],
+ main:{label:'CREATE TABLE',tpl:{s:`CREATE TABLE ⟨tab⟩ (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    nome TEXT NOT NULL,
+    email TEXT UNIQUE,
+    saldo REAL NOT NULL DEFAULT 0,
+    criado_em TEXT DEFAULT CURRENT_TIMESTAMP
+);`,t:`CREATE TABLE ⟨tab⟩ (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    nome NVARCHAR(100) NOT NULL,
+    email NVARCHAR(150) UNIQUE,
+    saldo DECIMAL(12,2) NOT NULL DEFAULT 0,
+    criado_em DATETIME2 DEFAULT SYSDATETIME()
+);`,p:`CREATE TABLE ⟨tab⟩ (
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    nome VARCHAR(100) NOT NULL,
+    email VARCHAR(150) UNIQUE,
+    saldo NUMERIC(12,2) NOT NULL DEFAULT 0,
+    criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);`},note:{s:'O SQLite tem poucos tipos (INTEGER, REAL, TEXT, BLOB) e guarda datas como texto.',t:'IDENTITY(1,1) numera automaticamente. NVARCHAR guarda Unicode.',p:'GENERATED ... AS IDENTITY é o padrão atual; SERIAL é a forma antiga.'}},
+ alts:[{label:'Com chave estrangeira (liga outra tabela)',tpl:{s:`CREATE TABLE Vendas (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    cliente_id INTEGER NOT NULL,
+    valor REAL NOT NULL CHECK (valor >= 0),
+    FOREIGN KEY (cliente_id) REFERENCES ⟨tab⟩ (id)
+);`,t:`CREATE TABLE Vendas (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    cliente_id INT NOT NULL,
+    valor DECIMAL(12,2) NOT NULL CHECK (valor >= 0),
+    FOREIGN KEY (cliente_id) REFERENCES ⟨tab⟩ (id)
+);`,p:`CREATE TABLE Vendas (
+    id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    cliente_id INTEGER NOT NULL,
+    valor NUMERIC(12,2) NOT NULL CHECK (valor >= 0),
+    FOREIGN KEY (cliente_id) REFERENCES ⟨tab⟩ (id)
+);`},note:{s:'No SQLite, ative a verificação com PRAGMA foreign_keys = ON; a cada conexão.',t:'',p:''}}]},
+{id:'altertable',cat:'Criar e editar dados',title:'Alterar tabela (colunas)',goal:'Adicionar, renomear ou remover uma coluna.',
+ fields:[['tab','Tabela','Clientes'],['col','Coluna','telefone'],['novo','Novo nome','celular']],
+ main:{label:'Adicionar coluna',tpl:{s:`ALTER TABLE ⟨tab⟩
+ADD COLUMN ⟨col⟩ TEXT;`,t:`ALTER TABLE ⟨tab⟩
+ADD ⟨col⟩ NVARCHAR(20) NULL;`,p:`ALTER TABLE ⟨tab⟩
+ADD COLUMN ⟨col⟩ VARCHAR(20);`},note:'A nova coluna começa NULL nas linhas existentes, a menos que você defina DEFAULT.'},
+ alts:[{label:'Renomear coluna',tpl:{sp:`ALTER TABLE ⟨tab⟩
+RENAME COLUMN ⟨col⟩ TO ⟨novo⟩;`,t:`EXEC sp_rename '⟨tab⟩.⟨col⟩', '⟨novo⟩', 'COLUMN';`},note:{sp:'No SQLite exige a versão 3.25+.',t:'No SQL Server usa-se o procedimento sp_rename.'}},{label:'Remover coluna',tpl:`ALTER TABLE ⟨tab⟩
+DROP COLUMN ⟨col⟩;`,note:'Apaga os dados da coluna. No SQLite exige a versão 3.35+.'}]},
+{id:'index',cat:'Criar e editar dados',title:'Índice para acelerar consultas',goal:'Deixar buscas e junções por uma coluna mais rápidas.',
+ fields:[['tab','Tabela','Vendas'],['col','Coluna','cliente_id']],
+ main:{label:'CREATE INDEX',tpl:`CREATE INDEX idx_⟨tab⟩_⟨col⟩
+    ON ⟨tab⟩ (⟨col⟩);`,note:'Indexe colunas usadas em WHERE, JOIN e ORDER BY. Índices demais deixam inserções e atualizações mais lentas.'},
+ alts:[{label:'Índice único (impede repetição)',tpl:`CREATE UNIQUE INDEX uq_⟨tab⟩_⟨col⟩
+    ON ⟨tab⟩ (⟨col⟩);`,note:'Bom para e-mail, CPF, código de produto.'}]},
+{id:'view',cat:'Criar e editar dados',title:'Visão (VIEW)',goal:'Guardar uma consulta com nome, para reutilizar como se fosse uma tabela.',
+ fields:[['nome','Nome da view','vw_total_por_cliente'],['tab','Tabela','Vendas'],['grp','Coluna do grupo','cliente_id'],['val','Coluna de valor','valor']],
+ main:{label:'CREATE VIEW',tpl:`CREATE VIEW ⟨nome⟩ AS
+SELECT ⟨grp⟩, SUM(⟨val⟩) AS total
+FROM ⟨tab⟩
+GROUP BY ⟨grp⟩;`,note:{s:'A view não guarda dados: a consulta roda a cada uso.',t:'No T-SQL, CREATE VIEW precisa ser o primeiro comando do lote.',p:'A view não guarda dados: a consulta roda a cada uso.'}},
+ alts:[{label:'Recriar a view (se já existir)',tpl:{s:`DROP VIEW IF EXISTS ⟨nome⟩;
+CREATE VIEW ⟨nome⟩ AS
+SELECT ⟨grp⟩, SUM(⟨val⟩) AS total
+FROM ⟨tab⟩
+GROUP BY ⟨grp⟩;`,t:`CREATE OR ALTER VIEW ⟨nome⟩ AS
+SELECT ⟨grp⟩, SUM(⟨val⟩) AS total
+FROM ⟨tab⟩
+GROUP BY ⟨grp⟩;`,p:`CREATE OR REPLACE VIEW ⟨nome⟩ AS
+SELECT ⟨grp⟩, SUM(⟨val⟩) AS total
+FROM ⟨tab⟩
+GROUP BY ⟨grp⟩;`},note:{t:'CREATE OR ALTER existe a partir do SQL Server 2016 SP1.'}}]},
+{id:'upsert',cat:'Criar e editar dados',title:'Inserir ou atualizar (upsert)',goal:'Se a linha já existe, atualiza; senão, insere.',
+ fields:[['tab','Tabela','Clientes'],['chave','Coluna chave','id'],['col','Coluna a atualizar','nome'],['vchave','Valor da chave','1'],['vcol','Novo valor',`'Maria'`]],
+ main:{label:'Upsert',tpl:{sp:`INSERT INTO ⟨tab⟩ (⟨chave⟩, ⟨col⟩)
+VALUES (⟨vchave⟩, ⟨vcol⟩)
+ON CONFLICT (⟨chave⟩) DO UPDATE
+SET ⟨col⟩ = excluded.⟨col⟩;`,t:`MERGE ⟨tab⟩ AS t
+USING (VALUES (⟨vchave⟩, ⟨vcol⟩)) AS s (⟨chave⟩, ⟨col⟩)
+    ON t.⟨chave⟩ = s.⟨chave⟩
+WHEN MATCHED THEN
+    UPDATE SET ⟨col⟩ = s.⟨col⟩
+WHEN NOT MATCHED THEN
+    INSERT (⟨chave⟩, ⟨col⟩) VALUES (s.⟨chave⟩, s.⟨col⟩);`},note:{sp:'A coluna chave precisa ter restrição PRIMARY KEY ou UNIQUE. No SQLite exige a versão 3.24+.',t:'O MERGE do T-SQL precisa terminar com ponto e vírgula. Em SQL Server com IDENTITY, a chave costuma não ser informada.'}},alts:[]},
+{id:'duplicados',cat:'Criar e editar dados',title:'Achar e remover duplicados',goal:'Encontrar linhas repetidas e apagar as sobras.',
+ fields:[['tab','Tabela','Clientes'],['col','Coluna que não pode repetir','email']],
+ main:{label:'Achar duplicados',tpl:`SELECT ⟨col⟩, COUNT(*) AS qtd
+FROM ⟨tab⟩
+GROUP BY ⟨col⟩
+HAVING COUNT(*) > 1
+ORDER BY qtd DESC;`,note:'Mostra os valores repetidos e quantas vezes aparecem.'},
+ alts:[{label:'Remover duplicados (mantém a de menor id)',tpl:{sp:`DELETE FROM ⟨tab⟩
+WHERE id NOT IN (
+    SELECT MIN(id)
+    FROM ⟨tab⟩
+    GROUP BY ⟨col⟩
+);`,t:`WITH numeradas AS (
+    SELECT *,
+           ROW_NUMBER() OVER (PARTITION BY ⟨col⟩ ORDER BY id) AS rn
+    FROM ⟨tab⟩
+)
+DELETE FROM numeradas
+WHERE rn > 1;`},note:'⚠ Supõe uma coluna id única. Rode antes em transação ou em uma cópia e confira.'}]}
+];
+
+/* ============ Painel de receitas ============ */
+let curR=R[0].id,rFilter='';const vals={};
+function renderRList(){
+  const box=$('#rlist');box.replaceChildren();const q=norm(rFilter);
+  const items=R.filter(r=>!q||norm(r.title+' '+r.goal+' '+r.cat).includes(q));
+  [...new Set(items.map(r=>r.cat))].forEach(c=>{
+    box.append(el('div',{class:'grp'},c));
+    items.filter(r=>r.cat===c).forEach(r=>box.append(el('button',{class:'rbtn',type:'button','aria-pressed':String(r.id===curR),onclick:()=>{curR=r.id;renderRList();renderRPanel();setHash('receitas/'+r.id);if(window.innerWidth<=820)$('#rpanel').scrollIntoView({behavior:'smooth',block:'start'});}},r.title)));
+  });
+  if(!items.length)box.append(el('p',{class:'hint',style:'padding:14px'},'Nenhuma receita encontrada. Veja o Catálogo.'));
+}
+function fill(tpl,r){
+  let s=pick(tpl,dia);const v=vals[r.id]||{};
+  r.fields.forEach(f=>{const x=(v[f[0]]??f[2]).trim()||f[2];s=s.split('⟨'+f[0]+'⟩').join(x);});
+  return s;
+}
+function renderRPanel(){
+  const r=R.find(x=>x.id===curR);const p=$('#rpanel');p.replaceChildren();
+  const v=vals[r.id]=vals[r.id]||{};const outBox=el('div');
+  const draw=()=>{outBox.replaceChildren();
+    const mk=(lab,tpl,note)=>{const txt=pick(tpl,dia);const nt=pick(note,dia);
+      return el('div',{class:'variant'},el('h3',{},lab),txt?fmtOut(fill(tpl,r)):el('div',{class:'warn'},'Sem equivalente direto em '+DS[dia]+'.'),nt?el('p',{class:'note'},nt):null);};
+    outBox.append(mk(r.main.label,r.main.tpl,r.main.note));r.alts.forEach(a=>outBox.append(mk(a.label,a.tpl,a.note)));};
+  const fields=el('div',{class:'fields'},r.fields.map(f=>{
+    const inp=el('input',{type:'text',value:v[f[0]]??f[2],spellcheck:'false','aria-label':f[1]});
+    inp.addEventListener('input',()=>{v[f[0]]=inp.value;draw();});
+    return el('label',{class:'f'},f[1],el('small',{},f[3]?'usado em: '+f[3]:' '),inp);
+  }));
+  p.append(el('div',{class:'card'},el('h2',{style:'margin:0 0 4px;font-size:19px'},r.title),el('p',{class:'note',style:'margin:0'},r.goal+'  ·  Dialeto: '+DN[dia]),outBox,el('h3',{style:'margin:18px 0 0;font-size:14px'},'Ajuste os nomes para o seu banco'),fields));
+  draw();
+}
+
+/* ============ Catálogo ============ */
+let cCat='',cQ='';
+function renderCats(){
+  const box=$('#ccats');box.replaceChildren();
+  [['','Todas'],...CATS.map(c=>[c,c])].forEach(([v,t])=>box.append(el('button',{class:'chip',type:'button','aria-pressed':String(cCat===v),onclick:()=>{cCat=v;renderCats();renderCatalog();}},t)));
+}
+function renderCatalog(){
+  const box=$('#clist');box.replaceChildren();const q=norm(cQ);
+  const items=F.filter(e=>(!cCat||e[1]===cCat)&&(!q||norm(e[0]+' '+e[1]+' '+e[3]).includes(q)));
+  if(!items.length){box.append(el('p',{class:'hint'},'Nenhum comando encontrado.'));return;}
+  items.forEach(e=>{
+    const has=e[2].includes(dia);
+    const badges=el('div',{class:'dia'},['s','t','p'].map(d=>el('span',{class:(e[2].includes(d)?'on':'')+(d===dia?' cur':'')},DS[d])));
+    box.append(el('div',{class:'fn'},
+      el('h3',{},e[0],el('span',{},e[1])),el('p',{},e[3]),
+      !has?el('div',{class:'warn'},'Não existe no '+DS[dia]+'.'+(e[7]&&e[7][dia]?' '+e[7][dia]:'')):null,
+      el('div',{class:'out',style:'margin:6px 0'},pick(e[4],dia)),fmtOut(pick(e[5],dia)),
+      e[6]?el('div',{class:'tip'},'💡 '+e[6]):null,
+      has&&e[7]&&e[7][dia]?el('div',{class:'tip'},'↔ '+e[7][dia]):null,
+      badges));
+  });
+}
+
+/* ============ Léxico, formatação e conversão ============ */
+function lex(src){
+  const T=[];let i=0;const n=src.length;let nb=false;
+  const push=(k,v,s,e)=>{T.push({k,v,s,e,nb,u:k==='w'?v.toUpperCase():''});nb=false;};
+  while(i<n){
+    const c=src[i];
+    if(c==='\n'){nb=true;i++;continue;}
+    if(/\s/.test(c)){i++;continue;}
+    if(c==='-'&&src[i+1]==='-'){let j=src.indexOf('\n',i);if(j<0)j=n;push('lc',src.slice(i,j).replace(/\s+$/,''),i,j);i=j;continue;}
+    if(c==='/'&&src[i+1]==='*'){let j=src.indexOf('*/',i+2);j=j<0?n:j+2;push('bc',src.slice(i,j),i,j);i=j;continue;}
+    if(c==="'"){let j=i+1;while(j<n){if(src[j]==="'"){if(src[j+1]==="'"){j+=2;continue;}break;}j++;}push('str',src.slice(i,Math.min(j+1,n)),i,Math.min(j+1,n));i=j+1;continue;}
+    if(c==='"'||c==='`'){let j=i+1;while(j<n){if(src[j]===c){if(src[j+1]===c){j+=2;continue;}break;}j++;}push('qid',src.slice(i,Math.min(j+1,n)),i,Math.min(j+1,n));i=j+1;continue;}
+    if(c==='['){const m=/^\[[^\]\[\r\n]+\]/.exec(src.slice(i,i+200));if(m&&!/^\[\d+\]$/.test(m[0])){push('qid',m[0],i,i+m[0].length);i+=m[0].length;continue;}}
+    if(/[0-9]/.test(c)||(c==='.'&&/[0-9]/.test(src[i+1]||''))){const m=/^(\d+\.?\d*|\.\d+)(e[+-]?\d+)?/i.exec(src.slice(i,i+40));push('num',m[0],i,i+m[0].length);i+=m[0].length;continue;}
+    if(/[A-Za-z_À-ÿ@#$]/.test(c)){let j=i+1;while(j<n&&/[A-Za-z0-9_À-ÿ@#$]/.test(src[j]))j++;push('w',src.slice(i,j),i,j);i=j;continue;}
+    const three=src.substr(i,3),two=src.substr(i,2);
+    if(three==='->>'){push('p',three,i,i+3);i+=3;continue;}
+    if(['<=','>=','<>','!=','||','::','->','=='].includes(two)){push('p',two,i,i+2);i+=2;continue;}
+    push('p',c,i,i+1);i++;
+  }
+  return T;
+}
+const KW=new Set(`SELECT FROM WHERE GROUP BY ORDER HAVING LIMIT OFFSET FETCH NEXT FIRST ONLY ROW ROWS WITH RECURSIVE AS ON USING JOIN INNER LEFT RIGHT FULL OUTER CROSS NATURAL APPLY UNION ALL INTERSECT EXCEPT DISTINCT PERCENT TIES AND OR NOT IN IS NULL LIKE ILIKE BETWEEN EXISTS ANY SOME CASE WHEN THEN ELSE END ASC DESC INSERT INTO VALUES UPDATE SET DELETE CREATE ALTER DROP TRUNCATE TABLE VIEW INDEX UNIQUE PRIMARY FOREIGN REFERENCES CONSTRAINT CHECK DEFAULT ADD COLUMN RENAME TO IF OVER PARTITION RANGE UNBOUNDED PRECEDING FOLLOWING CURRENT BEGIN COMMIT ROLLBACK TRANSACTION CONFLICT DO NOTHING RETURNING MERGE MATCHED TRUE FALSE COLLATE ESCAPE INTERVAL LATERAL FILTER WITHIN`.split(/\s+/));
+const TYPES=new Set(`INT INTEGER BIGINT SMALLINT TINYINT TEXT VARCHAR NVARCHAR CHAR NCHAR REAL FLOAT DOUBLE NUMERIC DECIMAL BOOLEAN BOOL DATE DATETIME DATETIME2 TIMESTAMP TIME BLOB SERIAL BIGSERIAL BIT MONEY UUID JSON JSONB IDENTITY GENERATED ALWAYS AUTOINCREMENT`.split(/\s+/));
+const MAJ=new Set(['SELECT','FROM','WHERE','HAVING','LIMIT','OFFSET','FETCH','WITH','VALUES','UPDATE','SET','RETURNING']);
+const MULTI=new Set(['SELECT','GROUP BY','ORDER BY','SET','VALUES','WITH']);
+const JS_=new Set(['INNER','LEFT','RIGHT','FULL','CROSS','NATURAL','OUTER']);
+const PAREN_SP=new Set(['INSERT','IN','AS','EXISTS','ON','AND','OR','NOT','WHERE','HAVING','WHEN','THEN','ELSE','SELECT','FROM','JOIN','VALUES','USING','OVER','BY','CASE','LIKE','BETWEEN','IS','ANY','ALL','SOME','UNION','SET','RETURNS','DEFAULT','CHECK','LIMIT','OFFSET','FETCH','WITH','INTERSECT','EXCEPT','APPLY','FILTER','WITHIN','CONSTRAINT','UNIQUE','KEY','REFERENCES','PARTITION','DISTINCT','TOP','ILIKE']);
+const SP_AFTER2=new Set(['INTO','TABLE','ON','EXISTS','VIEW','INDEX']);
+const UNA=new Set(['SELECT','WHERE','AND','OR','WHEN','THEN','ELSE','ON','BY','HAVING','CASE','BETWEEN','LIMIT','IN','NOT','DISTINCT','TOP','RETURN','SET']);
+
+function phraseAt(T,i){
+  const t=T[i];if(!t||t.k!=='w')return null;
+  const u=t.u,n1=T[i+1]&&T[i+1].u;
+  const mk=(text,len,type)=>({text,len,type});
+  if((u==='GROUP'||u==='ORDER')&&n1==='BY')return mk(u+' BY',2,'major');
+  if(u==='UNION')return n1==='ALL'?mk('UNION ALL',2,'major'):mk('UNION',1,'major');
+  if(u==='INTERSECT'||u==='EXCEPT')return mk(u,1,'major');
+  if(u==='INSERT')return n1==='INTO'?mk('INSERT INTO',2,'major'):mk('INSERT',1,'major');
+  if(u==='DELETE')return n1==='FROM'?mk('DELETE FROM',2,'major'):mk('DELETE',1,'major');
+  if(u==='ON'&&n1==='CONFLICT')return mk('ON CONFLICT',2,'major');
+  if(u==='DO'&&(n1==='UPDATE'||n1==='NOTHING'))return mk('DO '+n1,2,'major');
+  if(u==='JOIN')return mk('JOIN',1,'join');
+  if(JS_.has(u)){
+    if((u==='LEFT'||u==='RIGHT')&&T[i+1]&&T[i+1].v==='(')return null;
+    let j=i;const w=[];while(T[j]&&T[j].k==='w'&&JS_.has(T[j].u)){w.push(T[j].u);j++;}
+    if(T[j]&&(T[j].u==='JOIN'||T[j].u==='APPLY')){w.push(T[j].u);return mk(w.join(' '),w.length,'join');}
+    return null;
+  }
+  if(MAJ.has(u))return mk(u,1,'major');
+  return null;
+}
+function skipSel(T,j){
+  let k=j;
+  if(T[k]&&(T[k].u==='DISTINCT'||T[k].u==='ALL'))k++;
+  if(T[k]&&T[k].u==='TOP'){
+    k++;
+    if(T[k]&&T[k].v==='('){let d=0;do{if(T[k].v==='(')d++;else if(T[k].v===')')d--;k++;}while(k<T.length&&d>0);}else k++;
+    if(T[k]&&T[k].u==='PERCENT')k++;
+    if(T[k]&&T[k].u==='WITH'&&T[k+1]&&T[k+1].u==='TIES')k+=2;
+  }
+  return k;
+}
+function hasComma(T,j){
+  let d=0;
+  for(let k=j;k<T.length;k++){const t=T[k];
+    if(t.v==='(')d++;
+    else if(t.v===')'){if(d===0)return false;d--;}
+    else if(d===0){
+      if(t.v===';')return false;
+      if(t.v===',')return true;
+      if(t.k==='w'&&phraseAt(T,k)&&!(T[k].u==='WITH'||T[k].u==='UPDATE'))return false;
+    }
+  }
+  return false;
+}
+
+function fmt(T){
+  const out=[];let cur='',lineInd=0,prev=null,prev2=null,first='';
+  const newCtx=(kind,base,openInd)=>({kind,base,openInd,n:0,clause:'',multi:false,brk:-1,cs:[],btw:false,tbl:false,sawT:false});
+  const ctxs=[newCtx('block',0,0)];
+  const nl=ind=>{if(cur.trim()!=='')out.push(cur.replace(/\s+$/,''));cur='';lineInd=ind;};
+  const sp=(p,t)=>{
+    if(!p)return false;const v=t.v,pv=p.v;
+    if(v===','||v===';'||v===')'||v==='.'||v==='::')return false;
+    if(pv==='('||pv==='.'||pv==='::'||pv===':')return false;
+    if(p.un)return false;
+    if(v==='('){
+      if(t.sp)return true;
+      if((p.k==='w'&&!PAREN_SP.has(p.u))||p.k==='qid')return !!(prev2&&SP_AFTER2.has(prev2.u));
+      return true;
+    }
+    return true;
+  };
+  const put=(t,v)=>{
+    if(t.v==='-'||t.v==='+')t.un=!prev||(prev.k==='p'&&prev.v!==')')||(prev.k==='w'&&UNA.has(prev.u));
+    if(cur==='')cur='    '.repeat(lineInd)+v;else{if(sp(prev,t))cur+=' ';cur+=v;}
+    prev2=prev;prev=t;
+  };
+  const wordOut=(t,i)=>{
+    if(KW.has(t.u))return t.u;
+    if(t.u==='TOP'&&prev&&(prev.u==='SELECT'||prev.u==='DISTINCT'))return 'TOP';
+    if(t.u==='KEY'&&prev&&(prev.u==='PRIMARY'||prev.u==='FOREIGN'))return 'KEY';
+    const nx=T[i+1];
+    if(nx&&nx.v==='('&&IDX[t.u])return t.u;
+    if((first==='CREATE'||first==='ALTER')&&TYPES.has(t.u))return t.u;
+    return t.v;
+  };
+  for(let i=0;i<T.length;i++){
+    const t=T[i];let c=ctxs[ctxs.length-1];
+    if(i===c.brk){nl(c.base+1);c.brk=-1;}
+    if(t.k==='lc'){
+      if(t.nb&&cur!=='')nl(c.kind==='func'?lineInd:c.base);
+      put(t,t.v);nl(lineInd);continue;
+    }
+    if(t.k==='bc'){if(t.nb&&cur!=='')nl(c.kind==='func'?lineInd:c.base);put(t,t.v);continue;}
+    if(t.v===';'&&ctxs.length===1){put(t,';');nl(0);out.push('');c.n=0;c.clause='';c.multi=false;c.brk=-1;c.cs=[];c.tbl=false;c.sawT=false;first='';continue;}
+    if(ctxs.length===1&&c.n===0&&t.k==='w')first=t.u;
+    if(t.v==='('){
+      const nx=T[i+1];
+      if(nx&&nx.k==='w'&&(nx.u==='SELECT'||nx.u==='WITH')){
+        put(t,'(');ctxs.push(newCtx('block',lineInd+1,lineInd));nl(lineInd+1);c.n++;continue;
+      }
+      if(c.kind==='block'&&ctxs.length===1&&first==='CREATE'&&c.sawT&&!c.tbl){
+        c.tbl=true;t.sp=true;put(t,'(');ctxs.push(newCtx('list',lineInd+1,lineInd));nl(lineInd+1);c.n++;continue;
+      }
+      put(t,'(');ctxs.push(newCtx('func',lineInd,lineInd));c.n++;continue;
+    }
+    if(t.v===')'){
+      if(ctxs.length>1){const k=ctxs.pop();if(k.kind!=='func')nl(k.openInd);}
+      put(t,')');ctxs[ctxs.length-1].n++;continue;
+    }
+    if(t.v===','&&c.kind==='list'){put(t,',');nl(c.base);c.n++;continue;}
+    if(t.v===','&&c.kind==='block'&&c.multi){put(t,',');nl(c.clause==='WITH'?c.base:c.base+1);c.n++;continue;}
+    if(t.k==='w'){
+      if(t.u==='BETWEEN')c.btw=true;
+      if(t.u==='AND'&&c.btw){c.btw=false;}
+      else if(c.kind==='block'){
+        let ph=phraseAt(T,i);
+        if(ph&&(ph.text==='WITH'||ph.text==='UPDATE')&&c.n>0)ph=null;
+        if(ph){
+          nl(c.base);c.clause=ph.type==='join'?'JOIN':ph.text;c.multi=false;c.brk=-1;
+          for(let k=0;k<ph.len;k++)put(T[i+k],T[i+k].u);
+          i+=ph.len-1;c.n+=ph.len;
+          if(MULTI.has(ph.text)&&hasComma(T,i+1)){c.multi=true;if(ph.text!=='WITH')c.brk=ph.text==='SELECT'?skipSel(T,i+1):i+1;}
+          continue;
+        }
+        if(t.u==='ON'&&c.clause==='JOIN')c.clause='ON';
+        if(first==='MERGE'&&(t.u==='USING'||t.u==='ON'))nl(c.base);
+        if((t.u==='AND'||t.u==='OR')&&!c.cs.length&&(c.clause==='WHERE'||c.clause==='HAVING'||c.clause==='ON'))nl(c.base+1);
+        if(t.u==='CASE')c.cs.push(lineInd);
+        else if(t.u==='WHEN'&&!c.cs.length)nl(c.base);
+        else if(t.u==='WHEN'||t.u==='ELSE'){if(c.cs.length)nl(c.cs[c.cs.length-1]+1);}
+        else if(t.u==='END'&&c.cs.length)nl(c.cs.pop());
+        if(t.u==='TABLE')c.sawT=true;
+      }
+      put(t,wordOut(t,i));c.n++;continue;
+    }
+    put(t,t.v);c.n++;
+  }
+  if(cur.trim()!=='')out.push(cur.replace(/\s+$/,''));
+  while(out.length&&out[out.length-1]==='')out.pop();
+  return out.join('\n');
+}
+
+/* ---- Detecção de dialeto ---- */
+function detect(T){
+  const sc={s:0,t:0,p:0};const ws=new Set(T.filter(x=>x.k==='w').map(x=>x.u));
+  const add=(d,names,w=1)=>names.forEach(n=>{if(ws.has(n))sc[d]+=w;});
+  add('t',['GETDATE','ISNULL','LEN','CHARINDEX','DATEADD','DATEDIFF','DATEPART','TRY_CAST','SYSDATETIME','IDENTITY','NVARCHAR','DATETIME2','EOMONTH','NEWID','DATEFROMPARTS','OUTPUT','NOLOCK'],2);
+  add('p',['ILIKE','NOW','SERIAL','BIGSERIAL','DATE_TRUNC','STRPOS','RETURNING','INTERVAL','GENERATE_SERIES','TO_CHAR','EXTRACT','JSONB','BOOLEAN','LATERAL'],2);
+  add('s',['STRFTIME','AUTOINCREMENT','GROUP_CONCAT','IFNULL','INSTR','JULIANDAY','PRAGMA'],2);
+  T.forEach((x,i)=>{
+    if(x.k==='qid'&&x.v[0]==='[')sc.t+=2;
+    if(x.v==='::')sc.p+=2;
+    if(x.u==='TOP'&&T[i-1]&&(T[i-1].u==='SELECT'||T[i-1].u==='DISTINCT'))sc.t+=3;
+    if(x.u==='LIMIT')sc.s+=1,sc.p+=1;
+    if(x.u==='DATE'&&T[i+1]&&T[i+1].v==='('&&T[i+2]&&T[i+2].k==='str'&&/now|start of/i.test(T[i+2].v))sc.s+=2;
+    if(x.u==='DATETIME'&&T[i+1]&&T[i+1].v==='('&&T[i+2]&&T[i+2].k==='str')sc.s+=2;
+    if(x.k==='w'&&x.v[0]==='@')sc.t+=2;
+    if(x.v==='||')sc.s+=1,sc.p+=1;
+    if(x.v==='+'&&((T[i-1]&&T[i-1].k==='str')||(T[i+1]&&T[i+1].k==='str')))sc.t+=2;
+  });
+  const best=Object.entries(sc).sort((a,b)=>b[1]-a[1]);
+  return best[0][1]===0||best[0][1]===best[1][1]?(best[0][1]===0?'s':(sc.s===best[0][1]?'s':best[0][0])):best[0][0];
+}
+
+/* ---- Conversão entre dialetos ---- */
+const mkTok=(k,v)=>({k,v,u:k==='w'?v.toUpperCase():'',s:0,e:0,nb:false});
+const W=v=>mkTok('w',v),P=v=>mkTok('p',v),STR=v=>mkTok('str',v);
+function splitArgs(T,open){
+  let d=0;const args=[];let cur=[];
+  for(let i=open;i<T.length;i++){const t=T[i];
+    if(t.v==='('){d++;if(d===1)continue;}
+    else if(t.v===')'){d--;if(d===0){args.push(cur);return{args,end:i};}}
+    else if(t.v===','&&d===1){args.push(cur);cur=[];continue;}
+    cur.push(t);
+  }
+  return null;
+}
+const joinArgs=A=>{const r=[];A.forEach((a,i)=>{if(i)r.push(P(','));r.push(...a);});return r;};
+const call=(name,A)=>[W(name),P('('),...joinArgs(A),P(')')];
+const NOTES={
+  DATEADD:{ok:'t',h:{s:`DATE(data, '+N days') ou DATETIME(data, '+N months')`,p:`data + INTERVAL 'N days'`}},
+  DATEDIFF:{ok:'t',h:{s:`JULIANDAY(fim) - JULIANDAY(início)`,p:`fim::date - início::date (dias) ou AGE()`}},
+  DATEPART:{ok:'t',h:{s:`CAST(STRFTIME('%Y', data) AS INTEGER)`,p:`EXTRACT(YEAR FROM data)`}},
+  YEAR:{ok:'t',h:{s:`CAST(STRFTIME('%Y', data) AS INTEGER)`,p:`EXTRACT(YEAR FROM data)`}},
+  MONTH:{ok:'t',h:{s:`CAST(STRFTIME('%m', data) AS INTEGER)`,p:`EXTRACT(MONTH FROM data)`}},
+  DAY:{ok:'t',h:{s:`CAST(STRFTIME('%d', data) AS INTEGER)`,p:`EXTRACT(DAY FROM data)`}},
+  EOMONTH:{ok:'t',h:{s:`DATE(data, 'start of month', '+1 month', '-1 day')`,p:`(DATE_TRUNC('month', data) + INTERVAL '1 month - 1 day')::date`}},
+  DATEFROMPARTS:{ok:'t',h:{s:`DATE(ano || '-' || mes || '-' || dia)`,p:`MAKE_DATE(ano, mes, dia)`}},
+  FORMAT:{ok:'t',h:{s:`STRFTIME('%Y-%m', data)`,p:`TO_CHAR(data, 'YYYY-MM')`}},
+  STRFTIME:{ok:'s',h:{t:`FORMAT(data, 'yyyy-MM') ou YEAR/MONTH/DATEPART`,p:`TO_CHAR(data, 'YYYY-MM')`}},
+  JULIANDAY:{ok:'s',h:{t:`DATEDIFF(DAY, início, fim)`,p:`fim::date - início::date`}},
+  DATETIME:{ok:'t',h:{s:`DATETIME('now')`,p:`NOW()`}},
+  DATE_TRUNC:{ok:'p',h:{s:`DATE(data, 'start of month')`,t:`DATETRUNC(month, data) (SQL Server 2022+) ou DATEFROMPARTS(YEAR(data), MONTH(data), 1)`}},
+  TO_CHAR:{ok:'p',h:{s:`STRFTIME('%Y-%m', data)`,t:`FORMAT(data, 'yyyy-MM')`}},
+  EXTRACT:{ok:'p',h:{s:`CAST(STRFTIME('%Y', data) AS INTEGER)`,t:`DATEPART(YEAR, data)`}},
+  AGE:{ok:'p',h:{s:`JULIANDAY(fim) - JULIANDAY(início)`,t:`DATEDIFF(...)`}},
+  TRY_CAST:{ok:'t',h:{s:`CAST(valor AS tipo) (sem "try")`,p:`CAST(valor AS tipo) (sem "try")`}},
+  TRY_CONVERT:{ok:'t',h:{s:`CAST(valor AS tipo)`,p:`CAST(valor AS tipo)`}},
+  CONVERT:{ok:'t',h:{s:`CAST(valor AS tipo)`,p:`CAST(valor AS tipo)`}},
+  NEWID:{ok:'t',h:{s:`RANDOM() (ou HEX(RANDOMBLOB(16)))`,p:`GEN_RANDOM_UUID()`}},
+  GENERATE_SERIES:{ok:'p',h:{s:`WITH RECURSIVE ... (SQLite 3.38+ tem generate_series em extensão)`,t:`GENERATE_SERIES (SQL Server 2022+) ou CTE recursiva`}},
+  STRING_SPLIT:{ok:'t',h:{s:`CTE recursiva`,p:`STRING_TO_TABLE(texto, separador) ou REGEXP_SPLIT_TO_TABLE`}},
+  PRAGMA:{ok:'s',h:{t:`(sem equivalente; use o catálogo do sistema)`,p:`(sem equivalente; use information_schema)`}},
+  RETURNING:{ok:'sp',h:{t:`OUTPUT inserted.coluna`}},
+  MERGE:{ok:'tp',h:{s:`INSERT ... ON CONFLICT (...) DO UPDATE`}},
+  CONFLICT:{ok:'sp',h:{t:`MERGE ... WHEN MATCHED / WHEN NOT MATCHED`}},
+  APPLY:{ok:'t',h:{s:`(sem suporte; use JOIN ou subconsulta)`,p:`JOIN LATERAL`}},
+  IDENTITY:{ok:'t',h:{s:`INTEGER PRIMARY KEY AUTOINCREMENT`,p:`GENERATED ALWAYS AS IDENTITY`}},
+  AUTOINCREMENT:{ok:'s',h:{t:`IDENTITY(1,1)`,p:`GENERATED ALWAYS AS IDENTITY`}},
+  SERIAL:{ok:'p',h:{s:`INTEGER PRIMARY KEY AUTOINCREMENT`,t:`INT IDENTITY(1,1)`}},
+  BIGSERIAL:{ok:'p',h:{s:`INTEGER PRIMARY KEY AUTOINCREMENT`,t:`BIGINT IDENTITY(1,1)`}},
+  NVARCHAR:{ok:'t',h:{s:`TEXT`,p:`VARCHAR(n) ou TEXT`}},
+  DATETIME2:{ok:'t',h:{s:`TEXT (data em formato ISO)`,p:`TIMESTAMP`}},
+  BOOLEAN:{ok:'sp',h:{t:`BIT`}},
+  TRUNCATE:{ok:'tp',h:{s:`DELETE FROM tabela`}},
+  ILIKE:{ok:'p',h:{}},
+};
+function conv(T,from,to,log){
+  const o=[];
+  for(let i=0;i<T.length;i++){
+    const t=T[i];
+    if(t.k==='qid'){
+      const inner=t.v.slice(1,-1);const nv=to==='t'?'['+inner+']':'"'+inner+'"';
+      if(nv!==t.v)log.add('Aspas de identificadores trocadas para o estilo de '+DS[to]);
+      o.push({...t,v:nv});continue;
+    }
+    if(t.k==='w'){
+      const u=t.u,nx=T[i+1];
+      if((u==='TRUE'||u==='FALSE')&&to==='t'){o.push(W(u==='TRUE'?'1':'0'));log.add('TRUE/FALSE → 1/0 (o T-SQL não tem literal booleano)');continue;}
+      if(u==='ILIKE'&&to!=='p'){o.push(W('LIKE'));log.note('ILIKE virou LIKE: confira como o '+DS[to]+' trata maiúsculas e minúsculas.');continue;}
+      if(nx&&nx.v==='('){
+        const sa=splitArgs(T,i+1);
+        if(sa){const r=callRule(t,sa,to,log);if(r){o.push(...r);i=sa.end;continue;}}
+      }
+    }
+    if(t.v==='||'&&to==='t'){o.push(P('+'));log.add('|| → + (concatenação no T-SQL; se houver número ou NULL, use CONCAT(...))');continue;}
+    if(t.v==='+'&&from==='t'&&to!=='t'){
+      const a=T[i-1],b=T[i+1];
+      if((a&&a.k==='str')||(b&&b.k==='str')){o.push(P('||'));log.add('+ entre textos → || (concatenação)');continue;}
+    }
+    if(t.v==='::'&&to!=='p'&&o.length&&T[i+1]&&T[i+1].k==='w'){
+      const a=o[o.length-1];
+      if(['w','num','str','qid'].includes(a.k)){o.pop();o.push(W('CAST'),P('('),a,W('AS'),T[i+1],P(')'));i++;log.add('valor::tipo → CAST(valor AS tipo)');continue;}
+    }
+    o.push({...t});
+  }
+  return o;
+}
+function callRule(t,sa,to,log){
+  const u=t.u,n=sa.args.length,empty=n===1&&!sa.args[0].length;
+  const A=sa.args.map(a=>conv(a,'x',to,log));
+  const CV=(a,b)=>log.add(a+' → '+b);
+  if((u==='ISNULL'||u==='IFNULL'||u==='NVL')&&n===2){CV(u,'COALESCE');return call('COALESCE',A);}
+  if(u==='LEN'&&to!=='t'){CV('LEN','LENGTH');return call('LENGTH',A);}
+  if(u==='LENGTH'&&to==='t'){CV('LENGTH','LEN');return call('LEN',A);}
+  if((u==='SUBSTR'||u==='SUBSTRING')&&n>=2){
+    if(to==='t'){const B=n===2?[A[0],A[1],[W('LEN'),P('('),...A[0],P(')')]]:A;if(u==='SUBSTR'||n===2)CV(u,'SUBSTRING (com tamanho)');return call('SUBSTRING',B);}
+    if(to==='s'&&u==='SUBSTRING'){CV('SUBSTRING','SUBSTR');return call('SUBSTR',A);}
+  }
+  if((u==='GETDATE'||u==='SYSDATETIME'||u==='NOW')&&empty){
+    const target=to==='t'?'GETDATE':to==='p'?'NOW':null;
+    if(u===target)return null;
+    if(u==='SYSDATETIME'&&to==='t')return null;
+    CV(u+'()',target?target+'()':'CURRENT_TIMESTAMP');
+    return target?[W(target),P('('),P(')')]:[W('CURRENT_TIMESTAMP')];
+  }
+  if((u==='CHARINDEX'||u==='INSTR'||u==='STRPOS')&&n>=2){
+    const nat={t:'CHARINDEX',s:'INSTR',p:'STRPOS'}[to];if(u===nat)return null;
+    let sub,str;if(u==='CHARINDEX'){sub=A[0];str=A[1];}else{str=A[0];sub=A[1];}
+    CV(u,nat+(nat==='CHARINDEX'||u==='CHARINDEX'?' (ordem dos argumentos invertida)':''));
+    return call(nat,to==='t'?[sub,str]:[str,sub]);
+  }
+  if(u==='GROUP_CONCAT'||u==='STRING_AGG'){
+    if(to==='s'&&u==='STRING_AGG'){CV('STRING_AGG','GROUP_CONCAT');return call('GROUP_CONCAT',A);}
+    if(to!=='s'&&u==='GROUP_CONCAT'){CV('GROUP_CONCAT','STRING_AGG');return call('STRING_AGG',n===1?[A[0],[STR("','")]]:A);}
+  }
+  if(u==='IIF'&&to==='p'&&n===3){CV('IIF','CASE WHEN');return [W('CASE'),W('WHEN'),...A[0],W('THEN'),...A[1],W('ELSE'),...A[2],W('END')];}
+  if((u==='RAND'||u==='RANDOM')&&empty){const nat=to==='t'?'RAND':'RANDOM';if(u!==nat){CV(u+'()',nat+'()');return [W(nat),P('('),P(')')];}}
+  if((u==='LEFT'||u==='RIGHT')&&to==='s'&&n===2){
+    CV(u,'SUBSTR');
+    return u==='LEFT'?call('SUBSTR',[A[0],[W('1')],A[1]]):call('SUBSTR',[A[0],[P('-'),P('('),...A[1],P(')')]]);
+  }
+  return null;
+}
+function limitPass(T,to,log){
+  const a=T.map(x=>({...x}));
+  const depthAt=(arr,idx)=>{let d=0;for(let k=0;k<idx;k++){if(arr[k].v==='(')d++;else if(arr[k].v===')')d--;}return d;};
+  if(to==='t'){
+    for(let g=0;g<20;g++){
+      const i=a.findIndex(x=>x.u==='LIMIT');if(i<0||!a[i+1])break;
+      const n=a[i+1];let m=null,end=i+2;
+      if(a[i+2]&&a[i+2].u==='OFFSET'&&a[i+3]){m=a[i+3];end=i+4;}
+      if(m){a.splice(i,end-i,W('OFFSET'),m,W('ROWS'),W('FETCH'),W('NEXT'),n,W('ROWS'),W('ONLY'));log.add('LIMIT n OFFSET m → OFFSET m ROWS FETCH NEXT n ROWS ONLY');log.note('No T-SQL, OFFSET/FETCH exige ORDER BY.');}
+      else{
+        const d=depthAt(a,i);let s=-1;
+        for(let k=i-1;k>=0;k--){if(a[k].u==='SELECT'&&depthAt(a,k)===d){s=k;break;}}
+        a.splice(i,end-i);
+        if(s>=0){let ins=s+1;if(a[ins]&&(a[ins].u==='DISTINCT'||a[ins].u==='ALL'))ins++;a.splice(ins,0,W('TOP'),n);log.add('LIMIT n → TOP n');}
+      }
+    }
+  }else{
+    for(let g=0;g<20;g++){
+      const i=a.findIndex((x,k)=>x.u==='TOP'&&k>0&&(a[k-1].u==='SELECT'||a[k-1].u==='DISTINCT'));if(i<0)break;
+      let n,len;
+      if(a[i+1]&&a[i+1].v==='('&&a[i+3]&&a[i+3].v===')'){n=a[i+2];len=4;}else{n=a[i+1];len=2;}
+      if(!n)break;
+      if(a[i+len]&&a[i+len].u==='PERCENT'){log.note('TOP ... PERCENT não tem equivalente direto: ajuste à mão.');a[i].u='TOP_';a[i].v='TOP';continue;}
+      const d=depthAt(a,i);a.splice(i,len);
+      let e=a.length,dd=d;
+      for(let k=i;k<a.length;k++){const x=a[k];
+        if(x.v==='(')dd++;
+        else if(x.v===')'){dd--;if(dd<d){e=k;break;}}
+        else if(dd===d&&(x.v===';'||x.u==='UNION'||x.u==='INTERSECT'||x.u==='EXCEPT')){e=k;break;}
+      }
+      a.splice(e,0,W('LIMIT'),n);log.add('TOP n → LIMIT n (no fim da consulta)');
+    }
+    if(to==='s'){
+      for(let g=0;g<20;g++){
+        const i=a.findIndex(x=>x.u==='OFFSET');if(i<0)break;
+        const rowW=x=>x&&(x.u==='ROW'||x.u==='ROWS');
+        if(a[i+2]&&rowW(a[i+2])&&a[i+3]&&a[i+3].u==='FETCH'&&a[i+4]&&(a[i+4].u==='NEXT'||a[i+4].u==='FIRST')&&a[i+5]&&rowW(a[i+6])&&a[i+7]&&a[i+7].u==='ONLY'){
+          const m=a[i+1],n=a[i+5];a.splice(i,8,W('LIMIT'),n,W('OFFSET'),m);log.add('OFFSET ... FETCH → LIMIT n OFFSET m');
+        }else break;
+      }
+      for(let g=0;g<20;g++){
+        const i=a.findIndex(x=>x.u==='FETCH');if(i<0)break;
+        if(a[i+1]&&(a[i+1].u==='FIRST'||a[i+1].u==='NEXT')&&a[i+2]&&a[i+3]&&a[i+3].u&&(a[i+3].u==='ROW'||a[i+3].u==='ROWS')&&a[i+4]&&a[i+4].u==='ONLY'){
+          const n=a[i+2];a.splice(i,5,W('LIMIT'),n);log.add('FETCH FIRST n ROWS ONLY → LIMIT n');
+        }else break;
+      }
+    }
+  }
+  return a;
+}
+const toText=a=>a.map(t=>t.v+(t.k==='lc'?'\n':'')).join(' ');
+function convertSql(src,from,to){
+  const log={list:[],notes:[],add(m){if(!this.list.includes(m))this.list.push(m);},note(m){if(!this.notes.includes(m))this.notes.push(m);}};
+  const T=lex(src);
+  if(from===to)return{text:fmt(T),applied:[],notes:[]};
+  let a=conv(T,from,to,log);a=limitPass(a,to,log);
+  const seen=new Set();
+  a.forEach((x,i)=>{
+    if(x.k!=='w'||seen.has(x.u))return;const nt=NOTES[x.u];if(!nt)return;
+    const isCall=a[i+1]&&a[i+1].v==='(';
+    if(['IDENTITY','AUTOINCREMENT','SERIAL','BIGSERIAL','NVARCHAR','DATETIME2','BOOLEAN','PRAGMA','TRUNCATE','RETURNING','MERGE','CONFLICT','APPLY'].includes(x.u)===false&&!isCall)return;
+    if(nt.ok.includes(to))return;
+    seen.add(x.u);
+    const h=nt.h[to];
+    log.note(x.u+': não existe no '+DS[to]+'.'+(h?' Equivalente: '+h:''));
+  });
+  if(a.some(x=>x.k==='w'&&['IDENTITY','AUTOINCREMENT','SERIAL','BIGSERIAL','NVARCHAR','DATETIME2'].includes(x.u)))log.note('Tipos de dados e colunas autoincrementais variam entre bancos: veja a receita "Criar tabela".');
+  return{text:fmt(lex(toText(a))),applied:log.list,notes:log.notes};
+}
+
+/* ---- Explicação passo a passo ---- */
+function stmts(T){const r=[];let d=0,cur=[];T.forEach(t=>{if(t.v==='(')d++;if(t.v===')')d--;if(t.v===';'&&d===0){if(cur.length)r.push(cur);cur=[];}else cur.push(t);});if(cur.length)r.push(cur);return r;}
+function segs(S){
+  const r=[];let d=0,seg=null;
+  for(let i=0;i<S.length;i++){const t=S[i];
+    if(d===0&&t.k==='w'){let ph=phraseAt(S,i);if(ph&&(ph.text==='WITH'||ph.text==='UPDATE')&&i>0)ph=null;
+      if(ph){seg={kw:ph.type==='join'?ph.text:ph.text,type:ph.type,toks:[]};r.push(seg);i+=ph.len-1;continue;}}
+    if(t.v==='(')d++;else if(t.v===')')d--;
+    if(!seg){seg={kw:'',type:'',toks:[]};r.push(seg);}
+    seg.toks.push(t);
+  }
+  return r;
+}
+const EX={
+  'WITH':'Define consultas temporárias com nome (CTEs). A consulta principal as usa como se fossem tabelas.',
+  'FROM':'Escolhe a tabela de origem. É por aqui que o banco começa: primeiro monta o conjunto de linhas.',
+  'JOIN':'Combina a tabela anterior com outra, ligando as linhas pela condição do ON (ou USING).',
+  'WHERE':'Filtra linhas individuais, antes de qualquer agrupamento. Só as linhas que atendem passam adiante.',
+  'GROUP BY':'Agrupa as linhas restantes. Cada grupo vira uma linha do resultado, e as agregações (COUNT, SUM...) são calculadas por grupo.',
+  'HAVING':'Filtra os grupos depois de calculados. É aqui que se usa COUNT, SUM, AVG... como condição.',
+  'SELECT':'Escolhe e calcula as colunas do resultado. Apelidos criados aqui (AS) só existem a partir deste ponto.',
+  'UNION':'Empilha o resultado desta consulta com o da próxima (UNION remove duplicados).',
+  'UNION ALL':'Empilha o resultado desta consulta com o da próxima, mantendo todas as linhas.',
+  'INTERSECT':'Mantém só as linhas presentes nas duas consultas.',
+  'EXCEPT':'Mantém as linhas da primeira consulta que não aparecem na segunda.',
+  'ORDER BY':'Ordena o resultado final. Só aqui os apelidos do SELECT já podem ser usados.',
+  'LIMIT':'Corta o resultado nas primeiras N linhas (depois da ordenação).',
+  'OFFSET':'Pula as primeiras linhas do resultado (usado para paginar).',
+  'FETCH':'Limita quantas linhas voltam (padrão SQL).',
+  'INSERT INTO':'Informa a tabela (e as colunas) que vai receber novas linhas.',
+  'VALUES':'Lista os valores das novas linhas, na mesma ordem das colunas.',
+  'UPDATE':'Escolhe a tabela cujas linhas serão alteradas.',
+  'SET':'Define os novos valores das colunas.',
+  'DELETE FROM':'Escolhe a tabela de onde as linhas serão apagadas.',
+  'DELETE':'Apaga linhas.',
+  'RETURNING':'Devolve as linhas afetadas pelo comando.',
+  'ON CONFLICT':'Se a chave já existir, em vez de falhar, segue a ação indicada (upsert).',
+  'DO UPDATE':'Atualiza a linha existente.',
+  'DO NOTHING':'Ignora a linha que já existe.'
+};
+const RANK={'WITH':0,'FROM':1,'JOIN':1,'WHERE':2,'GROUP BY':3,'HAVING':4,'SELECT':5,'UNION':6,'UNION ALL':6,'INTERSECT':6,'EXCEPT':6,'ORDER BY':7,'LIMIT':8,'OFFSET':8,'FETCH':8};
+const FIRSTEX={CREATE:'Comando de estrutura (DDL): cria um objeto, como tabela, índice ou view.',ALTER:'Comando de estrutura (DDL): altera um objeto existente.',DROP:'Comando de estrutura (DDL): apaga um objeto e seus dados. Irreversível sem backup.',TRUNCATE:'Esvazia a tabela inteira de uma vez.',BEGIN:'Inicia uma transação: nada é definitivo até o COMMIT.',COMMIT:'Confirma a transação.',ROLLBACK:'Desfaz a transação.'};
+const textOf=(src,toks)=>toks.length?src.slice(toks[0].s,toks[toks.length-1].e).replace(/\s+/g,' ').trim():'';
+function explainStmt(src,S,SG){
+  const box=[];
+  const isQuery=SG.some(s=>['SELECT','FROM'].includes(s.kw));
+  let items=SG.filter(s=>s.kw).map((s,k)=>({...s,k}));
+  const firstWord=S.find(t=>t.k==='w');
+  if(!SG.some(s=>s.kw)&&firstWord&&FIRSTEX[firstWord.u])return [el('div',{class:'fn'},el('h3',{},firstWord.u),el('p',{},FIRSTEX[firstWord.u]))];
+  if(SG.length&&!SG[0].kw&&firstWord&&FIRSTEX[firstWord.u])box.push(el('div',{class:'tip'},FIRSTEX[firstWord.u]));
+  if(isQuery)items=items.sort((a,b)=>((RANK[a.type==='join'?'JOIN':a.kw]??9)-(RANK[b.type==='join'?'JOIN':b.kw]??9))||a.k-b.k);
+  let n=0;
+  items.forEach(s=>{
+    n++;
+    const key=s.type==='join'?'JOIN':s.kw;
+    let txt=textOf(src,s.toks);let extra='';
+    if(s.kw==='SELECT'){
+      const f=s.toks[0];
+      if(f&&f.u==='DISTINCT')extra=' DISTINCT remove as linhas repetidas do resultado.';
+      if(f&&(f.u==='TOP'||(f.u==='DISTINCT'&&s.toks[1]&&s.toks[1].u==='TOP')))extra+=' TOP limita o número de linhas (depois da ordenação).';
+    }
+    if(s.type==='join'&&/^(CROSS)/.test(s.kw))extra=' CROSS combina todas as linhas com todas.';
+    const lab=s.type==='join'?s.kw:s.kw;
+    box.push(el('div',{class:'step'},el('h3',{},el('i',{},String(n).padStart(2,'0')),lab),txt?el('div',{class:'out',style:'margin:8px 0 0'},txt):null,el('p',{},(EX[key]||'')+extra)));
+  });
+  return box;
+}
+function hints(src,S,SG){
+  const h=[];const kws=SG.map(s=>s.kw);const has=k=>kws.includes(k);
+  const fw=S.find(t=>t.k==='w');
+  if(fw&&(fw.u==='UPDATE'||fw.u==='DELETE')&&!has('WHERE'))h.push({e:1,m:fw.u+' sem WHERE altera todas as linhas da tabela. Confira antes com um SELECT e use uma transação.'});
+  for(let i=0;i<S.length;i++){const t=S[i];
+    if(t.u==='SELECT'){let j=i+1;if(S[j]&&(S[j].u==='DISTINCT'||S[j].u==='ALL'))j++;if(S[j]&&S[j].v==='*')h.push({m:'SELECT * traz todas as colunas. Em consultas de produção, liste só as que você precisa (menos dados, menos surpresas se a tabela mudar).'});}
+    if((t.v==='='||t.v==='<>'||t.v==='!=')&&S[i+1]&&S[i+1].u==='NULL')h.push({m:'Comparar com = NULL (ou <> NULL) nunca é verdadeiro. Use IS NULL ou IS NOT NULL.'});
+    if(t.u==='NOT'&&S[i+1]&&S[i+1].u==='IN'&&S[i+2]&&S[i+2].v==='('&&S[i+3]&&S[i+3].u==='SELECT')h.push({m:'NOT IN com subconsulta devolve vazio se a subconsulta tiver algum NULL. NOT EXISTS é mais seguro.'});
+    if((t.u==='LIKE'||t.u==='ILIKE')&&S[i+1]&&S[i+1].k==='str'&&/^'%/.test(S[i+1].v))h.push({m:"LIKE começando com % obriga o banco a ler a tabela inteira (não usa índice). Se possível, procure por 'texto%'."});
+  }
+  const from=SG.find(s=>s.kw==='FROM');
+  if(from){let d=0;for(const t of from.toks){if(t.v==='(')d++;else if(t.v===')')d--;else if(t.v===','&&d===0){h.push({m:'Várias tabelas separadas por vírgula no FROM (junção implícita) é um estilo antigo. Prefira JOIN ... ON, que é mais claro e evita produto cartesiano por esquecimento.'});break;}}}
+  const wh=SG.find(s=>s.kw==='WHERE');
+  if(wh){const NS=new Set(['YEAR','MONTH','DAY','UPPER','LOWER','DATE','CAST','SUBSTR','SUBSTRING','LEFT','RIGHT','LEN','LENGTH','STRFTIME','CONVERT','TRIM','ISNULL','COALESCE','DATEPART','EXTRACT','DATE_TRUNC','FORMAT','TO_CHAR']);
+    if(wh.toks.some((t,i)=>t.k==='w'&&NS.has(t.u)&&wh.toks[i+1]&&wh.toks[i+1].v==='('))h.push({m:'Aplicar função a uma coluna no WHERE (ex.: YEAR(data) = 2025) impede o uso de índice. Prefira comparar a coluna com um intervalo: data >= \'2025-01-01\' AND data < \'2026-01-01\'.'});}
+  if(kws.includes('UNION'))h.push({m:'UNION remove duplicados e por isso é mais lento. Se não precisa remover, use UNION ALL.'});
+  const sel=SG.find(s=>s.kw==='SELECT');
+  if((has('LIMIT')||(sel&&sel.toks[0]&&(sel.toks[0].u==='TOP'||(sel.toks[1]&&sel.toks[1].u==='TOP'))))&&!has('ORDER BY'))h.push({m:'Limitar linhas sem ORDER BY devolve linhas arbitrárias: a ordem não é garantida.'});
+  SG.filter(s=>s.type==='join'&&!/CROSS|APPLY/.test(s.kw)).forEach(s=>{if(!s.toks.some(t=>t.u==='ON'||t.u==='USING'))h.push({m:'Há um '+s.kw+' sem ON/USING: isso gera produto cartesiano (todas as linhas combinadas com todas).'});});
+  const seen=new Set();return h.filter(x=>seen.has(x.m)?false:(seen.add(x.m),true));
+}
+
+/* ---- Tela de formatação ---- */
+let srcSel='a';
+function explain(){
+  const out=$('#xout');out.replaceChildren();
+  const src=$('#xin').value;
+  if(!src.trim()){out.append(el('p',{class:'hint'},'Cole uma consulta ou comando acima.'));return;}
+  const T=lex(src);
+  const from=srcSel==='a'?detect(T):srcSel;
+  const errors=[];
+  let d=0;T.forEach(t=>{if(t.v==='(')d++;else if(t.v===')')d--;});
+  if(d>0)errors.push('Faltam '+d+' parêntese(s) de fechamento.');else if(d<0)errors.push('Há '+(-d)+' parêntese(s) de fechamento a mais.');
+  if(T.some(t=>t.k==='str'&&(t.v.length<2||t.v[t.v.length-1]!=="'")))errors.push('Há um texto com aspas simples sem fechar.');
+  const card=el('div',{class:'card'});
+  card.append(el('p',{},'Dialeto ',srcSel==='a'?'detectado: ':'escolhido: ',el('b',{},DN[from]),'. ',
+    errors.length?el('span',{class:'err'},'Atenção: '+errors.join(' ')):el('span',{class:'ok'},'Parênteses e aspas balanceados.')));
+  const formatted=fmt(T);
+  card.append(el('h3',{style:'margin:14px 0 4px;font-size:15px'},'Código organizado'),fmtOut(formatted));
+  out.append(card);
+  // Conversão
+  const c2=el('div',{class:'card'});c2.append(el('h3',{style:'margin:0 0 8px;font-size:15px'},'Converter para outro dialeto'));
+  ['s','t','p'].forEach(dd=>{
+    const r=convertSql(src,from,dd);
+    const blk=el('div',{class:'variant'},el('h3',{},DN[dd]+(dd===from?' (original)':'')),fmtOut(r.text));
+    if(r.applied.length)blk.append(el('p',{class:'note'},'Ajustes feitos: '+r.applied.join('; ')+'.'));
+    r.notes.forEach(nt=>blk.append(el('div',{class:'warn'},nt)));
+    c2.append(blk);
+  });
+  c2.append(el('p',{class:'note'},'A conversão cobre os casos mais comuns (limite de linhas, funções de texto, nulos, data atual, concatenação, aspas de identificadores). Revise o resultado e teste antes de usar.'));
+  out.append(c2);
+  // Passo a passo + funções + sugestões
+  const ST=stmts(T);
+  if(ST.length){
+    const c3=el('div',{class:'card'});
+    c3.append(el('h3',{style:'margin:0 0 4px;font-size:15px'},'Como o banco lê este comando'));
+    c3.append(el('p',{class:'hint'},'Os passos estão na ordem lógica de execução, que é diferente da ordem em que se escreve.'));
+    ST.forEach((S,k)=>{
+      if(ST.length>1)c3.append(el('h3',{style:'margin:14px 0 2px;font-size:13px;color:var(--accent-soft)'},'Comando '+(k+1)));
+      explainStmt(src,S,segs(S)).forEach(x=>c3.append(x));
+    });
+    out.append(c3);
+    const used=[];T.forEach((t,i)=>{if(t.k==='w'&&T[i+1]&&T[i+1].v==='('&&IDX[t.u]&&!used.includes(IDX[t.u]))used.push(IDX[t.u]);});
+    if(used.length){
+      const c4=el('div',{class:'card'});c4.append(el('h3',{style:'margin:0 0 4px;font-size:15px'},'Funções usadas'));
+      used.forEach(e=>c4.append(el('div',{class:'fn'},el('h3',{},e[0],el('span',{},e[1])),el('p',{},e[3]),el('div',{class:'out',style:'margin:6px 0'},pick(e[4],from)),e[6]?el('div',{class:'tip'},'💡 '+e[6]):null)));
+      out.append(c4);
+    }
+    const hs=[];ST.forEach(S=>hints(src,S,segs(S)).forEach(x=>hs.push(x)));
+    const seen=new Set();const uh=hs.filter(x=>seen.has(x.m)?false:(seen.add(x.m),true));
+    if(uh.length){const c5=el('div',{class:'card'});c5.append(el('h3',{style:'margin:0 0 6px;font-size:15px'},'Sugestões'));uh.forEach(x=>c5.append(el('div',{class:x.e?'warn err':'warn',style:x.e?'color:var(--bad)':''},x.m)));out.append(c5);}
+  }
+}
+
+/* ============ Abas e dialeto ============ */
+function setTab(id){
+  ['receitas','catalogo','explicar'].forEach(t=>{$('#p-'+t).classList.toggle('hide',t!==id);$('#tab-'+t).setAttribute('aria-selected',String(t===id));});
+  setHash(id==='receitas'?'receitas/'+curR:id);
+}
+function setDia(d){
+  dia=d;try{localStorage.setItem('sql-dia',d);}catch{}
+  ['s','t','p'].forEach(x=>$('#dia-'+x).setAttribute('aria-pressed',String(x===d)));
+  renderRPanel();renderCatalog();
+}
+function setSrc(s){srcSel=s;['a','s','t','p'].forEach(x=>$('#src-'+x).setAttribute('aria-pressed',String(x===s)));if($('#xin').value.trim())explain();}
+document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>setTab(b.dataset.tab)));
+document.querySelectorAll('[data-dia]').forEach(b=>b.addEventListener('click',()=>setDia(b.dataset.dia)));
+document.querySelectorAll('[data-src]').forEach(b=>b.addEventListener('click',()=>setSrc(b.dataset.src)));
+$('#rq').addEventListener('input',e=>{rFilter=e.target.value;renderRList();});
+$('#cq').addEventListener('input',e=>{cQ=e.target.value;renderCatalog();});
+$('#xgo').addEventListener('click',explain);
+{let tmr;$('#xin').addEventListener('input',()=>{clearTimeout(tmr);tmr=setTimeout(explain,400);});}
+$('#xex').addEventListener('click',()=>{$('#xin').value=`select c.nome, count(*) as pedidos, sum(v.valor) total from vendas v join clientes c on c.id=v.cliente_id where v.data>='2025-01-01' and v.valor>0 group by c.nome having count(*)>1 order by total desc limit 10`;explain();});
+['s','t','p'].forEach(x=>$('#dia-'+x).setAttribute('aria-pressed',String(x===dia)));
+renderRList();renderRPanel();renderCats();renderCatalog();
+{const [t,rid]=location.hash.slice(1).split('/');if(rid&&R.some(r=>r.id===rid)){curR=rid;renderRList();renderRPanel();}if(['receitas','catalogo','explicar'].includes(t))setTab(t);}
+</script>
+</body>
+</html>
