@@ -68,12 +68,12 @@ src/pdf/
 
 ## Visual
 
-O visual segue o eduardonunes.dev: fundo `#030305`, acento roxo `#8a5bd8` / `#a58be6`, cantos retos, bordas de 1px, títulos em Roboto Slab e rótulos em caixa-alta espaçada. As cores e fontes ficam em variáveis no início de `assets/tema.css`.
+O padrão é o tema escuro, igual ao eduardonunes.dev, e cada página tem um botão **Modo claro / Modo escuro** (no cabeçalho; no PDF Local, na barra lateral). A escolha fica guardada no navegador (`localStorage`, chave `ferramentas-tema`) e vale para todas as ferramentas. O tema escuro segue o eduardonunes.dev: fundo `#030305`, acento roxo `#8a5bd8` / `#a58be6`, cantos retos, bordas de 1px, títulos em Roboto Slab e rótulos em caixa-alta espaçada. As cores e fontes ficam em variáveis no início de `assets/tema.css`; o modo claro redefine as mesmas variáveis em `html[data-theme=light]`. Use `var(--on)` (e não `#fff`) para texto em destaque ao passar o mouse, senão o contraste quebra no modo claro.
 
 - **Landing, Excel, DAX e SQL** usam o `assets/tema.css`.
 - **PDF Local** é um único arquivo: o CSS fica dentro do `src/pdf/template.html` e o `build.py` embute as fontes (latin) em base64.
-- Se mudar a paleta, atualize os dois lugares.
-- **Cache:** o CSS é carregado com versão (`tema.css?v=2`). Ao alterar o `tema.css`, incremente o número nas quatro páginas, senão alguns navegadores mostram o site sem estilo.
+- Se mudar a paleta (escura ou clara), atualize os dois lugares.
+- **Cache:** o CSS é carregado com versão (`tema.css?v=3`). Ao alterar o `tema.css`, incremente o número nas quatro páginas, senão alguns navegadores mostram o site sem estilo.
 
 ## Rodar localmente
 

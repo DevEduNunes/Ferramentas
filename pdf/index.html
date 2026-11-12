@@ -2,6 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
+<script>try{var t=localStorage.getItem('ferramentas-tema');document.documentElement.dataset.theme=(t==='light'?'light':'dark')}catch(e){document.documentElement.dataset.theme='dark'}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#030305">
 <!-- Bloqueia qualquer comunicação de rede: o navegador recusa fetch/XHR/WebSocket/imagens/scripts externos. -->
@@ -18,11 +19,21 @@
   --sans:"Space Grotesk",system-ui,-apple-system,"Segoe UI",sans-serif;
   --serif:"Roboto Slab",Rockwell,Georgia,serif;
   --ease:cubic-bezier(.16,1,.3,1);
+  --on:#fff; --overlay:rgba(3,3,5,.78); --glow:rgba(138,91,216,.11); --line3:#3a3745;
+  --addbg:rgba(78,201,160,.18); --addtx:#8fe3c6; --delbg:rgba(229,100,107,.18); --deltx:#f0969b;
+}
+html[data-theme=light]{
+  color-scheme:light;
+  --bg:#f7f6fa; --panel:#ffffff; --panel2:#f1eff7; --panel3:#ebe6f8;
+  --text:#2c2a38; --head:#1b1826; --muted:#5f5c70; --dim:#8c889b; --line:#e2dfec; --line2:#cfcadc; --line3:#b9b3cc;
+  --accent:#7544c9; --accent-soft:#6a3fba; --danger:#c43c45; --ok:#1b8a68; --warn:#a87413;
+  --on:#14121c; --overlay:rgba(247,246,250,.82); --glow:rgba(117,68,201,.08);
+  --addbg:rgba(27,138,104,.14); --addtx:#12684e; --delbg:rgba(196,60,69,.12); --deltx:#a52c35;
 }
 *{box-sizing:border-box}
 html,body{min-height:100%}
 body{margin:0;color:var(--text);font:16px/1.55 var(--sans);-webkit-font-smoothing:antialiased;
-  background:radial-gradient(900px 520px at 88% -8%,rgba(138,91,216,.11),transparent 62%),var(--bg);background-attachment:fixed}
+  background:radial-gradient(900px 520px at 88% -8%,var(--glow),transparent 62%),var(--bg);background-attachment:fixed}
 ::selection{background:var(--accent);color:#fff}
 :focus-visible{outline:2px solid var(--accent-soft);outline-offset:3px}
 .app{display:grid;grid-template-columns:280px 1fr;min-height:100vh}
@@ -30,12 +41,12 @@ aside{background:var(--panel);border-right:1px solid var(--line);padding:28px 20
 .brand{font-family:var(--serif);font-weight:700;font-size:20px;color:var(--head);padding:0 8px 2px}
 .brand i{font-style:normal;color:var(--accent)}
 .back{margin:0 8px 18px;font-size:11.5px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);text-decoration:none;transition:color .3s}
-.back:hover{color:#fff}
+.back:hover{color:var(--on)}
 .badge{margin:0 8px 20px;padding:11px 13px;border:1px solid var(--line);border-left:3px solid var(--accent);background:var(--panel2);font-size:13px;color:var(--muted);line-height:1.5}
 .badge b{color:var(--text);font-weight:600}
 nav button{all:unset;box-sizing:border-box;display:flex;gap:12px;align-items:baseline;width:100%;padding:10px 12px;border-left:2px solid transparent;cursor:pointer;color:var(--muted);font-size:15px;transition:color .25s,background .25s,border-color .25s}
-nav button:hover{color:#fff;background:var(--panel2)}
-nav button.active{color:#fff;background:var(--panel2);border-left-color:var(--accent)}
+nav button:hover{color:var(--on);background:var(--panel2)}
+nav button.active{color:var(--on);background:var(--panel2);border-left-color:var(--accent)}
 nav button:focus-visible{outline:2px solid var(--accent-soft);outline-offset:-2px}
 nav .ic{font-size:11px;font-weight:500;letter-spacing:.14em;color:var(--dim);min-width:20px}
 nav button.active .ic{color:var(--accent)}
@@ -51,12 +62,12 @@ h1{margin:0;font-family:var(--serif);font-weight:700;font-size:clamp(30px,4vw,48
 .drop:hover,.drop.over{border-color:var(--accent);background:var(--panel3);color:var(--text)}
 .drop strong{color:var(--head);display:block;font-family:var(--serif);font-size:21px;font-weight:600;margin-bottom:6px}
 button.btn,button.primary{font:inherit;font-size:11.5px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;padding:11px 18px;border:1px solid var(--line2);background:transparent;color:var(--text);cursor:pointer;transition:border-color .25s,background .25s,color .25s}
-button.btn:hover{border-color:var(--accent);color:#fff;background:var(--panel3)}
+button.btn:hover{border-color:var(--accent);color:var(--on);background:var(--panel3)}
 button.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
-button.primary:hover{background:#9a6de6;border-color:#9a6de6}
+button.primary:hover{background:var(--accent-soft);border-color:var(--accent-soft)}
 button:disabled{opacity:.45;cursor:not-allowed}
 button.icon{font:inherit;border:1px solid var(--line2);background:transparent;color:var(--text);width:30px;height:30px;cursor:pointer;line-height:1;transition:border-color .25s,color .25s}
-button.icon:hover{border-color:var(--accent);color:#fff}
+button.icon:hover{border-color:var(--accent);color:var(--on)}
 button.icon.danger:hover{color:var(--danger);border-color:var(--danger)}
 .row{display:flex;flex-wrap:wrap;gap:14px;align-items:center}
 .row.end{justify-content:flex-end}
@@ -85,26 +96,28 @@ input:focus-visible,select:focus-visible{outline:none;border-color:var(--accent)
 .note{font-size:13.5px;color:var(--muted);margin:10px 0 0}
 .warn{border-left:2px solid var(--warn);background:var(--panel2);color:var(--text);padding:10px 14px;font-size:14px}
 .hide{display:none!important}
-#busy{position:fixed;inset:0;background:rgba(3,3,5,.78);display:flex;align-items:center;justify-content:center;z-index:50;backdrop-filter:blur(3px)}
+#busy{position:fixed;inset:0;background:var(--overlay);display:flex;align-items:center;justify-content:center;z-index:50;backdrop-filter:blur(3px)}
 #busy .box{background:var(--panel);border:1px solid var(--line2);border-left:3px solid var(--accent);padding:22px 26px;min-width:300px}
 .bar-o{height:3px;background:var(--line);margin-top:14px}
 .bar-i{height:100%;width:0;background:var(--accent);transition:width .15s}
 #toasts{position:fixed;right:18px;bottom:18px;display:flex;flex-direction:column;gap:8px;z-index:60;max-width:min(420px,calc(100vw - 36px))}
 .toast{background:var(--panel);border:1px solid var(--line2);border-left:3px solid var(--ok);padding:11px 15px;font-size:14px}
 .toast.err{border-left-color:var(--danger)}
+button.theme-btn{font:inherit;font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;border:1px solid var(--line2);background:transparent;color:var(--muted);padding:8px 12px;margin:0 8px 18px;cursor:pointer;text-align:left;transition:color .25s,border-color .25s,background .25s}
+button.theme-btn:hover{color:var(--on);border-color:var(--accent);background:var(--panel3)}
 nav .grp{margin:18px 8px 6px;font-size:10.5px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--dim)}
 nav .grp:first-child{margin-top:4px}
 button.tb{font:inherit;font-size:12.5px;padding:8px 12px;border:1px solid var(--line2);background:transparent;color:var(--muted);cursor:pointer;transition:border-color .25s,color .25s,background .25s}
-button.tb:hover{color:#fff;border-color:var(--line2);background:var(--panel2)}
-button.tb[aria-pressed=true]{border-color:var(--accent);color:#fff;background:var(--panel3)}
+button.tb:hover{color:var(--on);border-color:var(--line2);background:var(--panel2)}
+button.tb[aria-pressed=true]{border-color:var(--accent);color:var(--on);background:var(--panel3)}
 .tbar{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
 textarea{font:inherit;font-size:14.5px;padding:10px 12px;border:1px solid var(--line2);background:var(--panel2);color:var(--text);width:100%;min-height:180px;resize:vertical;border-radius:0}
 textarea:focus-visible{outline:none;border-color:var(--accent);background:var(--panel3)}
 textarea.mono{font-family:ui-monospace,"Cascadia Mono",Consolas,monospace;font-size:13px;line-height:1.5}
 .cols2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .cols3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
-.add{background:rgba(78,201,160,.18);color:#8fe3c6}
-.del{background:rgba(229,100,107,.18);color:#f0969b;text-decoration:line-through}
+.add{background:var(--addbg);color:var(--addtx)}
+.del{background:var(--delbg);color:var(--deltx);text-decoration:line-through}
 .diffbox{border:1px solid var(--line);background:var(--panel2);padding:12px 14px;white-space:pre-wrap;word-break:break-word;font-size:14px;line-height:1.7;max-height:360px;overflow:auto}
 .cv{max-width:100%;height:auto;border:1px solid var(--line);background:#fff;display:block}
 .stat{color:var(--muted);font-size:13px}
@@ -131,6 +144,7 @@ table.t th{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:va
   <aside>
     <div class="brand">PDF Local<i>.</i></div>
     <a class="back" href="../">← Ferramentas</a>
+    <button class="theme-btn" id="themeBtn" type="button">☀ Modo claro</button>
     <div class="badge"><b>100% offline.</b> Seus arquivos nunca saem deste computador: não há upload nem servidor.</div>
     <nav id="nav" aria-label="Ferramentas"></nav>
   </aside>
@@ -667,7 +681,7 @@ function pageViewer(pdf, opt = {}) {
   const V = { n: 1, total: pdf.numPages, scale: opt.scale || 1.3, vp: null, vp1: null, token: 0 };
   const base = h('canvas'), top = h('canvas', { style: 'position:absolute;left:0;top:0;touch-action:none;cursor:crosshair' });
   const stage = h('div', { style: 'position:relative;display:inline-block;line-height:0;background:#fff' }, base, top);
-  const scroller = h('div', { style: 'overflow:auto;max-width:100%;max-height:78vh;border:1px solid var(--line);background:#16151b;padding:10px;text-align:center' }, stage);
+  const scroller = h('div', { style: 'overflow:auto;max-width:100%;max-height:78vh;border:1px solid var(--line);background:var(--panel3);padding:10px;text-align:center' }, stage);
   const label = h('span', { class: 'meta' });
   const prev = h('button', { class: 'btn', type: 'button', onclick: () => V.go(V.n - 1) }, '←');
   const next = h('button', { class: 'btn', type: 'button', onclick: () => V.go(V.n + 1) }, '→');
@@ -1742,6 +1756,13 @@ tools.push({ id: 'limites', icon: 'ℹ', title: 'O que não dá para fazer aqui'
       h('p', { class: 'note' }, 'Esse é o preço de verdade da privacidade: tudo o que está nesta página roda no seu computador, e o que não dá para rodar aqui fica de fora em vez de ir para um servidor.'));
   } });
 
+
+(function () {
+  const b = document.getElementById('themeBtn'), r = document.documentElement;
+  const lab = () => { const l = r.dataset.theme === 'light'; b.textContent = l ? '☾ Modo escuro' : '☀ Modo claro'; b.setAttribute('aria-label', l ? 'Mudar para o modo escuro' : 'Mudar para o modo claro'); const m = document.querySelector('meta[name=theme-color]'); if (m) m.content = l ? '#f7f6fa' : '#030305'; };
+  b.addEventListener('click', () => { const n = r.dataset.theme === 'light' ? 'dark' : 'light'; r.dataset.theme = n; try { localStorage.setItem('ferramentas-tema', n); } catch {} lab(); });
+  lab();
+})();
 
 /* ---------- navegação ---------- */
 const MENU = [

@@ -81,7 +81,7 @@ function pageViewer(pdf, opt = {}) {
   const V = { n: 1, total: pdf.numPages, scale: opt.scale || 1.3, vp: null, vp1: null, token: 0 };
   const base = h('canvas'), top = h('canvas', { style: 'position:absolute;left:0;top:0;touch-action:none;cursor:crosshair' });
   const stage = h('div', { style: 'position:relative;display:inline-block;line-height:0;background:#fff' }, base, top);
-  const scroller = h('div', { style: 'overflow:auto;max-width:100%;max-height:78vh;border:1px solid var(--line);background:#16151b;padding:10px;text-align:center' }, stage);
+  const scroller = h('div', { style: 'overflow:auto;max-width:100%;max-height:78vh;border:1px solid var(--line);background:var(--panel3);padding:10px;text-align:center' }, stage);
   const label = h('span', { class: 'meta' });
   const prev = h('button', { class: 'btn', type: 'button', onclick: () => V.go(V.n - 1) }, '←');
   const next = h('button', { class: 'btn', type: 'button', onclick: () => V.go(V.n + 1) }, '→');
