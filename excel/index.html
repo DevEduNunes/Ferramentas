@@ -1,0 +1,585 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Nenhuma requisição de rede é permitida: tudo roda no navegador. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'">
+<title>Fórmulas do Excel · Ferramentas</title>
+<meta name="description" content="Receitas, catálogo e tradutor de fórmulas do Excel em português e inglês. Tudo no navegador, sem enviar nada a servidor.">
+<style>
+:root{
+  --bg:#f6f7f9; --panel:#fff; --text:#1c2230; --muted:#667085; --line:#e3e6ec;
+  --accent:#2f6fed; --accent-t:#fff; --accent-soft:#e8f0ff; --ok:#12b76a; --warn:#b54708; --warn-bg:#fff4e5; --bad:#d92d20;
+  --code:#f1f3f8; --shadow:0 1px 2px rgba(16,24,40,.06),0 4px 14px rgba(16,24,40,.06);
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#12151c; --panel:#1b1f29; --text:#e8eaf0; --muted:#98a2b3; --line:#2b3140;
+    --accent:#5b8cff; --accent-t:#0b1020; --accent-soft:#222c46; --ok:#32d583; --warn:#ffd28a; --warn-bg:#3a2c12; --bad:#f97066;
+    --code:#10131a; --shadow:0 1px 2px rgba(0,0,0,.4);}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+a{color:var(--accent)}
+.wrap{max-width:1040px;margin:0 auto;padding:0 20px 60px}
+header.top{display:flex;justify-content:space-between;align-items:center;padding:18px 0;gap:12px;flex-wrap:wrap}
+header.top a{color:var(--muted);text-decoration:none;font-size:14px}
+header.top a:hover{color:var(--text)}
+h1{margin:6px 0 4px;font-size:28px;letter-spacing:-.02em}
+.sub{color:var(--muted);margin:0 0 18px;max-width:700px}
+.bar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-bottom:16px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--panel)}
+.seg button{font:inherit;border:0;background:transparent;color:var(--muted);padding:8px 14px;cursor:pointer}
+.seg button[aria-pressed=true],.seg button[aria-selected=true]{background:var(--accent);color:var(--accent-t);font-weight:600}
+.seg button:focus-visible,.chip:focus-visible,.btn:focus-visible,.rbtn:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.hint{font-size:13px;color:var(--muted)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;box-shadow:var(--shadow);margin-bottom:14px}
+input[type=text],input[type=search],textarea,select{font:inherit;width:100%;padding:9px 11px;border-radius:9px;border:1px solid var(--line);background:var(--bg);color:var(--text)}
+textarea{font-family:ui-monospace,Consolas,"Courier New",monospace;min-height:120px;resize:vertical}
+input:focus-visible,textarea:focus-visible{outline:2px solid var(--accent)}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+label.f small{color:var(--muted);opacity:.85}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+.chip{font:inherit;font-size:13px;border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:99px;padding:5px 13px;cursor:pointer}
+.chip[aria-pressed=true]{background:var(--accent-soft);border-color:var(--accent);font-weight:600}
+.layout{display:grid;grid-template-columns:300px 1fr;gap:18px;align-items:start}
+.rlist{display:flex;flex-direction:column;gap:6px;max-height:70vh;overflow:auto;padding-right:4px}
+.rbtn{font:inherit;text-align:left;border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:10px;padding:9px 12px;cursor:pointer}
+.rbtn:hover{border-color:var(--accent)}
+.rbtn[aria-pressed=true]{background:var(--accent-soft);border-color:var(--accent)}
+.rbtn small{display:block;color:var(--muted);font-size:12px}
+.fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:14px 0}
+.out{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-family:ui-monospace,Consolas,"Courier New",monospace;font-size:14.5px;white-space:pre-wrap;word-break:break-word;margin:6px 0}
+.row{display:flex;gap:10px;align-items:flex-start;justify-content:space-between}
+.row .out{flex:1;margin:0}
+.btn{font:inherit;border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:9px;padding:7px 13px;cursor:pointer;white-space:nowrap}
+.btn:hover{background:var(--bg)}
+.btn.primary{background:var(--accent);color:var(--accent-t);border-color:var(--accent);font-weight:600}
+.variant{margin-top:16px}
+.variant h3{margin:0 0 2px;font-size:14px}
+.note{font-size:13.5px;color:var(--muted);margin:4px 0 0}
+.badge{display:inline-block;font-size:11.5px;border-radius:99px;padding:1px 9px;background:var(--accent-soft);margin-left:6px;vertical-align:middle}
+.fn{border-top:1px solid var(--line);padding:14px 0}
+.fn:first-child{border-top:0}
+.fn h3{margin:0;font-size:16px}
+.fn h3 span{color:var(--muted);font-weight:400;font-size:13px;margin-left:8px}
+.fn p{margin:4px 0}
+.tip{background:var(--warn-bg);color:var(--warn);border-radius:8px;padding:7px 10px;font-size:13.5px;margin:6px 0 0}
+.tabs{margin-bottom:16px}
+.warn{background:var(--warn-bg);color:var(--warn);border-radius:10px;padding:10px 13px;font-size:14px;margin:8px 0}
+.err{color:var(--bad);font-weight:600}
+.ok{color:var(--ok);font-weight:600}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+footer{color:var(--muted);font-size:13px;margin-top:28px;border-top:1px solid var(--line);padding-top:16px}
+.hide{display:none!important}
+@media (max-width:820px){.layout,.grid2{grid-template-columns:1fr}.rlist{max-height:170px;flex-direction:row;flex-wrap:wrap;border:1px solid var(--line);border-radius:12px;padding:8px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="top"><a href="../">← Todas as ferramentas</a><a href="https://eduardonunes.dev">eduardonunes.dev</a></header>
+<h1>📊 Fórmulas do Excel</h1>
+<p class="sub">Receitas prontas para preencher, catálogo de funções e um tradutor de fórmulas entre português e inglês. Tudo roda no seu navegador: nada do que você digita é enviado a lugar nenhum.</p>
+
+<div class="bar">
+  <div class="seg tabs" role="tablist" aria-label="Seções">
+    <button role="tab" id="tab-receitas" aria-selected="true" data-tab="receitas">Receitas</button>
+    <button role="tab" id="tab-catalogo" aria-selected="false" data-tab="catalogo">Catálogo</button>
+    <button role="tab" id="tab-explicar" aria-selected="false" data-tab="explicar">Explicar e converter</button>
+  </div>
+  <div>
+    <div class="seg" role="group" aria-label="Idioma das fórmulas">
+      <button id="loc-pt" aria-pressed="true">Excel em português (;)</button>
+      <button id="loc-en" aria-pressed="false">Excel em inglês (,)</button>
+    </div>
+  </div>
+</div>
+
+<section id="p-receitas">
+  <div class="layout">
+    <div>
+      <input type="search" id="rq" placeholder="Buscar receita (ex.: somar, data, texto)…" aria-label="Buscar receita">
+      <div class="rlist" id="rlist" style="margin-top:10px"></div>
+    </div>
+    <div id="rpanel"></div>
+  </div>
+</section>
+
+<section id="p-catalogo" class="hide">
+  <input type="search" id="cq" placeholder="Buscar função pelo nome ou pelo que ela faz (ex.: procv, somar, data)…" aria-label="Buscar função">
+  <div class="chips" id="ccats"></div>
+  <div class="card" id="clist"></div>
+</section>
+
+<section id="p-explicar" class="hide">
+  <div class="card">
+    <label class="f">Cole uma fórmula (em português ou inglês)
+      <textarea id="xin" spellcheck="false" placeholder='=SE(PROCV(A2;Preços!A:C;3;0)>100;"Caro";"OK")'></textarea>
+    </label>
+    <div class="row" style="margin-top:10px;justify-content:flex-start;flex-wrap:wrap">
+      <button class="btn primary" id="xgo">Explicar e converter</button>
+      <button class="btn" id="xex">Usar exemplo</button>
+      <span class="hint">A fórmula é analisada aqui mesmo, no navegador.</span>
+    </div>
+  </div>
+  <div id="xout"></div>
+</section>
+
+<footer>Os nomes das funções seguem o Excel em português do Brasil. Se o seu Excel não reconhecer algum nome, troque para "Excel em inglês" acima e confira no assistente de funções (botão <b>fx</b>). Funções marcadas com 365 ou 2019 exigem essas versões. Não afiliado à Microsoft.</footer>
+</div>
+
+<script>
+'use strict';
+/* ============ Catálogo ============
+   [en, pt, categoria, descrição, sintaxe (EN), exemplo (EN), dica, versão] */
+const F=[
+// Lógica
+['IF','SE','Lógica','Testa uma condição e devolve um valor se for verdadeira e outro se for falsa.','IF(teste, valor_se_verdadeiro, [valor_se_falso])','=IF(B2>=7,"Aprovado","Reprovado")','Para mais de duas saídas, use IFS em vez de vários IF aninhados.',''],
+['IFS','SES','Lógica','Testa várias condições em ordem e devolve o resultado da primeira que for verdadeira.','IFS(teste1, valor1, [teste2, valor2], ...)','=IFS(B2>=9,"A",B2>=7,"B",TRUE,"C")','Use TRUE como último teste para representar "nenhuma das anteriores".','2019 / 365'],
+['AND','E','Lógica','Devolve VERDADEIRO somente se todas as condições forem verdadeiras.','AND(condição1, [condição2], ...)','=IF(AND(B2>=7,C2>=75),"Aprovado","Reprovado")','Use dentro do SE para exigir vários critérios ao mesmo tempo.',''],
+['OR','OU','Lógica','Devolve VERDADEIRO se pelo menos uma condição for verdadeira.','OR(condição1, [condição2], ...)','=IF(OR(B2="Sim",C2="Sim"),"Ok","Pendente")','',''],
+['NOT','NÃO','Lógica','Inverte o resultado lógico: VERDADEIRO vira FALSO e vice-versa.','NOT(condição)','=IF(NOT(ISBLANK(A2)),"Preenchido","Vazio")','',''],
+['IFERROR','SEERRO','Lógica','Devolve um valor alternativo quando a fórmula resulta em erro; caso contrário, devolve o resultado normal.','IFERROR(valor, valor_se_erro)','=IFERROR(A2/B2,0)','Use só quando o erro é esperado. Esconder erros demais dificulta achar problemas reais.',''],
+['LET','LET','Lógica','Dá nomes a cálculos intermediários dentro da própria fórmula, evitando repetir expressões.','LET(nome1, valor1, [nome2, valor2], ..., cálculo)','=LET(total,SUM(B2:B10),B2/total)','Deixa fórmulas longas mais curtas e mais rápidas.','365 / 2021'],
+// Busca e referência
+['VLOOKUP','PROCV','Busca e referência','Procura um valor na primeira coluna de uma tabela e devolve o valor de outra coluna da mesma linha.','VLOOKUP(valor_procurado, tabela, nº_coluna, [procurar_intervalo])','=VLOOKUP(A2,Preços!A:C,3,FALSE)','Use FALSE (ou 0) para busca exata. A coluna de busca precisa ser a primeira da tabela. Sem o 4º argumento, a busca é aproximada e pode errar.',''],
+['HLOOKUP','PROCH','Busca e referência','Igual ao PROCV, mas procura na primeira linha e devolve o valor de uma linha abaixo.','HLOOKUP(valor_procurado, tabela, nº_linha, [procurar_intervalo])','=HLOOKUP("Jan",A1:M5,3,FALSE)','',''],
+['XLOOKUP','PROCX','Busca e referência','Procura um valor em uma coluna e devolve o resultado correspondente de outra, em qualquer direção, com valor padrão se não achar.','XLOOKUP(valor_procurado, intervalo_busca, intervalo_retorno, [se_não_encontrado])','=XLOOKUP(A2,Preços!A:A,Preços!C:C,"Não encontrado")','Substitui o PROCV e o PROCH com menos limitações. Busca exata por padrão.','365 / 2021'],
+['INDEX','ÍNDICE','Busca e referência','Devolve o valor de uma posição (linha e coluna) dentro de um intervalo.','INDEX(intervalo, nº_linha, [nº_coluna])','=INDEX(C2:C100,5)','Combine com CORRESP para fazer buscas flexíveis em qualquer versão do Excel.',''],
+['MATCH','CORRESP','Busca e referência','Devolve a posição de um valor dentro de uma lista.','MATCH(valor_procurado, intervalo, [tipo_correspondência])','=MATCH("Maria",A2:A100,0)','Use 0 para correspondência exata.',''],
+['XMATCH','CORRESPX','Busca e referência','Versão moderna do CORRESP: devolve a posição de um item, com busca exata por padrão.','XMATCH(valor_procurado, intervalo, [modo_correspondência], [modo_busca])','=XMATCH("Maria",A2:A100)','','365 / 2021'],
+['CHOOSE','ESCOLHER','Busca e referência','Escolhe um valor de uma lista de opções a partir de um número.','CHOOSE(nº_índice, valor1, [valor2], ...)','=CHOOSE(WEEKDAY(A2,2),"Seg","Ter","Qua","Qui","Sex","Sáb","Dom")','',''],
+['OFFSET','DESLOC','Busca e referência','Devolve uma referência deslocada a partir de uma célula inicial.','OFFSET(referência, linhas, colunas, [altura], [largura])','=SUM(OFFSET(A1,1,0,5,1))','É volátil (recalcula sempre). Prefira ÍNDICE quando possível.',''],
+['INDIRECT','INDIRETO','Busca e referência','Converte um texto em referência de célula ou intervalo.','INDIRECT(texto_ref)','=INDIRECT("A"&B1)','Também é volátil e quebra se a planilha referenciada for renomeada.',''],
+['TRANSPOSE','TRANSPOR','Busca e referência','Troca linhas por colunas em um intervalo.','TRANSPOSE(intervalo)','=TRANSPOSE(A1:C3)','Em versões anteriores ao 365, é preciso confirmar com Ctrl+Shift+Enter.',''],
+['HYPERLINK','HIPERLINK','Busca e referência','Cria um link clicável para um endereço ou célula.','HYPERLINK(local_do_link, [nome_amigável])','=HYPERLINK("https://exemplo.com","Abrir")','',''],
+['ROW','LINHA','Busca e referência','Devolve o número da linha de uma referência.','ROW([referência])','=ROW(A5)','Sem argumento, devolve a linha da própria célula.',''],
+['COLUMN','COLUNA','Busca e referência','Devolve o número da coluna de uma referência.','COLUMN([referência])','=COLUMN(C1)','',''],
+// Matemática e estatística
+['SUM','SOMA','Matemática e estatística','Soma números e intervalos.','SUM(núm1, [núm2], ...)','=SUM(B2:B10)','Ignora textos e células vazias.',''],
+['SUMIF','SOMASE','Matemática e estatística','Soma os valores que atendem a um critério.','SUMIF(intervalo_critério, critério, [intervalo_soma])','=SUMIF(B2:B100,"Norte",C2:C100)','Critérios aceitam operadores entre aspas, como ">=1000".',''],
+['SUMIFS','SOMASES','Matemática e estatística','Soma valores que atendem a vários critérios ao mesmo tempo.','SUMIFS(intervalo_soma, intervalo_crit1, crit1, [intervalo_crit2, crit2], ...)','=SUMIFS(D2:D100,B2:B100,"Norte",C2:C100,">=1000")','Atenção: aqui o intervalo de soma vem primeiro (no SOMASE vem por último).',''],
+['SUMPRODUCT','SOMARPRODUTO','Matemática e estatística','Multiplica intervalos item a item e soma os resultados. Também resolve somas com condições complexas.','SUMPRODUCT(matriz1, [matriz2], ...)','=SUMPRODUCT(B2:B10,C2:C10)','',''],
+['AVERAGE','MÉDIA','Matemática e estatística','Calcula a média aritmética.','AVERAGE(núm1, [núm2], ...)','=AVERAGE(B2:B10)','',''],
+['AVERAGEIF','MÉDIASE','Matemática e estatística','Média dos valores que atendem a um critério.','AVERAGEIF(intervalo_critério, critério, [intervalo_média])','=AVERAGEIF(B2:B100,"Norte",C2:C100)','',''],
+['AVERAGEIFS','MÉDIASES','Matemática e estatística','Média dos valores que atendem a vários critérios.','AVERAGEIFS(intervalo_média, intervalo_crit1, crit1, ...)','=AVERAGEIFS(D2:D100,B2:B100,"Norte",C2:C100,">=1000")','',''],
+['MAX','MÁXIMO','Matemática e estatística','Devolve o maior valor.','MAX(núm1, [núm2], ...)','=MAX(B2:B100)','',''],
+['MIN','MÍNIMO','Matemática e estatística','Devolve o menor valor.','MIN(núm1, [núm2], ...)','=MIN(B2:B100)','',''],
+['MAXIFS','MÁXIMOSES','Matemática e estatística','Maior valor entre as células que atendem a critérios.','MAXIFS(intervalo_máx, intervalo_crit1, crit1, ...)','=MAXIFS(C2:C100,B2:B100,"Norte")','','2019 / 365'],
+['MINIFS','MÍNIMOSES','Matemática e estatística','Menor valor entre as células que atendem a critérios.','MINIFS(intervalo_mín, intervalo_crit1, crit1, ...)','=MINIFS(C2:C100,B2:B100,"Norte")','','2019 / 365'],
+['COUNT','CONT.NÚM','Matemática e estatística','Conta quantas células contêm números.','COUNT(valor1, [valor2], ...)','=COUNT(B2:B100)','',''],
+['COUNTA','CONT.VALORES','Matemática e estatística','Conta as células que não estão vazias (texto ou número).','COUNTA(valor1, [valor2], ...)','=COUNTA(A2:A100)','',''],
+['COUNTBLANK','CONTAR.VAZIO','Matemática e estatística','Conta as células vazias de um intervalo.','COUNTBLANK(intervalo)','=COUNTBLANK(A2:A100)','',''],
+['COUNTIF','CONT.SE','Matemática e estatística','Conta as células que atendem a um critério.','COUNTIF(intervalo, critério)','=COUNTIF(B2:B100,"Norte")','Para contar itens maiores que um valor: =COUNTIF(B2:B100,">100").',''],
+['COUNTIFS','CONT.SES','Matemática e estatística','Conta as células que atendem a vários critérios ao mesmo tempo.','COUNTIFS(intervalo_crit1, crit1, [intervalo_crit2, crit2], ...)','=COUNTIFS(B2:B100,"Norte",C2:C100,">=1000")','',''],
+['ROUND','ARRED','Matemática e estatística','Arredonda um número para uma quantidade de casas decimais.','ROUND(número, casas)','=ROUND(A2,2)','Casas negativas arredondam para dezenas, centenas etc.',''],
+['ROUNDUP','ARREDONDAR.PARA.CIMA','Matemática e estatística','Arredonda sempre para cima (afastando de zero).','ROUNDUP(número, casas)','=ROUNDUP(A2,0)','',''],
+['ROUNDDOWN','ARREDONDAR.PARA.BAIXO','Matemática e estatística','Arredonda sempre para baixo (em direção a zero).','ROUNDDOWN(número, casas)','=ROUNDDOWN(A2,0)','',''],
+['TRUNC','TRUNCAR','Matemática e estatística','Corta as casas decimais sem arredondar.','TRUNC(número, [casas])','=TRUNC(A2)','',''],
+['INT','INT','Matemática e estatística','Arredonda para baixo até o inteiro mais próximo.','INT(número)','=INT(A2)','Para números negativos, INT(-1,5) dá -2.',''],
+['MOD','RESTO','Matemática e estatística','Devolve o resto de uma divisão.','MOD(número, divisor)','=MOD(A2,2)=0','Útil para testar se um número é par.',''],
+['ABS','ABS','Matemática e estatística','Devolve o valor absoluto (sem sinal).','ABS(número)','=ABS(A2-B2)','',''],
+['LARGE','MAIOR','Matemática e estatística','Devolve o enésimo maior valor de um intervalo.','LARGE(intervalo, n)','=LARGE(B2:B100,3)','',''],
+['SMALL','MENOR','Matemática e estatística','Devolve o enésimo menor valor de um intervalo.','SMALL(intervalo, n)','=SMALL(B2:B100,3)','',''],
+['RANK.EQ','ORDEM.EQV','Matemática e estatística','Devolve a posição de um número em uma lista (ranking).','RANK.EQ(número, intervalo, [ordem])','=RANK.EQ(B2,$B$2:$B$100,0)','Ordem 0 (padrão) classifica do maior para o menor.',''],
+['MEDIAN','MED','Matemática e estatística','Devolve a mediana (valor central).','MEDIAN(núm1, [núm2], ...)','=MEDIAN(B2:B100)','',''],
+['SUBTOTAL','SUBTOTAL','Matemática e estatística','Calcula soma, média, contagem etc. respeitando filtros.','SUBTOTAL(nº_função, ref1, ...)','=SUBTOTAL(109,B2:B100)','Use 9 ou 109 para somar: ambos ignoram linhas filtradas; o 109 também ignora linhas ocultas manualmente.',''],
+['AGGREGATE','AGREGAR','Matemática e estatística','Faz cálculos (soma, média, máximo...) podendo ignorar erros e linhas ocultas.','AGGREGATE(nº_função, opções, ref1, ...)','=AGGREGATE(9,6,B2:B100)','Com a opção 6, ignora células com erro.',''],
+['RANDBETWEEN','ALEATÓRIOENTRE','Matemática e estatística','Gera um número inteiro aleatório entre dois limites.','RANDBETWEEN(mínimo, máximo)','=RANDBETWEEN(1,100)','Muda a cada recálculo da planilha.',''],
+['POWER','POTÊNCIA','Matemática e estatística','Eleva um número a uma potência.','POWER(número, potência)','=POWER(2,10)','Equivale ao operador ^ (2^10).',''],
+['SQRT','RAIZ','Matemática e estatística','Devolve a raiz quadrada.','SQRT(número)','=SQRT(A2)','',''],
+// Texto
+['LEFT','ESQUERDA','Texto','Devolve os primeiros caracteres de um texto.','LEFT(texto, [núm_caract])','=LEFT(A2,3)','',''],
+['RIGHT','DIREITA','Texto','Devolve os últimos caracteres de um texto.','RIGHT(texto, [núm_caract])','=RIGHT(A2,4)','',''],
+['MID','EXT.TEXTO','Texto','Devolve caracteres do meio de um texto, a partir de uma posição.','MID(texto, núm_inicial, núm_caract)','=MID(A2,4,2)','',''],
+['LEN','NÚM.CARACT','Texto','Conta quantos caracteres tem um texto.','LEN(texto)','=LEN(A2)','Espaços também contam.',''],
+['TRIM','ARRUMAR','Texto','Remove espaços extras no início, no fim e duplicados entre palavras.','TRIM(texto)','=TRIM(A2)','',''],
+['UPPER','MAIÚSCULA','Texto','Converte o texto para letras maiúsculas.','UPPER(texto)','=UPPER(A2)','',''],
+['LOWER','MINÚSCULA','Texto','Converte o texto para letras minúsculas.','LOWER(texto)','=LOWER(A2)','',''],
+['PROPER','PRI.MAIÚSCULA','Texto','Coloca a primeira letra de cada palavra em maiúscula.','PROPER(texto)','=PROPER(A2)','',''],
+['FIND','LOCALIZAR','Texto','Localiza a posição de um texto dentro de outro, diferenciando maiúsculas de minúsculas.','FIND(texto_procurado, no_texto, [núm_inicial])','=FIND("-",A2)','Dá #VALOR! se não encontrar. Envolva em SEERRO quando necessário.',''],
+['SEARCH','PROCURAR','Texto','Como o LOCALIZAR, mas não diferencia maiúsculas de minúsculas e aceita curingas (? e *).','SEARCH(texto_procurado, no_texto, [núm_inicial])','=SEARCH("nort",A2)','',''],
+['SUBSTITUTE','SUBSTITUIR','Texto','Troca um texto por outro dentro de uma célula.','SUBSTITUTE(texto, texto_antigo, texto_novo, [núm_ocorrência])','=SUBSTITUTE(A2,"-","")','',''],
+['REPLACE','MUDAR','Texto','Troca parte de um texto indicando posição e tamanho.','REPLACE(texto_antigo, núm_inicial, núm_caract, texto_novo)','=REPLACE(A2,1,3,"XXX")','',''],
+['CONCAT','CONCAT','Texto','Junta textos e intervalos em um só texto.','CONCAT(texto1, [texto2], ...)','=CONCAT(A2," ",B2)','O operador & faz o mesmo: =A2&" "&B2.','2019 / 365'],
+['CONCATENATE','CONCATENAR','Texto','Junta textos em um só (versão antiga).','CONCATENATE(texto1, [texto2], ...)','=CONCATENATE(A2," ",B2)','Mantida por compatibilidade; prefira CONCAT ou o operador &.',''],
+['TEXTJOIN','UNIRTEXTO','Texto','Junta textos usando um separador, podendo ignorar células vazias.','TEXTJOIN(delimitador, ignorar_vazias, texto1, ...)','=TEXTJOIN(", ",TRUE,A2:A10)','','2019 / 365'],
+['TEXT','TEXTO','Texto','Converte um número ou data em texto com um formato específico.','TEXT(valor, formato)','=TEXT(A2,"dd/mm/yyyy")','Os códigos de formato dependem do idioma: em português o ano é "aaaa" (ex.: "dd/mm/aaaa"). Esta página converte isso para você.',''],
+['VALUE','VALOR','Texto','Converte um texto que parece número em número.','VALUE(texto)','=VALUE("123")','',''],
+['REPT','REPT','Texto','Repete um texto várias vezes.','REPT(texto, vezes)','=REPT("-",10)','',''],
+['EXACT','EXATO','Texto','Verifica se dois textos são idênticos (diferenciando maiúsculas).','EXACT(texto1, texto2)','=EXACT(A2,B2)','',''],
+['TEXTBEFORE','TEXTOANTES','Texto','Devolve o texto que vem antes de um delimitador.','TEXTBEFORE(texto, delimitador, [núm_instância], ...)','=TEXTBEFORE(A2," ")','','365'],
+['TEXTAFTER','TEXTODEPOIS','Texto','Devolve o texto que vem depois de um delimitador.','TEXTAFTER(texto, delimitador, [núm_instância], ...)','=TEXTAFTER(A2," ")','','365'],
+['TEXTSPLIT','DIVIDIRTEXTO','Texto','Divide um texto em várias células usando delimitadores.','TEXTSPLIT(texto, delim_coluna, [delim_linha], ...)','=TEXTSPLIT(A2,",")','O resultado "derrama" nas células ao lado.','365'],
+// Data e hora
+['TODAY','HOJE','Data e hora','Devolve a data de hoje.','TODAY()','=TODAY()','Atualiza ao abrir ou recalcular a planilha.',''],
+['NOW','AGORA','Data e hora','Devolve a data e a hora atuais.','NOW()','=NOW()','',''],
+['DATE','DATA','Data e hora','Monta uma data a partir de ano, mês e dia.','DATE(ano, mês, dia)','=DATE(2025,12,31)','Útil para juntar partes: =DATE(A2,B2,C2).',''],
+['YEAR','ANO','Data e hora','Extrai o ano de uma data.','YEAR(data)','=YEAR(A2)','',''],
+['MONTH','MÊS','Data e hora','Extrai o mês (1 a 12) de uma data.','MONTH(data)','=MONTH(A2)','',''],
+['DAY','DIA','Data e hora','Extrai o dia do mês de uma data.','DAY(data)','=DAY(A2)','',''],
+['WEEKDAY','DIA.DA.SEMANA','Data e hora','Devolve o dia da semana como número.','WEEKDAY(data, [tipo])','=WEEKDAY(A2,2)','Tipo 2 numera de segunda (1) a domingo (7).',''],
+['WEEKNUM','NÚMSEMANA','Data e hora','Devolve o número da semana no ano.','WEEKNUM(data, [tipo])','=WEEKNUM(A2,21)','Tipo 21 usa a semana ISO (começa na segunda).',''],
+['EOMONTH','FIMMÊS','Data e hora','Devolve o último dia do mês, antes ou depois de alguns meses.','EOMONTH(data_inicial, meses)','=EOMONTH(A2,0)','Use 0 para o fim do mês da data, -1 para o mês anterior.',''],
+['EDATE','DATAM','Data e hora','Soma ou subtrai meses de uma data, mantendo o dia.','EDATE(data_inicial, meses)','=EDATE(A2,3)','',''],
+['DATEDIF','DATADIF','Data e hora','Calcula a diferença entre duas datas em anos ("Y"), meses ("M") ou dias ("D").','DATEDIF(data_inicial, data_final, unidade)','=DATEDIF(A2,TODAY(),"Y")','É uma função "escondida": não aparece na lista do Excel, mas funciona. As unidades "YM" e "MD" podem dar resultados incorretos em alguns casos.',''],
+['NETWORKDAYS','DIATRABALHOTOTAL','Data e hora','Conta os dias úteis entre duas datas, excluindo fins de semana e feriados opcionais.','NETWORKDAYS(data_inicial, data_final, [feriados])','=NETWORKDAYS(A2,B2,Feriados!A2:A20)','',''],
+['WORKDAY','DIATRABALHO','Data e hora','Devolve a data após um número de dias úteis.','WORKDAY(data_inicial, dias, [feriados])','=WORKDAY(A2,10,Feriados!A2:A20)','',''],
+['DATEVALUE','DATA.VALOR','Data e hora','Converte uma data escrita como texto em data de verdade.','DATEVALUE(texto_data)','=DATEVALUE("31/12/2025")','',''],
+['DAYS','DIAS','Data e hora','Devolve o número de dias entre duas datas.','DAYS(data_final, data_inicial)','=DAYS(B2,A2)','Também funciona subtraindo: =B2-A2.',''],
+['YEARFRAC','FRAÇÃOANO','Data e hora','Devolve a fração do ano entre duas datas.','YEARFRAC(data_inicial, data_final, [base])','=YEARFRAC(A2,B2,1)','',''],
+// Informação
+['ISBLANK','ÉCÉL.VAZIA','Informação','Verifica se a célula está vazia.','ISBLANK(valor)','=ISBLANK(A2)','',''],
+['ISNUMBER','ÉNÚM','Informação','Verifica se o valor é um número.','ISNUMBER(valor)','=ISNUMBER(A2)','Combinada com CORRESP, verifica se um item existe em uma lista.',''],
+['ISTEXT','ÉTEXTO','Informação','Verifica se o valor é texto.','ISTEXT(valor)','=ISTEXT(A2)','',''],
+['ISERROR','ÉERRO','Informação','Verifica se o valor é qualquer tipo de erro.','ISERROR(valor)','=ISERROR(A2)','',''],
+['ISNA','É.NÃO.DISP','Informação','Verifica se o valor é o erro #N/D.','ISNA(valor)','=ISNA(MATCH(A2,B:B,0))','',''],
+// Matrizes dinâmicas
+['UNIQUE','ÚNICO','Matrizes dinâmicas','Devolve a lista de valores sem repetição.','UNIQUE(matriz, [por_coluna], [exatamente_uma_vez])','=UNIQUE(A2:A100)','O resultado "derrama" nas células abaixo: deixe espaço livre.','365 / 2021'],
+['SORT','CLASSIFICAR','Matrizes dinâmicas','Ordena um intervalo.','SORT(matriz, [índice_coluna], [ordem], [por_coluna])','=SORT(A2:C100,2,-1)','Ordem 1 = crescente; -1 = decrescente.','365 / 2021'],
+['SORTBY','CLASSIFICARPOR','Matrizes dinâmicas','Ordena um intervalo com base em outra coluna.','SORTBY(matriz, por_matriz1, [ordem1], ...)','=SORTBY(A2:A100,B2:B100,-1)','','365 / 2021'],
+['FILTER','FILTRO','Matrizes dinâmicas','Filtra linhas de um intervalo que atendem a uma condição.','FILTER(matriz, incluir, [se_vazio])','=FILTER(A2:C100,B2:B100="Norte","Nada encontrado")','','365 / 2021'],
+['SEQUENCE','SEQUÊNCIA','Matrizes dinâmicas','Gera uma lista de números em sequência.','SEQUENCE(linhas, [colunas], [início], [incremento])','=SEQUENCE(10)','','365 / 2021']
+];
+const CATS=['Lógica','Busca e referência','Matemática e estatística','Texto','Data e hora','Informação','Matrizes dinâmicas'];
+
+/* ============ Conversão PT <-> EN ============ */
+const norm=s=>s.normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase();
+const IDX={};            // nome normalizado (EN ou PT) -> entrada
+F.forEach(e=>{IDX[norm(e[0])]=e; IDX[norm(e[1])]=e;});
+const BOOL={'TRUE':['TRUE','VERDADEIRO'],'VERDADEIRO':['TRUE','VERDADEIRO'],'FALSE':['FALSE','FALSO'],'FALSO':['FALSE','FALSO']};
+const isIdStart=c=>/[A-Za-zÀ-ÿ_]/.test(c), isIdChar=c=>/[A-Za-zÀ-ÿ0-9_.]/.test(c);
+
+function detectLocale(src){
+  let inStr=false;
+  for(let i=0;i<src.length;i++){const c=src[i]; if(c==='"'){inStr=!inStr;continue;} if(!inStr&&c===';') return 'pt';}
+  const ids=src.replace(/"[^"]*"/g,'').match(/[A-Za-zÀ-ÿ_][A-Za-zÀ-ÿ0-9_.]*(?=\s*\()/g)||[];
+  for(const id of ids){const e=IDX[norm(id)]; if(e && norm(e[0])!==norm(e[1]) && norm(id)===norm(e[1])) return 'pt';}
+  if(/\d,\d/.test(src.replace(/"[^"]*"/g,'')) && !/[A-Za-z]\([^)]*,[^)]*\)/.test(src)) return 'pt';
+  return 'en';
+}
+/* converte src (escrita em `from`) para o idioma `to`; ignora textos entre aspas e {campos} */
+function convert(src,from,to){
+  if(from===to) return src;
+  let out='',i=0,fmtNext=false;const n=src.length;
+  while(i<n){
+    const c=src[i];
+    if(c==='"'){
+      let j=i+1; while(j<n){ if(src[j]==='"'){ if(src[j+1]==='"'){j+=2;continue;} break;} j++; }
+      let lit=src.slice(i,j+1);
+      if(fmtNext){ lit = to==='pt' ? lit.replace(/yyyy/gi,'aaaa').replace(/yy/gi,'aa') : lit.replace(/aaaa/gi,'yyyy').replace(/aa/gi,'yy'); fmtNext=false; }
+      out+=lit; i=j+1; continue;
+    }
+    if(c==='{'){ const j=src.indexOf('}',i); const k=j<0?n-1:j; out+=src.slice(i,k+1); i=k+1; continue; }
+    if(c==="'"){ let j=src.indexOf("'",i+1); if(j<0) j=n-1; out+=src.slice(i,j+1); i=j+1; continue; }
+    if(isIdStart(c)){
+      let j=i; while(j<n&&isIdChar(src[j])) j++;
+      const id=src.slice(i,j); let k=j; while(k<n&&src[k]===' ') k++;
+      const key=norm(id);
+      if(src[k]==='('){
+        const e=IDX[key];
+        if(e){ out+=(to==='pt'?e[1]:e[0]); if(e[0]==='TEXT') fmtNext=true; } else out+=id;
+      } else if(BOOL[key]) out+=BOOL[key][to==='pt'?1:0];
+      else out+=id;
+      i=j; continue;
+    }
+    if(/\d/.test(c)){
+      let j=i; while(j<n&&/\d/.test(src[j])) j++;
+      if(j+1<n && (src[j]==='.'||src[j]===',') && /\d/.test(src[j+1]) && ((from==='en'&&src[j]==='.')||(from==='pt'&&src[j]===','))){
+        let m=j+1; while(m<n&&/\d/.test(src[m])) m++;
+        out+=src.slice(i,j)+(to==='pt'?',':'.')+src.slice(j+1,m); i=m; continue;
+      }
+      out+=src.slice(i,j); i=j; continue;
+    }
+    if(from==='en'&&to==='pt'&&c===','){ out+=';'; i++; continue; }
+    if(from==='pt'&&to==='en'&&c===';'){ out+=','; i++; continue; }
+    out+=c; i++;
+  }
+  return out;
+}
+
+/* ============ Estado e utilidades ============ */
+const $=s=>document.querySelector(s);
+const el=(t,a={},...k)=>{const e=document.createElement(t);for(const[x,v]of Object.entries(a)){if(x==='class')e.className=v;else if(x.startsWith('on'))e.addEventListener(x.slice(2),v);else if(v===true)e.setAttribute(x,'');else if(v!==false&&v!=null)e.setAttribute(x,v);}for(const c of k.flat())e.append(c&&c.nodeType?c:document.createTextNode(c??''));return e;};
+let loc='pt';
+try{const s=localStorage.getItem('xl-loc'); if(s==='en'||s==='pt') loc=s;}catch{}
+const L=src=>convert(src,'en',loc);      // texto canônico (EN) -> idioma atual
+function copy(text,btn){
+  const done=()=>{const o=btn.textContent;btn.textContent='Copiado!';setTimeout(()=>btn.textContent=o,1200);};
+  if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(text).then(done,fallback);} else fallback();
+  function fallback(){const t=el('textarea',{style:'position:fixed;opacity:0'});t.value=text;document.body.append(t);t.select();try{document.execCommand('copy');done();}catch{btn.textContent='Selecione e copie';}t.remove();}
+}
+const fmtOut=(text)=>{const b=el('button',{class:'btn',type:'button','aria-label':'Copiar fórmula'},'Copiar'); b.addEventListener('click',()=>copy(text,b)); return el('div',{class:'row'},el('div',{class:'out'},text),b);};
+
+/* ============ Receitas ============
+   campos: [chave, rótulo, padrão, dica de uso]  |  fórmulas em EN canônico com {chave} */
+const R=[
+{id:'procv',cat:'Busca',title:'Buscar um valor em outra tabela',goal:'Trazer preço, nome ou qualquer dado de outra tabela usando um código.',
+ fields:[['chave','Valor procurado (célula)','A2'],['tabela','Tabela onde procurar','Dados!$A:$D','PROCV'],['col','Nº da coluna a devolver','3','PROCV'],['busca','Coluna onde procurar','Dados!$A:$A','PROCX e ÍNDICE+CORRESP'],['ret','Coluna a devolver','Dados!$C:$C','PROCX e ÍNDICE+CORRESP']],
+ main:{label:'Com PROCV (qualquer versão)',tpl:'=VLOOKUP({chave},{tabela},{col},FALSE)',note:'FALSO/0 faz busca exata. O valor procurado precisa estar na primeira coluna da tabela.'},
+ alts:[{label:'Com PROCX (Excel 365)',tpl:'=XLOOKUP({chave},{busca},{ret},"Não encontrado")',note:'Mais simples: não depende da posição das colunas e já trata o "não encontrado".'},
+       {label:'Com ÍNDICE + CORRESP (qualquer versão, busca para a esquerda)',tpl:'=INDEX({ret},MATCH({chave},{busca},0))',note:'Funciona mesmo quando a coluna de busca fica à direita da coluna de resultado.'}]},
+{id:'somase',cat:'Somar e contar',title:'Somar com uma condição',goal:'Somar valores só das linhas que atendem a um critério.',
+ fields:[['crit_rng','Intervalo do critério','B2:B100'],['crit','Critério','"Norte"','texto entre aspas, ou célula'],['soma_rng','Intervalo a somar','C2:C100'],['crit_rng2','2º intervalo de critério','D2:D100','vários critérios'],['crit2','2º critério','">=1000"','vários critérios']],
+ main:{label:'Um critério (SOMASE)',tpl:'=SUMIF({crit_rng},{crit},{soma_rng})',note:'Operadores vão entre aspas: ">=1000", "<>0". Para referenciar uma célula com operador: ">="&F1.'},
+ alts:[{label:'Dois critérios (SOMASES)',tpl:'=SUMIFS({soma_rng},{crit_rng},{crit},{crit_rng2},{crit2})',note:'No SOMASES o intervalo de soma vem primeiro.'}]},
+{id:'contse',cat:'Somar e contar',title:'Contar com condições',goal:'Contar quantas linhas atendem a um ou mais critérios.',
+ fields:[['rng','Intervalo','B2:B100'],['crit','Critério','"Norte"'],['rng2','2º intervalo','C2:C100','dois critérios'],['crit2','2º critério','">=1000"','dois critérios']],
+ main:{label:'Um critério (CONT.SE)',tpl:'=COUNTIF({rng},{crit})',note:''},
+ alts:[{label:'Dois critérios (CONT.SES)',tpl:'=COUNTIFS({rng},{crit},{rng2},{crit2})',note:''},
+       {label:'Contar células preenchidas',tpl:'=COUNTA({rng})',note:'Conta tudo que não está vazio.'}]},
+{id:'mediase',cat:'Somar e contar',title:'Média e maior/menor com condição',goal:'Calcular média, máximo ou mínimo apenas das linhas que atendem a um critério.',
+ fields:[['crit_rng','Intervalo do critério','B2:B100'],['crit','Critério','"Norte"'],['val_rng','Intervalo dos valores','C2:C100']],
+ main:{label:'Média (MÉDIASE)',tpl:'=AVERAGEIF({crit_rng},{crit},{val_rng})',note:''},
+ alts:[{label:'Maior valor (MÁXIMOSES)',tpl:'=MAXIFS({val_rng},{crit_rng},{crit})',note:'Excel 2019 ou 365.'},{label:'Menor valor (MÍNIMOSES)',tpl:'=MINIFS({val_rng},{crit_rng},{crit})',note:'Excel 2019 ou 365.'}]},
+{id:'pct',cat:'Somar e contar',title:'Percentual do total',goal:'Mostrar quanto cada item representa do total.',
+ fields:[['cel','Valor do item','B2'],['faixa','Intervalo total (fixo)','$B$2:$B$100']],
+ main:{label:'Percentual',tpl:'={cel}/SUM({faixa})',note:'Formate a célula como porcentagem (Ctrl+Shift+%). Os $ travam o intervalo ao copiar a fórmula para baixo.'},alts:[]},
+{id:'acum',cat:'Somar e contar',title:'Soma acumulada',goal:'Total que vai crescendo linha a linha.',
+ fields:[['ini','Primeira célula (fixa)','$B$2'],['cel','Célula atual','B2']],
+ main:{label:'Acumulado',tpl:'=SUM({ini}:{cel})',note:'Copie para baixo: o início fica travado e o fim acompanha a linha.'},alts:[]},
+{id:'rank',cat:'Somar e contar',title:'Ranking (posição)',goal:'Descobrir a posição de cada valor na lista.',
+ fields:[['cel','Valor','B2'],['faixa','Lista de valores (fixa)','$B$2:$B$100'],['ordem','Ordem (0 = maior primeiro, 1 = menor primeiro)','0']],
+ main:{label:'Posição',tpl:'=RANK.EQ({cel},{faixa},{ordem})',note:'Empates recebem a mesma posição.'},alts:[]},
+{id:'seerro',cat:'Lógica',title:'Tratar erros (#N/D, #DIV/0!)',goal:'Mostrar um valor alternativo em vez de um erro.',
+ fields:[['formula','Fórmula (sem o =)','A2/B2'],['alt','Valor se der erro','0','texto vai entre aspas, ex.: "-"']],
+ main:{label:'Com SEERRO',tpl:'=IFERROR({formula},{alt})',note:'Use quando o erro é esperado (por exemplo, divisão por zero).'},alts:[]},
+{id:'ses',cat:'Lógica',title:'Se / senão com vários casos',goal:'Devolver resultados diferentes conforme faixas ou condições.',
+ fields:[['c1','Condição 1','B2>=9'],['r1','Resultado 1','"A"'],['c2','Condição 2','B2>=7'],['r2','Resultado 2','"B"'],['r3','Resultado para os demais casos','"C"']],
+ main:{label:'Com SES (2019/365)',tpl:'=IFS({c1},{r1},{c2},{r2},TRUE,{r3})',note:'As condições são testadas em ordem; a primeira verdadeira vence.'},
+ alts:[{label:'Com SE aninhado (qualquer versão)',tpl:'=IF({c1},{r1},IF({c2},{r2},{r3}))',note:''}]},
+{id:'existe',cat:'Lógica',title:'Verificar se existe em outra lista',goal:'Responder Sim/Não se um item aparece em uma lista.',
+ fields:[['cel','Item','A2'],['lista','Lista onde procurar','Lista!$A:$A']],
+ main:{label:'Com CONT.SE',tpl:'=IF(COUNTIF({lista},{cel})>0,"Sim","Não")',note:''},
+ alts:[{label:'Com CORRESP',tpl:'=IF(ISNUMBER(MATCH({cel},{lista},0)),"Sim","Não")',note:''}]},
+{id:'multi',cat:'Busca',title:'Buscar com vários critérios',goal:'Encontrar um valor combinando duas colunas (ex.: produto + região).',
+ fields:[['ret','Coluna do resultado','D2:D100'],['c1','Coluna do critério 1','A2:A100'],['v1','Valor do critério 1','F1'],['c2','Coluna do critério 2','B2:B100'],['v2','Valor do critério 2','F2']],
+ main:{label:'Com ÍNDICE + CORRESP',tpl:'=INDEX({ret},MATCH(1,({c1}={v1})*({c2}={v2}),0))',note:'Antes do Excel 365, confirme com Ctrl+Shift+Enter (fórmula matricial).'},
+ alts:[{label:'Com PROCX (365)',tpl:'=XLOOKUP(1,({c1}={v1})*({c2}={v2}),{ret},"Não encontrado")',note:''}]},
+{id:'concat',cat:'Texto',title:'Juntar textos (nome + sobrenome)',goal:'Combinar o conteúdo de células em um único texto.',
+ fields:[['a','Primeira célula','A2'],['b','Segunda célula','B2'],['sep','Separador','" "','texto entre aspas']],
+ main:{label:'Com o operador &',tpl:'={a}&{sep}&{b}',note:''},
+ alts:[{label:'Com UNIRTEXTO (2019/365)',tpl:'=TEXTJOIN({sep},TRUE,{a}:{b})',note:'Ignora células vazias.'}]},
+{id:'sepa',cat:'Texto',title:'Separar texto por um delimitador',goal:'Pegar a parte antes ou depois de um separador (ex.: primeiro nome).',
+ fields:[['cel','Célula','A2'],['sep','Delimitador','" "','texto entre aspas']],
+ main:{label:'Parte antes do delimitador',tpl:'=LEFT({cel},FIND({sep},{cel})-1)',note:'Dá erro se o delimitador não existir; envolva em SEERRO se necessário.'},
+ alts:[{label:'Parte depois do delimitador',tpl:'=MID({cel},FIND({sep},{cel})+1,LEN({cel}))',note:''},
+       {label:'Antes (365)',tpl:'=TEXTBEFORE({cel},{sep})',note:'Mais simples no Excel 365.'},{label:'Depois (365)',tpl:'=TEXTAFTER({cel},{sep})',note:''}]},
+{id:'limpa',cat:'Texto',title:'Limpar e padronizar texto',goal:'Remover espaços extras e deixar nomes com a inicial maiúscula.',
+ fields:[['cel','Célula','A2']],
+ main:{label:'Espaços + inicial maiúscula',tpl:'=PROPER(TRIM({cel}))',note:'Para virar valor fixo: copie e use Colar Especial > Valores.'},
+ alts:[{label:'Tudo maiúsculo',tpl:'=UPPER(TRIM({cel}))',note:''},{label:'Trocar um texto por outro',tpl:'=SUBSTITUTE({cel},"-","")',note:'Aqui remove os hífens; edite os textos entre aspas.'}]},
+{id:'datatxt',cat:'Datas',title:'Formatar data como texto',goal:'Mostrar uma data como "05/03/2025" ou como nome do mês.',
+ fields:[['cel','Célula com a data','A2']],
+ main:{label:'dd/mm/aaaa',tpl:'=TEXT({cel},"dd/mm/yyyy")',note:'Em português o código do ano é "aaaa"; a página já ajusta conforme o idioma escolhido.'},
+ alts:[{label:'Mês por extenso',tpl:'=TEXT({cel},"mmmm")',note:''},{label:'Dia da semana por extenso',tpl:'=TEXT({cel},"dddd")',note:''}]},
+{id:'datadif',cat:'Datas',title:'Diferença entre duas datas',goal:'Calcular anos, meses ou dias entre duas datas.',
+ fields:[['ini','Data inicial','A2'],['fim','Data final','B2'],['un','Unidade (Y anos, M meses, D dias)','Y']],
+ main:{label:'Com DATADIF',tpl:'=DATEDIF({ini},{fim},"{un}")',note:'Função "escondida": não aparece na lista, mas funciona.'},
+ alts:[{label:'Só dias (subtração)',tpl:'={fim}-{ini}',note:'Formate o resultado como Número, não como Data.'}]},
+{id:'idade',cat:'Datas',title:'Idade a partir da data de nascimento',goal:'Calcular a idade em anos completos.',
+ fields:[['nasc','Data de nascimento','A2']],
+ main:{label:'Idade',tpl:'=DATEDIF({nasc},TODAY(),"Y")',note:'Atualiza sozinha todo dia.'},alts:[]},
+{id:'uteis',cat:'Datas',title:'Dias úteis',goal:'Contar dias úteis entre datas ou achar a data após N dias úteis.',
+ fields:[['ini','Data inicial','A2'],['fim','Data final','B2'],['dias','Quantidade de dias úteis','10'],['fer','Lista de feriados (opcional)','Feriados!$A$2:$A$30']],
+ main:{label:'Dias úteis entre duas datas',tpl:'=NETWORKDAYS({ini},{fim},{fer})',note:'Exclui sábados, domingos e os feriados informados.'},
+ alts:[{label:'Data após N dias úteis',tpl:'=WORKDAY({ini},{dias},{fer})',note:'Formate o resultado como Data.'}]},
+{id:'fimmes',cat:'Datas',title:'Primeiro e último dia do mês',goal:'Obter o início ou o fim do mês de uma data.',
+ fields:[['cel','Célula com a data','A2']],
+ main:{label:'Último dia do mês',tpl:'=EOMONTH({cel},0)',note:'Formate como Data.'},
+ alts:[{label:'Primeiro dia do mês',tpl:'=EOMONTH({cel},-1)+1',note:''},{label:'Mesmo dia, 3 meses depois',tpl:'=EDATE({cel},3)',note:''}]},
+{id:'unicos',cat:'Listas (365)',title:'Valores únicos e contagem de únicos',goal:'Remover repetições de uma lista ou saber quantos itens diferentes existem.',
+ fields:[['faixa','Intervalo','A2:A100']],
+ main:{label:'Lista de únicos (365)',tpl:'=UNIQUE({faixa})',note:'O resultado ocupa as células abaixo; deixe espaço livre.'},
+ alts:[{label:'Quantos únicos (365)',tpl:'=COUNTA(UNIQUE({faixa}))',note:''},{label:'Quantos únicos (qualquer versão)',tpl:'=SUMPRODUCT(1/COUNTIF({faixa},{faixa}))',note:'Não pode haver células vazias no intervalo.'}]},
+{id:'filtro',cat:'Listas (365)',title:'Filtrar linhas por condição',goal:'Extrair as linhas que atendem a um critério, sem usar o filtro manual.',
+ fields:[['tab','Tabela','A2:D100'],['col','Coluna do critério','B2:B100'],['val','Valor procurado','"Norte"']],
+ main:{label:'Com FILTRO',tpl:'=FILTER({tab},{col}={val},"Nada encontrado")',note:'Excel 365/2021. O resultado se atualiza sozinho.'},alts:[]},
+{id:'ordenar',cat:'Listas (365)',title:'Ordenar uma lista',goal:'Ordenar dados por uma coluna, de forma automática.',
+ fields:[['tab','Tabela','A2:C100'],['col','Nº da coluna de ordenação','2'],['ord','Ordem (1 crescente, -1 decrescente)','-1']],
+ main:{label:'Com CLASSIFICAR',tpl:'=SORT({tab},{col},{ord})',note:'Excel 365/2021.'},alts:[]},
+{id:'arred',cat:'Somar e contar',title:'Arredondar números',goal:'Arredondar para N casas, sempre para cima ou sempre para baixo.',
+ fields:[['cel','Valor','A2'],['casas','Casas decimais','2']],
+ main:{label:'Arredondar',tpl:'=ROUND({cel},{casas})',note:''},
+ alts:[{label:'Sempre para cima',tpl:'=ROUNDUP({cel},{casas})',note:''},{label:'Sempre para baixo',tpl:'=ROUNDDOWN({cel},{casas})',note:''}]}
+];
+
+let curR=R[0].id, rFilter='';
+const vals={}; // valores digitados por receita
+function renderRList(){
+  const box=$('#rlist'); box.replaceChildren();
+  const q=norm(rFilter);
+  R.filter(r=>!q||norm(r.title+' '+r.goal+' '+r.cat).includes(q)).forEach(r=>{
+    box.append(el('button',{class:'rbtn',type:'button','aria-pressed':String(r.id===curR),onclick:()=>{curR=r.id;renderRList();renderRPanel();if(window.innerWidth<=820)$('#rpanel').scrollIntoView({behavior:'smooth',block:'start'});}},r.title,el('small',{},r.cat)));
+  });
+  if(!box.children.length) box.append(el('p',{class:'hint'},'Nenhuma receita encontrada. Veja o Catálogo.'));
+}
+function fill(tpl,r){
+  let s=L(tpl);
+  const v=vals[r.id]||{};
+  r.fields.forEach(f=>{const x=(v[f[0]]??f[2]).trim()||f[2]; s=s.split('{'+f[0]+'}').join(x);});
+  return s;
+}
+function renderRPanel(){
+  const r=R.find(x=>x.id===curR); const p=$('#rpanel'); p.replaceChildren();
+  const v=vals[r.id]=vals[r.id]||{};
+  const outBox=el('div');
+  const draw=()=>{outBox.replaceChildren();
+    const mk=(lab,tpl,note,main)=>el('div',{class:'variant'},el('h3',{},lab),fmtOut(fill(tpl,r)),note?el('p',{class:'note'},note):null);
+    outBox.append(mk(r.main.label,r.main.tpl,r.main.note,true)); r.alts.forEach(a=>outBox.append(mk(a.label,a.tpl,a.note)));
+  };
+  const fields=el('div',{class:'fields'},r.fields.map(f=>{
+    const inp=el('input',{type:'text',value:v[f[0]]??f[2],spellcheck:'false','aria-label':f[1]});
+    inp.addEventListener('input',()=>{v[f[0]]=inp.value;draw();});
+    return el('label',{class:'f'},f[1]+(f[3]?'':''),f[3]?el('small',{},'usado em: '+f[3]):null,inp);
+  }));
+  p.append(el('div',{class:'card'},el('h2',{style:'margin:0 0 4px;font-size:19px'},r.title),el('p',{class:'note',style:'margin:0'},r.goal),outBox,el('h3',{style:'margin:18px 0 0;font-size:14px'},'Ajuste os campos para a sua planilha'),fields));
+  draw();
+}
+
+/* ============ Catálogo ============ */
+let cCat='', cQ='';
+function renderCats(){
+  const box=$('#ccats'); box.replaceChildren();
+  [['', 'Todas'],...CATS.map(c=>[c,c])].forEach(([v,t])=>box.append(el('button',{class:'chip',type:'button','aria-pressed':String(cCat===v),onclick:()=>{cCat=v;renderCats();renderCatalog();}},t)));
+}
+function renderCatalog(){
+  const box=$('#clist'); box.replaceChildren(); const q=norm(cQ);
+  const items=F.filter(e=>(!cCat||e[2]===cCat)&&(!q||norm(e.slice(0,4).join(' ')).includes(q)));
+  if(!items.length){box.append(el('p',{class:'hint'},'Nenhuma função encontrada.'));return;}
+  items.forEach(e=>{
+    const name=loc==='pt'?e[1]:e[0], other=loc==='pt'?e[0]:e[1];
+    box.append(el('div',{class:'fn'},
+      el('h3',{},name,e[7]?el('span',{class:'badge'},e[7]):null,el('span',{},other!==name?'('+(loc==='pt'?'inglês: ':'português: ')+other+')':'')),
+      el('p',{},e[3]),
+      el('div',{class:'out',style:'margin:6px 0'},L(e[4])),
+      fmtOut(L(e[5])),
+      e[6]?el('div',{class:'tip'},'💡 '+e[6]):null));
+  });
+}
+
+/* ============ Explicar e converter ============ */
+function lex(src){
+  const t=[];let i=0;const n=src.length;
+  while(i<n){
+    const c=src[i];
+    if(c==='"'){let j=i+1;while(j<n){if(src[j]==='"'){if(src[j+1]==='"'){j+=2;continue;}break;}j++;}t.push({t:'o',v:src.slice(i,j+1)});i=j+1;continue;}
+    if(c==="'"){let j=src.indexOf("'",i+1);if(j<0)j=n-1;t.push({t:'o',v:src.slice(i,j+1)});i=j+1;continue;}
+    if(isIdStart(c)){let j=i;while(j<n&&isIdChar(src[j]))j++;let k=j;while(k<n&&src[k]===' ')k++;
+      if(src[k]==='('){t.push({t:'f',v:src.slice(i,j)});t.push({t:'(',v:'('});i=k+1;}else{t.push({t:'o',v:src.slice(i,j)});i=j;}continue;}
+    if(c==='('){t.push({t:'(',v:'('});i++;continue;}
+    if(c===')'){t.push({t:')',v:')'});i++;continue;}
+    if(c===';'||c===','){t.push({t:'s',v:c});i++;continue;}
+    t.push({t:'o',v:c});i++;
+  }
+  return t;
+}
+function parse(src){
+  const tk=lex(src);let p=0;const errors=[];
+  function call(name){
+    const args=[];let cur=[];
+    while(p<tk.length){
+      const x=tk[p];
+      if(x.t===')'){p++;args.push(cur);return{fn:name,args};}
+      if(x.t==='s'){p++;args.push(cur);cur=[];continue;}
+      if(x.t==='f'){p+=2;cur.push(call(x.v));continue;}
+      if(x.t==='('){p++;cur.push(call(''));continue;}
+      cur.push({txt:x.v});p++;
+    }
+    errors.push('Faltam parênteses de fechamento.');args.push(cur);return{fn:name,args};
+  }
+  const top=[];
+  while(p<tk.length){
+    const x=tk[p];
+    if(x.t==='f'){p+=2;top.push(call(x.v));continue;}
+    if(x.t==='('){p++;top.push(call(''));continue;}
+    if(x.t===')'){errors.push('Há um parêntese de fechamento sobrando.');p++;continue;}
+    top.push({txt:x.v});p++;
+  }
+  return{top,errors:[...new Set(errors)]};
+}
+const isCall=x=>x.fn!==undefined;
+function flat(items,sep){return items.map(x=>isCall(x)?x.fn+'('+x.args.map(a=>flat(a,sep).trim()).join(sep+' ')+')':x.txt).join('');}
+function pretty(items,sep,ind){return items.map(x=>isCall(x)?prettyCall(x,sep,ind):x.txt).join('');}
+function prettyCall(c,sep,ind){
+  const one=flat([c],sep);
+  if(one.length<=64||!c.args.some(a=>a.some(isCall))) return one;
+  const pad='  '.repeat(ind+1);
+  return c.fn+'(\n'+c.args.map(a=>pad+pretty(a,sep,ind+1).trim()).join(sep+'\n')+'\n'+'  '.repeat(ind)+')';
+}
+function walk(items,fn,depth=0){items.forEach(x=>{if(isCall(x)){fn(x,depth);x.args.forEach(a=>walk(a,fn,depth+1));}});}
+function ifDepth(items){let best=0;(function rec(its,d){its.forEach(x=>{if(!isCall(x))return;const e=IDX[norm(x.fn)];const isIf=e&&e[0]==='IF';const nd=isIf?d+1:d;best=Math.max(best,nd);x.args.forEach(a=>rec(a,nd));});})(items,0);return best;}
+
+function explain(){
+  const out=$('#xout'); out.replaceChildren();
+  let src=$('#xin').value.trim();
+  if(!src){out.append(el('p',{class:'hint'},'Cole uma fórmula acima.'));return;}
+  if(!src.startsWith('=')) src='='+src;
+  const from=detectLocale(src); const sep=from==='pt'?';':',';
+  const {top,errors}=parse(src);
+  const card=el('div',{class:'card'});
+  card.append(el('p',{},'Idioma detectado: ',el('b',{},from==='pt'?'Excel em português (separador ;)':'Excel em inglês (separador ,)'),'. ',
+    errors.length?el('span',{class:'err'},'Atenção: '+errors.join(' ')):el('span',{class:'ok'},'Parênteses balanceados.')));
+  const pr=pretty(top,sep,0).replace(/^\s+/,'');
+  card.append(el('h3',{style:'margin:14px 0 4px;font-size:15px'},'Fórmula organizada'),fmtOut(pr));
+  out.append(card);
+  // conversões
+  const c2=el('div',{class:'card'});
+  c2.append(el('h3',{style:'margin:0 0 8px;font-size:15px'},'Converter'));
+  const g=el('div',{class:'grid2'});
+  [['pt','Excel em português (;)'],['en','Excel em inglês (,)']].forEach(([lc,lab])=>{
+    const cv=convert(pr,from,lc);
+    g.append(el('div',{},el('div',{class:'hint'},lab+(lc===from?' (original)':'')),fmtOut(cv)));
+  });
+  c2.append(g,el('p',{class:'note'},'Formatos de data em TEXTO() também são ajustados (aaaa ⇄ yyyy). Revise sempre o resultado antes de usar.'));
+  out.append(c2);
+  // funções
+  const used=[];walk(top,x=>{if(x.fn&&!used.includes(norm(x.fn)))used.push(norm(x.fn));});
+  const c3=el('div',{class:'card'}); c3.append(el('h3',{style:'margin:0 0 4px;font-size:15px'},'Funções usadas'));
+  if(!used.length) c3.append(el('p',{class:'hint'},'Nenhuma função encontrada.'));
+  used.forEach(k=>{
+    const e=IDX[k];
+    if(e) c3.append(el('div',{class:'fn'},el('h3',{},loc==='pt'?e[1]:e[0],e[7]?el('span',{class:'badge'},e[7]):null,el('span',{},'('+(loc==='pt'?e[0]:e[1])+')')),el('p',{},e[3]),el('div',{class:'out',style:'margin:6px 0'},L(e[4])),e[6]?el('div',{class:'tip'},'💡 '+e[6]):null));
+    else c3.append(el('div',{class:'fn'},el('h3',{},k),el('p',{class:'hint'},'Não está no catálogo desta página (pode ser uma função válida, nova ou de suplemento).')));
+  });
+  out.append(c3);
+  // dicas
+  const hints=[];
+  walk(top,x=>{const e=IDX[norm(x.fn||'')];if(!e)return;
+    if(e[0]==='VLOOKUP'&&x.args.length<4) hints.push('PROCV sem o 4º argumento faz busca aproximada e pode devolver o item errado. Use FALSO (ou 0) para busca exata.');
+    if(e[0]==='VLOOKUP'&&x.args.length>=4) hints.push('Se você tem Excel 365, PROCX costuma ser mais simples e flexível que PROCV.');
+    if(e[0]==='CONCATENATE') hints.push('CONCATENAR é uma função antiga; considere CONCAT, UNIRTEXTO ou o operador &.');
+    if(e[0]==='INDIRECT'||e[0]==='OFFSET') hints.push((loc==='pt'?e[1]:e[0])+' é volátil: recalcula a cada alteração e pode deixar a planilha lenta.');
+  });
+  if(ifDepth(top)>=3) hints.push('Você tem 3 ou mais SE aninhados. SES (Excel 2019/365) deixa a fórmula mais legível.');
+  if(/\b[A-Z]{1,3}:[A-Z]{1,3}\b/.test(src.replace(/"[^"]*"/g,''))&&/SUMPRODUCT|SOMARPRODUTO/i.test(src)) hints.push('Referências de coluna inteira dentro de SOMARPRODUTO deixam o cálculo lento; use intervalos delimitados.');
+  const uniq=[...new Set(hints)];
+  if(uniq.length){const c4=el('div',{class:'card'});c4.append(el('h3',{style:'margin:0 0 6px;font-size:15px'},'Sugestões'));uniq.forEach(h=>c4.append(el('div',{class:'warn'},h)));out.append(c4);}
+}
+
+/* ============ Abas e idioma ============ */
+function setTab(id){
+  ['receitas','catalogo','explicar'].forEach(t=>{
+    $('#p-'+t).classList.toggle('hide',t!==id);
+    $('#tab-'+t).setAttribute('aria-selected',String(t===id));
+  });
+  try{history.replaceState(null,'','#'+id);}catch{}
+}
+function setLoc(l){
+  loc=l; try{localStorage.setItem('xl-loc',l);}catch{}
+  $('#loc-pt').setAttribute('aria-pressed',String(l==='pt')); $('#loc-en').setAttribute('aria-pressed',String(l==='en'));
+  renderRPanel(); renderCatalog(); if($('#xin').value.trim()) explain();
+}
+document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>setTab(b.dataset.tab)));
+$('#loc-pt').addEventListener('click',()=>setLoc('pt'));
+$('#loc-en').addEventListener('click',()=>setLoc('en'));
+$('#rq').addEventListener('input',e=>{rFilter=e.target.value;renderRList();});
+$('#cq').addEventListener('input',e=>{cQ=e.target.value;renderCatalog();});
+$('#xgo').addEventListener('click',explain);
+$('#xex').addEventListener('click',()=>{$('#xin').value='=SE(PROCV(A2;Preços!A:C;3;0)>100;"Caro";SE(PROCV(A2;Preços!A:C;3;0)>50;"Médio";"Barato"))';explain();});
+$('#loc-pt').setAttribute('aria-pressed',String(loc==='pt')); $('#loc-en').setAttribute('aria-pressed',String(loc==='en'));
+renderRList(); renderRPanel(); renderCats(); renderCatalog();
+const h=location.hash.slice(1); if(['receitas','catalogo','explicar'].includes(h)) setTab(h);
+</script>
+</body>
+</html>
