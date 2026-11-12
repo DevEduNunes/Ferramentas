@@ -1,0 +1,496 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Bloqueia qualquer comunicação de rede: o navegador recusa fetch/XHR/WebSocket/imagens/scripts externos. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' blob:; worker-src blob:; style-src 'unsafe-inline'; img-src blob: data:; connect-src blob: data:; font-src data:; form-action 'none'; base-uri 'none'">
+<title>PDF Local</title>
+<style>
+:root{
+  --bg:#f6f7f9; --panel:#fff; --text:#1c2230; --muted:#667085; --line:#e3e6ec;
+  --accent:#2f6fed; --accent-t:#fff; --accent-soft:#e8f0ff; --danger:#d92d20; --ok:#12b76a;
+  --shadow:0 1px 2px rgba(16,24,40,.06),0 4px 14px rgba(16,24,40,.06);
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#12151c; --panel:#1b1f29; --text:#e8eaf0; --muted:#98a2b3; --line:#2b3140;
+    --accent:#5b8cff; --accent-t:#0b1020; --accent-soft:#222c46; --danger:#f97066; --ok:#32d583;
+    --shadow:0 1px 2px rgba(0,0,0,.4);}
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.app{display:grid;grid-template-columns:260px 1fr;min-height:100%}
+aside{background:var(--panel);border-right:1px solid var(--line);padding:20px 14px;display:flex;flex-direction:column;gap:6px;position:sticky;top:0;height:100vh;overflow:auto}
+.brand{font-weight:700;font-size:18px;padding:0 8px 4px}
+.back{margin:0 8px 10px;font-size:13px;color:var(--muted);text-decoration:none}
+.back:hover{color:var(--text)}
+.badge{margin:0 8px 14px;padding:8px 10px;border-radius:10px;background:var(--accent-soft);font-size:12.5px;color:var(--text)}
+.badge b{color:var(--ok)}
+nav button{all:unset;box-sizing:border-box;display:flex;gap:10px;align-items:center;width:100%;padding:9px 10px;border-radius:10px;cursor:pointer;color:var(--text)}
+nav button:hover{background:var(--bg)}
+nav button.active{background:var(--accent-soft);font-weight:600}
+nav button:focus-visible{outline:2px solid var(--accent)}
+nav .ic{width:22px;text-align:center}
+main{padding:28px clamp(16px,4vw,48px);max-width:1100px;width:100%}
+h1{margin:0 0 4px;font-size:24px}
+.sub{color:var(--muted);margin:0 0 22px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;box-shadow:var(--shadow);margin-bottom:16px}
+.drop{border:2px dashed var(--line);border-radius:14px;padding:34px 16px;text-align:center;color:var(--muted);cursor:pointer;transition:.15s;background:var(--panel)}
+.drop:hover,.drop.over{border-color:var(--accent);background:var(--accent-soft);color:var(--text)}
+.drop strong{color:var(--text);display:block;font-size:16px;margin-bottom:4px}
+button.btn,button.primary{font:inherit;border-radius:10px;padding:9px 16px;border:1px solid var(--line);background:var(--panel);color:var(--text);cursor:pointer}
+button.btn:hover{background:var(--bg)}
+button.primary{background:var(--accent);color:var(--accent-t);border-color:var(--accent);font-weight:600}
+button.primary:hover{filter:brightness(1.08)}
+button:disabled{opacity:.5;cursor:not-allowed}
+button.icon{font:inherit;border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:8px;width:30px;height:30px;cursor:pointer;line-height:1}
+button.icon:hover{background:var(--bg)}
+button.icon.danger:hover{color:var(--danger);border-color:var(--danger)}
+.row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.row.end{justify-content:flex-end}
+.grow{flex:1}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+label.f.inline{flex-direction:row;align-items:center;gap:8px;color:var(--text);font-size:14px}
+input[type=text],input[type=number],select{font:inherit;padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--text);min-width:0}
+input[type=color]{width:42px;height:36px;border:1px solid var(--line);border-radius:8px;background:var(--bg);padding:2px}
+input:focus-visible,select:focus-visible{outline:2px solid var(--accent)}
+.list{display:flex;flex-direction:column;gap:8px;margin:14px 0}
+.item{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--bg)}
+.item .name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item .meta{color:var(--muted);font-size:13px;white-space:nowrap}
+.item img.th{width:40px;height:40px;object-fit:cover;border-radius:6px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;margin-top:14px}
+.pg{border:1px solid var(--line);border-radius:12px;background:var(--bg);padding:8px;display:flex;flex-direction:column;gap:6px;cursor:grab}
+.pg.drag{opacity:.4}
+.pg.del{opacity:.35}
+.pg .thumb{aspect-ratio:3/4;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#fff;border-radius:6px;border:1px solid var(--line)}
+.pg .thumb img{max-width:100%;max-height:100%;transition:transform .15s}
+.pg .thumb .ph{color:#999;font-size:12px}
+.pg .bar{display:flex;justify-content:space-between;align-items:center;gap:4px;font-size:12px;color:var(--muted)}
+.note{font-size:13px;color:var(--muted);margin:8px 0 0}
+.warn{background:#fff4e5;color:#7a4b00;border-radius:10px;padding:10px 12px;font-size:13.5px}
+@media (prefers-color-scheme:dark){.warn{background:#3a2c12;color:#ffd28a}}
+.hide{display:none!important}
+#busy{position:fixed;inset:0;background:rgba(10,14,24,.55);display:flex;align-items:center;justify-content:center;z-index:50}
+#busy .box{background:var(--panel);border-radius:14px;padding:22px 26px;min-width:280px;box-shadow:var(--shadow)}
+.bar-o{height:8px;background:var(--line);border-radius:99px;overflow:hidden;margin-top:12px}
+.bar-i{height:100%;width:0;background:var(--accent);transition:width .15s}
+#toasts{position:fixed;right:16px;bottom:16px;display:flex;flex-direction:column;gap:8px;z-index:60;max-width:min(420px,calc(100vw - 32px))}
+.toast{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--ok);padding:10px 14px;border-radius:10px;box-shadow:var(--shadow);font-size:14px}
+.toast.err{border-left-color:var(--danger)}
+@media (max-width:760px){
+  .app{grid-template-columns:1fr}
+  aside{position:static;height:auto;border-right:0;border-bottom:1px solid var(--line)}
+  nav{display:grid;grid-template-columns:repeat(2,1fr);gap:4px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside>
+    <div class="brand">📄 PDF Local</div>
+    <a class="back" href="../">← Todas as ferramentas</a>
+    <div class="badge"><b>100% offline.</b> Seus arquivos nunca saem deste computador: não há upload nem servidor.</div>
+    <nav id="nav" aria-label="Ferramentas"></nav>
+  </aside>
+  <main id="main"></main>
+</div>
+<div id="busy" class="hide" role="status" aria-live="polite"><div class="box"><div id="busyMsg">Processando…</div><div class="bar-o"><div class="bar-i" id="busyBar"></div></div></div></div>
+<div id="toasts" aria-live="polite"></div>
+
+<script>/*__PDFLIB__*/</script>
+<script>/*__PDFJS__*/</script>
+<script>/*__JSZIP__*/</script>
+<script type="text/plain" id="pdfworker">/*__PDFWORKER__*/</script>
+
+<script>
+'use strict';
+const { PDFDocument, StandardFonts, rgb, degrees } = PDFLib;
+pdfjsLib.GlobalWorkerOptions.workerSrc = URL.createObjectURL(
+  new Blob([document.getElementById('pdfworker').textContent], { type: 'text/javascript' }));
+
+/* ---------- utilidades ---------- */
+const h = (tag, attrs = {}, ...kids) => {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === 'class') e.className = v;
+    else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+    else if (v === true) e.setAttribute(k, '');
+    else if (v !== false && v != null) e.setAttribute(k, v);
+  }
+  for (const c of kids.flat()) e.append(c && c.nodeType ? c : document.createTextNode(c ?? ''));
+  return e;
+};
+const fmtSize = n => n < 1024 ? n + ' B' : n < 1048576 ? (n / 1024).toFixed(1) + ' KB' : (n / 1048576).toFixed(2) + ' MB';
+const baseName = n => n.replace(/\.[^.]+$/, '');
+const readBytes = async f => new Uint8Array(await f.arrayBuffer());
+const errMsg = e => /encrypt/i.test(e?.message || '') ? 'o arquivo está protegido por senha' : (e?.message || String(e));
+const blobOf = (cv, type, q) => new Promise(r => cv.toBlob(r, type, q));
+
+function toast(msg, kind) {
+  const t = h('div', { class: 'toast' + (kind === 'err' ? ' err' : '') }, msg);
+  document.getElementById('toasts').append(t);
+  setTimeout(() => t.remove(), kind === 'err' ? 9000 : 5000);
+}
+function download(data, name, mime = 'application/octet-stream') {
+  const blob = data instanceof Blob ? data : new Blob([data], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = h('a', { href: url, download: name });
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 30000);
+}
+async function run(label, fn) {
+  const busy = document.getElementById('busy'), bar = document.getElementById('busyBar');
+  document.getElementById('busyMsg').textContent = label;
+  bar.style.width = '0%'; busy.classList.remove('hide');
+  try {
+    await fn((i, n, msg) => { bar.style.width = (100 * i / n) + '%'; if (msg) document.getElementById('busyMsg').textContent = msg; });
+  } catch (e) { console.error(e); toast('Erro: ' + errMsg(e), 'err'); }
+  finally { busy.classList.add('hide'); }
+}
+function dropzone({ accept, multiple, label, onFiles }) {
+  const exts = accept.split(',').map(s => s.trim().toLowerCase());
+  const ok = f => exts.some(x => x.startsWith('.') ? f.name.toLowerCase().endsWith(x) : (x.endsWith('/*') ? f.type.startsWith(x.slice(0, -1)) : f.type === x));
+  const input = h('input', { type: 'file', accept, class: 'hide', ...(multiple ? { multiple: true } : {}) });
+  const el = h('div', { class: 'drop', tabindex: '0', role: 'button' },
+    h('strong', {}, label), h('span', {}, 'ou clique para escolher ' + (multiple ? 'os arquivos' : 'o arquivo')), input);
+  const handle = fs => {
+    fs = [...fs].filter(ok);
+    if (!fs.length) return toast('Tipo de arquivo não suportado aqui.', 'err');
+    onFiles(multiple ? fs : fs.slice(0, 1));
+  };
+  el.addEventListener('click', () => input.click());
+  el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); input.click(); } });
+  input.addEventListener('change', () => { handle(input.files); input.value = ''; });
+  el.addEventListener('dragover', e => { e.preventDefault(); el.classList.add('over'); });
+  el.addEventListener('dragleave', () => el.classList.remove('over'));
+  el.addEventListener('drop', e => { e.preventDefault(); el.classList.remove('over'); handle(e.dataTransfer.files); });
+  return el;
+}
+/* lista reordenável (juntar / imagens) */
+function drawItems(host, items, redraw, meta, thumb) {
+  host.replaceChildren(...items.map((it, i) => h('div', { class: 'item' },
+    thumb ? h('img', { class: 'th', src: it.url, alt: '' }) : null,
+    h('span', { class: 'name', title: it.name }, `${i + 1}. ${it.name}`),
+    h('span', { class: 'meta' }, meta(it)),
+    h('button', { class: 'icon', title: 'Subir', 'aria-label': 'Subir', disabled: i === 0, onclick: () => { [items[i - 1], items[i]] = [items[i], items[i - 1]]; redraw(); } }, '↑'),
+    h('button', { class: 'icon', title: 'Descer', 'aria-label': 'Descer', disabled: i === items.length - 1, onclick: () => { [items[i + 1], items[i]] = [items[i], items[i + 1]]; redraw(); } }, '↓'),
+    h('button', { class: 'icon danger', title: 'Remover', 'aria-label': 'Remover', onclick: () => { if (it.url) URL.revokeObjectURL(it.url); items.splice(i, 1); redraw(); } }, '✕'))));
+}
+async function loadPdfJs(bytes) {
+  return pdfjsLib.getDocument({ data: bytes.slice(), isEvalSupported: false }).promise;
+}
+async function renderPage(pdf, n, scale) {
+  const page = await pdf.getPage(n);
+  const vp = page.getViewport({ scale });
+  const c = document.createElement('canvas');
+  c.width = Math.ceil(vp.width); c.height = Math.ceil(vp.height);
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height);
+  await page.render({ canvasContext: ctx, viewport: vp }).promise;
+  page.cleanup();
+  return c;
+}
+function parseRanges(s, n) {
+  const out = [];
+  for (const part of s.split(',').map(x => x.trim()).filter(Boolean)) {
+    const m = part.match(/^(\d*)\s*-\s*(\d*)$/);
+    let a, b;
+    if (m) { a = m[1] ? +m[1] : 1; b = m[2] ? +m[2] : n; }
+    else if (/^\d+$/.test(part)) a = b = +part;
+    else throw new Error(`Intervalo inválido: "${part}"`);
+    if (a < 1 || b > n || a > b) throw new Error(`Intervalo fora do limite (1–${n}): "${part}"`);
+    out.push(Array.from({ length: b - a + 1 }, (_, i) => a - 1 + i));
+  }
+  if (!out.length) throw new Error('Informe ao menos um intervalo.');
+  return out;
+}
+async function subsetPdf(src, idxs) {
+  const out = await PDFDocument.create();
+  (await out.copyPages(src, idxs)).forEach(p => out.addPage(p));
+  return out.save();
+}
+/* seletor de um único PDF, com info */
+function singlePdf(root, onLoaded, note) {
+  const info = h('div', { class: 'item hide' });
+  const dz = dropzone({ accept: '.pdf,application/pdf', multiple: false, label: 'Arraste o PDF aqui', onFiles: async ([f]) => {
+    try {
+      const bytes = await readBytes(f);
+      const doc = await PDFDocument.load(bytes);
+      info.classList.remove('hide');
+      info.replaceChildren(h('span', { class: 'name' }, f.name), h('span', { class: 'meta' }, `${doc.getPageCount()} pág. · ${fmtSize(f.size)}`));
+      onLoaded({ file: f, bytes, doc, n: doc.getPageCount() });
+    } catch (e) { toast(`Não foi possível abrir "${f.name}": ${errMsg(e)}`, 'err'); }
+  } });
+  root.append(dz, info);
+  if (note) root.append(h('p', { class: 'note' }, note));
+}
+
+/* ---------- ferramentas ---------- */
+const tools = [];
+
+tools.push({ id: 'juntar', icon: '🧩', title: 'Juntar PDFs', desc: 'Combine vários PDFs em um único arquivo, na ordem que você escolher.',
+  mount(root) {
+    const items = [];
+    const list = h('div', { class: 'list' });
+    const go = h('button', { class: 'primary', disabled: true, onclick: () => run('Juntando…', async prog => {
+      const out = await PDFDocument.create();
+      for (let i = 0; i < items.length; i++) {
+        const src = await PDFDocument.load(items[i].bytes);
+        (await out.copyPages(src, src.getPageIndices())).forEach(p => out.addPage(p));
+        prog(i + 1, items.length);
+      }
+      download(await out.save(), 'unido.pdf', 'application/pdf');
+      toast('PDF unido gerado.');
+    }) }, 'Juntar e baixar');
+    const redraw = () => { drawItems(list, items, redraw, it => `${it.pages} pág. · ${fmtSize(it.size)}`); go.disabled = items.length < 2; };
+    root.append(dropzone({ accept: '.pdf,application/pdf', multiple: true, label: 'Arraste os PDFs aqui', onFiles: async fs => {
+      for (const f of fs) {
+        try { const bytes = await readBytes(f); const d = await PDFDocument.load(bytes); items.push({ name: f.name, bytes, pages: d.getPageCount(), size: f.size }); }
+        catch (e) { toast(`Não foi possível abrir "${f.name}": ${errMsg(e)}`, 'err'); }
+      }
+      redraw();
+    } }), list, h('div', { class: 'row end' }, go));
+  } });
+
+tools.push({ id: 'dividir', icon: '✂️', title: 'Dividir / Extrair', desc: 'Separe um PDF em partes ou extraia apenas as páginas que precisa.',
+  mount(root) {
+    let cur = null;
+    const mode = h('select', {},
+      h('option', { value: 'ranges' }, 'Cada intervalo vira um PDF'),
+      h('option', { value: 'each' }, 'Uma página por arquivo'),
+      h('option', { value: 'extract' }, 'Extrair intervalos em um único PDF'));
+    const ranges = h('input', { type: 'text', placeholder: 'Ex.: 1-3, 5, 8-', value: '' });
+    const rf = h('label', { class: 'f grow' }, 'Páginas / intervalos', ranges);
+    const go = h('button', { class: 'primary', disabled: true, onclick: () => run('Dividindo…', async prog => {
+      const name = baseName(cur.file.name), m = mode.value;
+      const groups = m === 'each' ? Array.from({ length: cur.n }, (_, i) => [i]) : parseRanges(ranges.value, cur.n);
+      if (m === 'extract') {
+        download(await subsetPdf(cur.doc, groups.flat()), `${name}-extraido.pdf`, 'application/pdf');
+      } else if (groups.length === 1) {
+        download(await subsetPdf(cur.doc, groups[0]), `${name}-parte1.pdf`, 'application/pdf');
+      } else {
+        const z = new JSZip();
+        for (let i = 0; i < groups.length; i++) { z.file(`${name}-parte${String(i + 1).padStart(2, '0')}.pdf`, await subsetPdf(cur.doc, groups[i])); prog(i + 1, groups.length); }
+        download(await z.generateAsync({ type: 'blob' }), `${name}-partes.zip`);
+      }
+      toast('Pronto.');
+    }) }, 'Dividir e baixar');
+    const opts = h('div', { class: 'card hide' }, h('div', { class: 'row' }, h('label', { class: 'f' }, 'Modo', mode), rf, go));
+    mode.addEventListener('change', () => rf.classList.toggle('hide', mode.value === 'each'));
+    const holder = h('div'); root.append(holder, opts);
+    singlePdf(holder, c => { cur = c; go.disabled = false; opts.classList.remove('hide'); ranges.value = `1-${c.n}`; });
+  } });
+
+tools.push({ id: 'organizar', icon: '🗂️', title: 'Organizar páginas', desc: 'Reordene arrastando, gire ou remova páginas de um PDF.',
+  mount(root) {
+    let cur = null, pdf = null, pages = [], dragIdx = null, token = {};
+    const grid = h('div', { class: 'grid' });
+    const status = h('span', { class: 'meta' });
+    const card = h('div', { class: 'card hide' });
+    const draw = () => {
+      const alive = pages.filter(p => !p.del).length;
+      status.textContent = `${alive} de ${pages.length} páginas serão mantidas`;
+      grid.replaceChildren(...pages.map((p, i) => {
+        const el = h('div', { class: 'pg' + (p.del ? ' del' : ''), draggable: true, 'data-id': p.id,
+          ondragstart: e => { dragIdx = i; e.dataTransfer.effectAllowed = 'move'; el.classList.add('drag'); },
+          ondragend: () => el.classList.remove('drag'),
+          ondragover: e => e.preventDefault(),
+          ondrop: e => { e.preventDefault(); if (dragIdx == null || dragIdx === i) return; const [m] = pages.splice(dragIdx, 1); pages.splice(i, 0, m); dragIdx = null; draw(); } },
+          h('div', { class: 'thumb' }, p.thumb ? h('img', { src: p.thumb, alt: `Página ${p.idx + 1}`, style: `transform:rotate(${p.rot}deg)${p.rot % 180 ? ' scale(.72)' : ''}` }) : h('span', { class: 'ph' }, 'carregando…')),
+          h('div', { class: 'bar' }, h('span', {}, `pág. ${p.idx + 1}`),
+            h('span', {},
+              h('button', { class: 'icon', title: 'Girar à esquerda', 'aria-label': 'Girar à esquerda', onclick: () => { p.rot = (p.rot + 270) % 360; draw(); } }, '↺'), ' ',
+              h('button', { class: 'icon', title: 'Girar à direita', 'aria-label': 'Girar à direita', onclick: () => { p.rot = (p.rot + 90) % 360; draw(); } }, '↻'), ' ',
+              h('button', { class: 'icon danger', title: p.del ? 'Restaurar' : 'Remover', 'aria-label': p.del ? 'Restaurar' : 'Remover', onclick: () => { p.del = !p.del; draw(); } }, p.del ? '↩' : '✕'))));
+        return el;
+      }));
+    };
+    const save = h('button', { class: 'primary', onclick: () => run('Gerando PDF…', async () => {
+      const keep = pages.filter(p => !p.del);
+      if (!keep.length) throw new Error('Mantenha ao menos uma página.');
+      const out = await PDFDocument.create();
+      const copied = await out.copyPages(cur.doc, keep.map(p => p.idx));
+      copied.forEach((pg, i) => { pg.setRotation(degrees((((pg.getRotation().angle + keep[i].rot) % 360) + 360) % 360)); out.addPage(pg); });
+      download(await out.save(), `${baseName(cur.file.name)}-organizado.pdf`, 'application/pdf');
+      toast('PDF organizado gerado.');
+    }) }, 'Salvar e baixar');
+    const reset = h('button', { class: 'btn', onclick: () => { pages.sort((a, b) => a.idx - b.idx).forEach(p => { p.rot = 0; p.del = false; }); draw(); } }, 'Desfazer tudo');
+    card.append(h('div', { class: 'row' }, status, h('span', { class: 'grow' }), reset, save),
+      h('p', { class: 'note' }, 'Arraste as miniaturas para reordenar.'), grid);
+    const holder = h('div'); root.append(holder, card);
+    singlePdf(holder, async c => {
+      token = {}; const my = token;
+      cur = c; pdf = await loadPdfJs(c.bytes);
+      pages = Array.from({ length: c.n }, (_, i) => ({ id: i, idx: i, rot: 0, del: false, thumb: null }));
+      card.classList.remove('hide'); draw();
+      for (const p of [...pages]) {
+        if (token !== my) return;
+        try { const cv = await renderPage(pdf, p.idx + 1, 0.4); p.thumb = cv.toDataURL('image/jpeg', 0.7); }
+        catch { p.thumb = ''; }
+        const img = grid.querySelector(`[data-id="${p.id}"] .thumb`);
+        if (img && p.thumb) img.replaceChildren(h('img', { src: p.thumb, alt: `Página ${p.idx + 1}`, style: `transform:rotate(${p.rot}deg)${p.rot % 180 ? ' scale(.72)' : ''}` }));
+      }
+    });
+    root.unmount = () => { token = {}; };
+  } });
+
+tools.push({ id: 'comprimir', icon: '🗜️', title: 'Comprimir PDF', desc: 'Reduz o tamanho convertendo as páginas em imagens otimizadas.',
+  mount(root) {
+    let cur = null;
+    const level = h('select', {},
+      h('option', { value: '150,0.75' }, 'Qualidade alta (menos compressão)'),
+      h('option', { value: '110,0.6', selected: true }, 'Equilibrado'),
+      h('option', { value: '80,0.45' }, 'Compressão máxima'));
+    const go = h('button', { class: 'primary', disabled: true, onclick: () => run('Comprimindo…', async prog => {
+      const [dpi, q] = level.value.split(',').map(Number);
+      const pdf = await loadPdfJs(cur.bytes), out = await PDFDocument.create();
+      for (let i = 1; i <= cur.n; i++) {
+        prog(i - 1, cur.n, `Comprimindo página ${i} de ${cur.n}…`);
+        const base = (await pdf.getPage(i)).getViewport({ scale: 1 });
+        const cv = await renderPage(pdf, i, dpi / 72);
+        const img = await out.embedJpg(new Uint8Array(await (await blobOf(cv, 'image/jpeg', q)).arrayBuffer()));
+        const pg = out.addPage([base.width, base.height]);
+        pg.drawImage(img, { x: 0, y: 0, width: base.width, height: base.height });
+        cv.width = cv.height = 0;
+      }
+      prog(cur.n, cur.n);
+      const bytes = await out.save();
+      const pct = Math.round(100 * (1 - bytes.length / cur.file.size));
+      if (bytes.length >= cur.file.size && !confirm(`O resultado (${fmtSize(bytes.length)}) ficou maior que o original (${fmtSize(cur.file.size)}). Baixar mesmo assim?`)) return;
+      download(bytes, `${baseName(cur.file.name)}-comprimido.pdf`, 'application/pdf');
+      toast(`${fmtSize(cur.file.size)} → ${fmtSize(bytes.length)} (${pct >= 0 ? '-' + pct : '+' + (-pct)}%)`);
+    }) }, 'Comprimir e baixar');
+    const opts = h('div', { class: 'card hide' }, h('div', { class: 'row' }, h('label', { class: 'f grow' }, 'Nível', level), go),
+      h('p', { class: 'warn' }, 'Atenção: as páginas viram imagens, então o texto deixa de ser selecionável/pesquisável. Ideal para documentos digitalizados.'));
+    const holder = h('div'); root.append(holder, opts);
+    singlePdf(holder, c => { cur = c; go.disabled = false; opts.classList.remove('hide'); });
+  } });
+
+tools.push({ id: 'img2pdf', icon: '🖼️', title: 'Imagens → PDF', desc: 'Transforme fotos e imagens (JPG, PNG, WebP…) em um PDF.',
+  mount(root) {
+    const items = [];
+    const list = h('div', { class: 'list' });
+    const size = h('select', {}, h('option', { value: 'fit' }, 'Ajustar ao tamanho da imagem'), h('option', { value: 'a4' }, 'A4 (orientação automática)'));
+    const margin = h('input', { type: 'number', min: '0', max: '100', value: '0', style: 'width:90px' });
+    const go = h('button', { class: 'primary', disabled: true, onclick: () => run('Criando PDF…', async prog => {
+      const out = await PDFDocument.create(), mg = Math.max(0, +margin.value || 0);
+      for (let i = 0; i < items.length; i++) {
+        const f = items[i].file;
+        const bmp = await createImageBitmap(f);
+        let emb;
+        if (f.type === 'image/png') emb = await out.embedPng(await readBytes(f));
+        else {
+          const cv = document.createElement('canvas'); cv.width = bmp.width; cv.height = bmp.height;
+          const ctx = cv.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cv.width, cv.height); ctx.drawImage(bmp, 0, 0);
+          emb = await out.embedJpg(new Uint8Array(await (await blobOf(cv, 'image/jpeg', 0.92)).arrayBuffer()));
+        }
+        let w = bmp.width, hh = bmp.height; bmp.close?.();
+        let pw, ph;
+        if (size.value === 'a4') { [pw, ph] = w > hh ? [841.89, 595.28] : [595.28, 841.89]; }
+        else { pw = w + 2 * mg; ph = hh + 2 * mg; }
+        const k = Math.min((pw - 2 * mg) / w, (ph - 2 * mg) / hh, size.value === 'a4' ? Infinity : 1);
+        const dw = w * k, dh = hh * k;
+        out.addPage([pw, ph]).drawImage(emb, { x: (pw - dw) / 2, y: (ph - dh) / 2, width: dw, height: dh });
+        prog(i + 1, items.length);
+      }
+      download(await out.save(), 'imagens.pdf', 'application/pdf');
+      toast('PDF criado.');
+    }) }, 'Criar PDF');
+    const redraw = () => { drawItems(list, items, redraw, it => fmtSize(it.file.size), true); go.disabled = !items.length; };
+    root.append(dropzone({ accept: 'image/*', multiple: true, label: 'Arraste as imagens aqui', onFiles: fs => {
+      fs.forEach(f => items.push({ name: f.name, file: f, url: URL.createObjectURL(f) })); redraw();
+    } }), list,
+      h('div', { class: 'card' }, h('div', { class: 'row' }, h('label', { class: 'f' }, 'Tamanho da página', size), h('label', { class: 'f' }, 'Margem (pt)', margin), h('span', { class: 'grow' }), go)));
+    root.unmount = () => items.forEach(i => URL.revokeObjectURL(i.url));
+  } });
+
+tools.push({ id: 'pdf2img', icon: '📷', title: 'PDF → Imagens', desc: 'Exporte cada página como imagem PNG ou JPG.',
+  mount(root) {
+    let cur = null;
+    const fmt = h('select', {}, h('option', { value: 'png' }, 'PNG (sem perdas)'), h('option', { value: 'jpg' }, 'JPG (menor)'));
+    const dpi = h('select', {}, h('option', { value: '100' }, '100 dpi (rascunho)'), h('option', { value: '150', selected: true }, '150 dpi'), h('option', { value: '300' }, '300 dpi (alta)'));
+    const go = h('button', { class: 'primary', disabled: true, onclick: () => run('Convertendo…', async prog => {
+      const pdf = await loadPdfJs(cur.bytes), ext = fmt.value, mime = ext === 'png' ? 'image/png' : 'image/jpeg';
+      const name = baseName(cur.file.name), z = new JSZip(), pad = String(cur.n).length;
+      for (let i = 1; i <= cur.n; i++) {
+        prog(i - 1, cur.n, `Página ${i} de ${cur.n}…`);
+        const cv = await renderPage(pdf, i, +dpi.value / 72);
+        const blob = await blobOf(cv, mime, 0.92); cv.width = cv.height = 0;
+        if (cur.n === 1) { download(blob, `${name}.${ext}`); return; }
+        z.file(`${name}-${String(i).padStart(pad, '0')}.${ext}`, blob);
+      }
+      prog(cur.n, cur.n, 'Compactando…');
+      download(await z.generateAsync({ type: 'blob' }), `${name}-imagens.zip`);
+      toast('Imagens exportadas.');
+    }) }, 'Converter e baixar');
+    const opts = h('div', { class: 'card hide' }, h('div', { class: 'row' }, h('label', { class: 'f' }, 'Formato', fmt), h('label', { class: 'f' }, 'Resolução', dpi), h('span', { class: 'grow' }), go));
+    const holder = h('div'); root.append(holder, opts);
+    singlePdf(holder, c => { cur = c; go.disabled = false; opts.classList.remove('hide'); });
+  } });
+
+tools.push({ id: 'marca', icon: '🔖', title: 'Marca d\'água e numeração', desc: 'Adicione uma marca d\'água em diagonal e/ou números de página.',
+  mount(root) {
+    let cur = null;
+    const wmOn = h('input', { type: 'checkbox', checked: true }), wmText = h('input', { type: 'text', value: 'CONFIDENCIAL', style: 'width:220px' });
+    const wmSize = h('input', { type: 'number', min: '10', max: '300', value: '64', style: 'width:90px' });
+    const wmOp = h('input', { type: 'number', min: '5', max: '100', value: '20', style: 'width:90px' });
+    const color = h('input', { type: 'color', value: '#808080' });
+    const numOn = h('input', { type: 'checkbox' });
+    const numPos = h('select', {}, h('option', { value: 'c' }, 'Centro'), h('option', { value: 'r', selected: true }, 'Direita'), h('option', { value: 'l' }, 'Esquerda'));
+    const numFmt = h('select', {}, h('option', { value: 'n' }, '1'), h('option', { value: 'nn' }, '1 / 10'), h('option', { value: 'p' }, 'Página 1 de 10'));
+    const hex = c => { const n = parseInt(c.slice(1), 16); return rgb((n >> 16 & 255) / 255, (n >> 8 & 255) / 255, (n & 255) / 255); };
+    const go = h('button', { class: 'primary', disabled: true, onclick: () => run('Aplicando…', async prog => {
+      if (!wmOn.checked && !numOn.checked) throw new Error('Ative a marca d\'água e/ou a numeração.');
+      const doc = await PDFDocument.load(cur.bytes), font = await doc.embedFont(StandardFonts.Helvetica);
+      const pgs = doc.getPages(), col = hex(color.value);
+      const text = wmText.value, size = +wmSize.value || 64, op = Math.min(1, Math.max(.05, (+wmOp.value || 20) / 100));
+      try {
+        pgs.forEach((p, i) => {
+          const { width: W, height: H } = p.getSize();
+          if (wmOn.checked && text) {
+            const tw = font.widthOfTextAtSize(text, size), th = size * 0.35, t = Math.PI / 4;
+            p.drawText(text, { x: W / 2 - (tw / 2) * Math.cos(t) + th * Math.sin(t), y: H / 2 - (tw / 2) * Math.sin(t) - th * Math.cos(t), size, font, color: col, opacity: op, rotate: degrees(45) });
+          }
+          if (numOn.checked) {
+            const s = numFmt.value === 'n' ? `${i + 1}` : numFmt.value === 'nn' ? `${i + 1} / ${pgs.length}` : `Página ${i + 1} de ${pgs.length}`;
+            const tw = font.widthOfTextAtSize(s, 10), x = numPos.value === 'c' ? (W - tw) / 2 : numPos.value === 'r' ? W - tw - 30 : 30;
+            p.drawText(s, { x, y: 20, size: 10, font, color: rgb(.25, .25, .25) });
+          }
+          prog(i + 1, pgs.length);
+        });
+      } catch (e) { if (/encode/i.test(e.message)) throw new Error('A marca d\'água contém caracteres não suportados (use letras latinas, números e acentos comuns).'); throw e; }
+      download(await doc.save(), `${baseName(cur.file.name)}-marcado.pdf`, 'application/pdf');
+      toast('PDF gerado.');
+    }) }, 'Aplicar e baixar');
+    const opts = h('div', { class: 'card hide' },
+      h('div', { class: 'row' }, h('label', { class: 'f inline' }, wmOn, 'Marca d\'água'), h('label', { class: 'f' }, 'Texto', wmText),
+        h('label', { class: 'f' }, 'Tamanho', wmSize), h('label', { class: 'f' }, 'Opacidade %', wmOp), h('label', { class: 'f' }, 'Cor', color)),
+      h('hr', { style: 'border:0;border-top:1px solid var(--line);margin:16px 0' }),
+      h('div', { class: 'row' }, h('label', { class: 'f inline' }, numOn, 'Numerar páginas'), h('label', { class: 'f' }, 'Posição', numPos), h('label', { class: 'f' }, 'Formato', numFmt),
+        h('span', { class: 'grow' }), go));
+    const holder = h('div'); root.append(holder, opts);
+    singlePdf(holder, c => { cur = c; go.disabled = false; opts.classList.remove('hide'); });
+  } });
+
+/* ---------- navegação ---------- */
+const nav = document.getElementById('nav'), main = document.getElementById('main');
+let activeRoot = null;
+function open(id) {
+  const t = tools.find(x => x.id === id) || tools[0];
+  activeRoot?.unmount?.();
+  nav.querySelectorAll('button').forEach(b => b.classList.toggle('active', b.dataset.id === t.id));
+  const root = h('div');
+  main.replaceChildren(h('h1', {}, t.title), h('p', { class: 'sub' }, t.desc), root);
+  activeRoot = root; t.mount(root);
+  try { history.replaceState(null, '', '#' + t.id); } catch {}
+  window.scrollTo(0, 0);
+}
+tools.forEach(t => nav.append(h('button', { 'data-id': t.id, onclick: () => open(t.id) }, h('span', { class: 'ic' }, t.icon), t.title)));
+open(location.hash.slice(1));
+window.addEventListener('dragover', e => e.preventDefault());
+window.addEventListener('drop', e => e.preventDefault());
+</script>
+</body>
+</html>

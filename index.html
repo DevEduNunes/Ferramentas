@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ferramentas · Eduardo Nunes</title>
+<meta name="description" content="Ferramentas gratuitas que rodam direto no navegador, sem upload e sem cadastro. Seus arquivos nunca saem do seu computador.">
+<meta name="theme-color" content="#2f6fed">
+<style>
+:root{
+  --bg:#f6f7f9; --panel:#fff; --text:#1c2230; --muted:#667085; --line:#e3e6ec;
+  --accent:#2f6fed; --accent-t:#fff; --accent-soft:#e8f0ff; --ok:#12b76a;
+  --shadow:0 1px 2px rgba(16,24,40,.06),0 8px 24px rgba(16,24,40,.08);
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#12151c; --panel:#1b1f29; --text:#e8eaf0; --muted:#98a2b3; --line:#2b3140;
+    --accent:#5b8cff; --accent-t:#0b1020; --accent-soft:#222c46; --ok:#32d583; --shadow:0 1px 2px rgba(0,0,0,.4);}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+a{color:inherit}
+.wrap{max-width:1000px;margin:0 auto;padding:0 20px}
+header{display:flex;justify-content:space-between;align-items:center;padding:20px 0}
+header .logo{font-weight:700;text-decoration:none}
+header a.back{color:var(--muted);text-decoration:none;font-size:14px}
+header a.back:hover{color:var(--text)}
+.hero{padding:48px 0 36px;text-align:center}
+.pill{display:inline-block;background:var(--accent-soft);color:var(--text);border-radius:99px;padding:5px 14px;font-size:13.5px;margin-bottom:18px}
+.pill b{color:var(--ok)}
+h1{font-size:clamp(30px,5vw,46px);line-height:1.15;margin:0 0 14px;letter-spacing:-.02em}
+.hero p{color:var(--muted);max-width:620px;margin:0 auto;font-size:18px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:18px;padding:12px 0 40px}
+.card{display:flex;flex-direction:column;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:22px;box-shadow:var(--shadow);text-decoration:none;transition:transform .15s,border-color .15s}
+a.card:hover{transform:translateY(-3px);border-color:var(--accent)}
+a.card:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.card .ic{font-size:34px;line-height:1}
+.card h2{margin:0;font-size:20px}
+.card p{margin:0;color:var(--muted);font-size:15px;flex:1}
+.tags{display:flex;flex-wrap:wrap;gap:6px}
+.tags span{font-size:12px;background:var(--bg);border:1px solid var(--line);border-radius:99px;padding:2px 10px;color:var(--muted)}
+.cta{color:var(--accent);font-weight:600;font-size:15px}
+.card.soon{opacity:.65;border-style:dashed;box-shadow:none}
+.soon .cta{color:var(--muted)}
+.why{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px;padding:10px 0 50px}
+.why div{padding:4px 2px}
+.why h3{margin:0 0 4px;font-size:16px}
+.why p{margin:0;color:var(--muted);font-size:14.5px}
+footer{border-top:1px solid var(--line);padding:24px 0 40px;color:var(--muted);font-size:14px;display:flex;flex-wrap:wrap;gap:8px 20px;justify-content:space-between}
+footer a{text-decoration:none}
+footer a:hover{color:var(--text)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <a class="logo" href="./">🧰 Ferramentas</a>
+    <a class="back" href="https://eduardonunes.dev">← eduardonunes.dev</a>
+  </header>
+
+  <section class="hero">
+    <span class="pill"><b>100% no navegador.</b> Sem upload, sem cadastro.</span>
+    <h1>Ferramentas simples,<br>feitas para uso diário</h1>
+    <p>Tudo roda no seu computador. Seus arquivos e dados nunca são enviados para nenhum servidor.</p>
+  </section>
+
+  <main>
+    <div class="grid">
+      <a class="card" href="pdf/">
+        <span class="ic" aria-hidden="true">📄</span>
+        <h2>PDF Local</h2>
+        <p>Alternativa ao iLovePDF que funciona offline. Ideal para documentos com dados sensíveis.</p>
+        <div class="tags"><span>Juntar</span><span>Dividir</span><span>Organizar</span><span>Comprimir</span><span>Imagens ⇄ PDF</span><span>Marca d'água</span></div>
+        <span class="cta">Abrir ferramenta →</span>
+      </a>
+
+      <div class="card soon" aria-disabled="true">
+        <span class="ic" aria-hidden="true">📊</span>
+        <h2>Ajuda com fórmulas do Excel</h2>
+        <p>Descreva o que precisa e encontre a fórmula certa, com exemplos prontos para copiar.</p>
+        <span class="cta">Em breve</span>
+      </div>
+    </div>
+
+    <section class="why" aria-label="Por que usar">
+      <div><h3>🔒 Privacidade de verdade</h3><p>Os arquivos são processados na memória do seu navegador. Não existe servidor para receber nada.</p></div>
+      <div><h3>✈️ Funciona offline</h3><p>Depois de carregada, a página não precisa de internet. Pode até salvar o arquivo e usar sem conexão.</p></div>
+      <div><h3>🆓 Gratuito e sem anúncios</h3><p>Sem limite de tamanho, sem conta e sem marca d'água indesejada.</p></div>
+    </section>
+  </main>
+
+  <footer>
+    <span>© <script>document.write(new Date().getFullYear())</script> Eduardo Nunes</span>
+    <a href="https://eduardonunes.dev">Voltar ao site principal</a>
+  </footer>
+</div>
+</body>
+</html>
