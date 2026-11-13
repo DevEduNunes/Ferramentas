@@ -1,0 +1,941 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<script>try{var t=localStorage.getItem('ferramentas-tema');document.documentElement.dataset.theme=(t==='light'?'light':'dark')}catch(e){document.documentElement.dataset.theme='dark'}</script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#030305">
+<!-- Nenhuma requisição de rede é permitida: tudo roda no navegador. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'none'">
+<title>Power Query (M) · Ferramentas</title>
+<meta name="description" content="Receitas de Power Query (linguagem M) para Excel e Power BI, catálogo de funções e um formatador que organiza a consulta e explica cada passo. Tudo no navegador, sem enviar nada a servidor.">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../assets/tema.css?v=3">
+<style>
+.args{margin:6px 0 0;padding:0;list-style:none;display:grid;gap:3px}
+.args li{font-size:13px;color:var(--muted);overflow-wrap:anywhere}
+.args code{color:var(--code)}
+.args b{font-weight:500;color:var(--accent-soft)}
+.badge2{display:inline-block;margin-left:8px;padding:1px 7px;border:1px solid var(--line2);font:500 10.5px var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);vertical-align:middle}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="topbar"><a class="logo" href="../">Ferramentas<i>.</i></a><nav style="display:flex;gap:26px;flex-wrap:wrap"><a href="../pdf/">PDF</a><a href="../excel/">Excel</a><a href="../dax/">DAX</a><a href="../sql/">SQL</a><a href="../powerquery/">Power Query</a><a href="https://eduardonunes.dev">eduardonunes.dev ↗</a><button class="theme-btn" id="themeBtn" type="button">☀ Modo claro</button></nav></header>
+<div class="kicker"><span class="count">05 / 05</span><span class="bar"></span><span class="label">Excel e Power BI</span></div>
+<h1>Power <em>Query</em> (M)</h1>
+<p class="sub">Receitas de consultas prontas para preencher, catálogo de funções da linguagem M e um formatador que organiza o código e explica cada passo. Tudo roda no seu navegador: nada do que você digita é enviado a lugar nenhum.</p>
+
+<details class="guide card">
+  <summary>Conceitos essenciais (leia uma vez, ajuda em tudo)</summary>
+  <dl>
+    <dt>Onde colar o código</dt><dd>No Excel: <b>Dados → Obter Dados → Iniciar o Editor do Power Query</b>; no Power BI: <b>Transformar dados</b>. Com a consulta selecionada, abra <b>Página Inicial → Editor Avançado</b> e cole. As receitas de <i>Fontes de dados</i> são consultas completas; as demais geram um <b>passo</b> para colar antes do <code>in</code>.</dd>
+    <dt>Passos e <code>let … in</code></dt><dd>Uma consulta M é uma lista de passos entre <code>let</code> e <code>in</code>. Cada passo usa o anterior; o que vem depois do <code>in</code> é o resultado. Passos são separados por vírgula, <b>menos o último</b>. Ao colar um passo novo, aponte o <code>in</code> para ele (ou para o passo que vier depois).</dd>
+    <dt>Maiúsculas importam</dt><dd>M diferencia maiúsculas de minúsculas: <code>Table.SelectRows</code> funciona, <code>table.selectrows</code> não. Palavras como <code>let</code>, <code>in</code>, <code>each</code>, <code>if</code>, <code>then</code>, <code>else</code>, <code>true</code> e <code>null</code> são sempre minúsculas. Nomes de colunas também.</dd>
+    <dt>Sempre vírgula, em qualquer idioma</dt><dd>Diferente do Excel e do DAX, o código M <b>não muda com a região</b>: argumentos são separados por vírgula e o decimal é ponto (<code>1234.5</code>). O que muda é só a interface do editor. Por isso esta página não tem chave de idioma.</dd>
+    <dt><code>each</code> e colchetes</dt><dd><code>each [Valor] &gt; 100</code> é um atalho: o <code>each</code> cria uma função da linha atual e <code>[Valor]</code> lê o campo da linha. Listas usam chaves <code>{ }</code> e registros usam colchetes <code>[ ]</code>.</dd>
+    <dt>Nomes com espaço</dt><dd>Passos e colunas com espaços ou acentos precisam de aspas: <code>#"Nome do passo"</code>. Em <code>each</code>, o nome da coluna fica entre colchetes sem aspas: <code>[Nome do Cliente]</code>.</dd>
+    <dt>Tipos de dados</dt><dd>Depois de importar, defina os tipos (<code>type text</code>, <code>type number</code>, <code>type date</code>, <code>Int64.Type</code>). Valores vindos como texto em formato brasileiro (<code>31/12/2025</code>, <code>1.234,56</code>) precisam da cultura <code>"pt-BR"</code> na conversão.</dd>
+    <dt>Segredos</dt><dd>Nunca coloque senha ou token dentro do código da consulta: ele vai junto com o arquivo. Use as credenciais da própria fonte de dados.</dd>
+  </dl>
+</details>
+
+<div class="ctl">
+  <div class="seg" role="tablist" aria-label="Seções">
+    <button role="tab" id="tab-receitas" aria-selected="true" data-tab="receitas">Receitas</button>
+    <button role="tab" id="tab-catalogo" aria-selected="false" data-tab="catalogo">Catálogo</button>
+    <button role="tab" id="tab-explicar" aria-selected="false" data-tab="explicar">Formatar e explicar</button>
+  </div>
+</div>
+
+<section id="p-receitas">
+  <div class="layout">
+    <div>
+      <input type="search" id="rq" placeholder="Buscar receita…" aria-label="Buscar receita">
+      <div class="rlist" id="rlist" style="margin-top:10px"></div>
+    </div>
+    <div id="rpanel"></div>
+  </div>
+</section>
+
+<section id="p-catalogo" class="hide">
+  <input type="search" id="cq" placeholder="Buscar função (ex.: Table.Group)…" aria-label="Buscar função">
+  <div class="chips" id="ccats"></div>
+  <div class="card" id="clist"></div>
+</section>
+
+<section id="p-explicar" class="hide">
+  <div class="card">
+    <label class="f">Cole uma consulta M completa (começando em <code>let</code>)
+      <textarea id="xin" spellcheck="false" placeholder='let Fonte = Excel.Workbook(File.Contents("C:\Dados\Vendas.xlsx"), null, true), ... in Resultado'></textarea>
+    </label>
+    <div class="row" style="margin-top:10px;justify-content:flex-start;flex-wrap:wrap">
+      <button class="btn primary" id="xgo">Formatar e explicar</button>
+      <button class="btn" id="xex">Usar exemplo</button>
+      <span class="hint">O código é analisado aqui mesmo, no navegador. Nada é executado.</span>
+    </div>
+  </div>
+  <div id="xout"></div>
+</section>
+
+<footer>O código gerado segue a documentação da linguagem M, mas esta página não executa consultas: teste no seu arquivo antes de usar em produção. Não afiliado à Microsoft.</footer>
+</div>
+
+<script>
+'use strict';
+/* ============ Catálogo ============
+   [nome, categoria, descrição, sintaxe, exemplo, dica]  (parâmetros opcionais entre [colchetes] na sintaxe) */
+const F=[
+// ---- Tabela
+['Table.SelectRows','Tabela','Filtra as linhas: mantém só as que atendem à condição.','Table.SelectRows(table, condition)','Filtrado = Table.SelectRows(Fonte, each [Valor] > 100)','Dentro do each, [Coluna] lê o campo da linha atual. Se a coluna tiver vazios (null), teste [Coluna] <> null antes de funções de texto.'],
+['Table.AddColumn','Tabela','Adiciona uma coluna calculada, linha a linha.','Table.AddColumn(table, newColumnName, columnGenerator, [columnType])','Total = Table.AddColumn(Fonte, "Total", each [Qtd] * [Preço], type number)','Informe o tipo no 4º argumento para a coluna já sair tipada.'],
+['Table.RemoveColumns','Tabela','Remove colunas pelo nome.','Table.RemoveColumns(table, columns, [missingField])','Table.RemoveColumns(Fonte, {"Obs", "Temp"})','Dá erro se a coluna não existir; acrescente MissingField.Ignore para ignorar.'],
+['Table.SelectColumns','Tabela','Mantém só as colunas indicadas (e na ordem indicada).','Table.SelectColumns(table, columns, [missingField])','Table.SelectColumns(Fonte, {"Data", "Cliente", "Valor"})','É mais seguro que remover quando podem surgir colunas novas na origem.'],
+['Table.RenameColumns','Tabela','Renomeia colunas. Cada item é {nome antigo, nome novo}.','Table.RenameColumns(table, renames, [missingField])','Table.RenameColumns(Fonte, {{"Valor", "Receita"}, {"Cli", "Cliente"}})','',],
+['Table.ReorderColumns','Tabela','Reordena as colunas.','Table.ReorderColumns(table, columnOrder, [missingField])','Table.ReorderColumns(Fonte, {"Data", "Cliente", "Valor"})','Colunas não citadas ficam no fim.'],
+['Table.TransformColumns','Tabela','Aplica uma função aos valores de colunas, no lugar.','Table.TransformColumns(table, transformOperations, [defaultTransformation], [missingField])','Table.TransformColumns(Fonte, {{"Nome", Text.Trim, type text}})','Cada item é {coluna, função, tipo opcional}.'],
+['Table.TransformColumnTypes','Tabela','Define o tipo de dados das colunas.','Table.TransformColumnTypes(table, typeTransformations, [culture])','Table.TransformColumnTypes(Fonte, {{"Data", type date}, {"Valor", type number}}, "pt-BR")','A cultura (3º argumento) decide como ler 31/12/2025 e 1.234,56.'],
+['Table.TransformColumnNames','Tabela','Aplica uma função aos nomes de todas as colunas.','Table.TransformColumnNames(table, nameGenerator, [options])','Table.TransformColumnNames(Fonte, Text.Trim)','Útil para tirar espaços sobrando ou padronizar caixa.'],
+['Table.ReplaceValue','Tabela','Substitui valores em colunas.','Table.ReplaceValue(table, oldValue, newValue, replacer, columnsToSearch)','Table.ReplaceValue(Fonte, null, 0, Replacer.ReplaceValue, {"Valor"})','Replacer.ReplaceValue troca o valor inteiro; Replacer.ReplaceText troca pedaços de texto.'],
+['Table.ReplaceErrorValues','Tabela','Troca valores com erro por um valor padrão.','Table.ReplaceErrorValues(table, errorReplacement)','Table.ReplaceErrorValues(Fonte, {{"Valor", 0}})','O 2º argumento é uma lista de {coluna, valor}.'],
+['Table.PromoteHeaders','Tabela','Usa a primeira linha como nomes das colunas.','Table.PromoteHeaders(table, [options])','Table.PromoteHeaders(Fonte, [PromoteAllScalars = true])','Com PromoteAllScalars = true, números e datas da primeira linha também viram nomes.'],
+['Table.DemoteHeaders','Tabela','Faz o contrário: os nomes das colunas viram a primeira linha.','Table.DemoteHeaders(table)','Table.DemoteHeaders(Fonte)','',],
+['Table.Skip','Tabela','Pula as primeiras linhas (ou enquanto uma condição valer).','Table.Skip(table, [countOrCondition])','Table.Skip(Fonte, 3)','',],
+['Table.FirstN','Tabela','Mantém as N primeiras linhas.','Table.FirstN(table, countOrCondition)','Table.FirstN(Ordenado, 10)','Depois de Table.Sort, dá o "top N".'],
+['Table.LastN','Tabela','Mantém as N últimas linhas.','Table.LastN(table, countOrCondition)','Table.LastN(Fonte, 5)','',],
+['Table.Range','Tabela','Devolve um trecho: a partir de uma posição (começa em 0), com certa quantidade.','Table.Range(table, offset, [count])','Table.Range(Fonte, 5, 10)','Posição 5 é a sexta linha.'],
+['Table.RemoveFirstN','Tabela','Remove as N primeiras linhas.','Table.RemoveFirstN(table, [countOrCondition])','Table.RemoveFirstN(Fonte, 2)','',],
+['Table.RemoveLastN','Tabela','Remove as N últimas linhas (rodapé, totais).','Table.RemoveLastN(table, [countOrCondition])','Table.RemoveLastN(Fonte, 1)','',],
+['Table.RemoveRows','Tabela','Remove um bloco de linhas a partir de uma posição.','Table.RemoveRows(table, offset, [count])','Table.RemoveRows(Fonte, 0, 3)','',],
+['Table.Distinct','Tabela','Remove linhas duplicadas (inteiras ou pelas colunas indicadas).','Table.Distinct(table, [equationCriteria])','Table.Distinct(Fonte, {"ClienteID"})','Diferencia maiúsculas de minúsculas e espaços.'],
+['Table.Sort','Tabela','Ordena a tabela por uma ou mais colunas.','Table.Sort(table, comparisonCriteria)','Table.Sort(Fonte, {{"Valor", Order.Descending}, {"Data", Order.Ascending}})','Uma coluna só: Table.Sort(Fonte, {"Data"}).'],
+['Table.Group','Tabela','Agrupa linhas e calcula agregações (soma, contagem, média…).','Table.Group(table, key, aggregatedColumns, [groupKind], [comparer])','Table.Group(Fonte, {"Cliente"}, {{"Total", each List.Sum([Valor]), type nullable number}})','Para contar linhas use each Table.RowCount(_).'],
+['Table.Pivot','Tabela','Transforma valores de uma coluna em colunas novas (pivotar).','Table.Pivot(table, pivotValues, attributeColumn, valueColumn, [aggregationFunction])','Table.Pivot(Fonte, List.Distinct(Fonte[Mês]), "Mês", "Valor", List.Sum)','Os valores da coluna de atributo precisam ser texto.'],
+['Table.Unpivot','Tabela','Transforma colunas escolhidas em linhas (despivotar).','Table.Unpivot(table, pivotColumns, attributeColumn, valueColumn)','Table.Unpivot(Fonte, {"Jan", "Fev", "Mar"}, "Mês", "Valor")','',],
+['Table.UnpivotOtherColumns','Tabela','Despiva todas as colunas, exceto as indicadas.','Table.UnpivotOtherColumns(table, pivotColumns, attributeColumn, valueColumn)','Table.UnpivotOtherColumns(Fonte, {"Produto"}, "Mês", "Valor")','Melhor que Unpivot quando surgem colunas novas (meses novos) com o tempo.'],
+['Table.Transpose','Tabela','Troca linhas por colunas.','Table.Transpose(table, [columns])','Table.Transpose(Fonte)','Os nomes das colunas se perdem; promova a primeira linha depois.'],
+['Table.NestedJoin','Tabela','Mescla duas tabelas (como um PROCV/JOIN) deixando o resultado em uma coluna de tabela.','Table.NestedJoin(table1, key1, table2, key2, newColumnName, [joinKind], [keyEqualityComparers])','Table.NestedJoin(Vendas, {"ClienteID"}, Clientes, {"ClienteID"}, "Cliente", JoinKind.LeftOuter)','Depois expanda a coluna com Table.ExpandTableColumn. As chaves precisam ter o mesmo tipo.'],
+['Table.Join','Tabela','Mescla duas tabelas já devolvendo as colunas juntas.','Table.Join(table1, key1, table2, key2, [joinKind], [joinAlgorithm], [keyEqualityComparers])','Table.Join(Vendas, {"ClienteID"}, Clientes, {"ID"}, JoinKind.Inner)','As duas tabelas não podem ter colunas com o mesmo nome (senão dá erro).'],
+['Table.ExpandTableColumn','Tabela','Expande uma coluna de tabelas (resultado de mesclagem ou agrupamento) em colunas.','Table.ExpandTableColumn(table, column, columnNames, [newColumnNames])','Table.ExpandTableColumn(Mesclada, "Cliente", {"Nome", "Cidade"})','',],
+['Table.ExpandRecordColumn','Tabela','Expande uma coluna de registros em colunas (comum em JSON).','Table.ExpandRecordColumn(table, column, fieldNames, [newColumnNames])','Table.ExpandRecordColumn(Fonte, "endereco", {"rua", "cidade"})','',],
+['Table.ExpandListColumn','Tabela','Expande uma coluna de listas em linhas.','Table.ExpandListColumn(table, column)','Table.ExpandListColumn(Fonte, "Tags")','Cada item da lista vira uma linha nova.'],
+['Table.Combine','Tabela','Empilha tabelas (anexar consultas). Colunas são unidas pelo nome.','Table.Combine(tables, [columns])','Table.Combine({Vendas2024, Vendas2025})','Colunas que só existem em uma das tabelas ficam com null na outra.'],
+['Table.AddIndexColumn','Tabela','Adiciona uma coluna de índice (numeração).','Table.AddIndexColumn(table, newColumnName, [initialValue], [increment], [columnType])','Table.AddIndexColumn(Fonte, "Índice", 1, 1, Int64.Type)','Por padrão o índice começa em 0.'],
+['Table.SplitColumn','Tabela','Divide uma coluna em várias.','Table.SplitColumn(table, sourceColumn, splitter, [columnNamesOrNumber])','Table.SplitColumn(Fonte, "Nome", Splitter.SplitTextByDelimiter(" ", QuoteStyle.Csv), {"Nome", "Sobrenome"})','O divisor vem de Splitter.*.'],
+['Table.CombineColumns','Tabela','Junta várias colunas em uma.','Table.CombineColumns(table, sourceColumns, combiner, column)','Table.CombineColumns(Fonte, {"Nome", "Sobrenome"}, Combiner.CombineTextByDelimiter(" ", QuoteStyle.None), "Nome Completo")','',],
+['Table.FillDown','Tabela','Preenche valores vazios (null) com o valor da linha de cima.','Table.FillDown(table, columns)','Table.FillDown(Fonte, {"Região"})','Só preenche null; texto vazio ("") não conta.'],
+['Table.FillUp','Tabela','Preenche valores vazios com o valor da linha de baixo.','Table.FillUp(table, columns)','Table.FillUp(Fonte, {"Região"})','',],
+['Table.RowCount','Tabela','Conta as linhas da tabela.','Table.RowCount(table)','Table.RowCount(Fonte)','',],
+['Table.ColumnNames','Tabela','Devolve a lista com os nomes das colunas.','Table.ColumnNames(table)','Table.ColumnNames(Fonte)','Muito usada para aplicar um passo a todas as colunas.'],
+['Table.Column','Tabela','Devolve os valores de uma coluna como lista.','Table.Column(table, column)','Table.Column(Fonte, "Valor")','Atalho: Fonte[Valor].'],
+['Table.Buffer','Tabela','Guarda a tabela em memória para que não seja lida de novo a cada passo.','Table.Buffer(table)','Table.Buffer(Ordenado)','Útil após Table.Sort antes de Table.Distinct. Interrompe o query folding em bancos de dados.'],
+['Table.FromRows','Tabela','Cria uma tabela a partir de uma lista de linhas.','Table.FromRows(rows, [columns])','Table.FromRows({{1, "A"}, {2, "B"}}, {"Id", "Letra"})','',],
+['Table.FromRecords','Tabela','Cria uma tabela a partir de uma lista de registros (comum em JSON).','Table.FromRecords(records, [columns], [missingField])','Table.FromRecords(Json.Document(Web.Contents(url)))','',],
+['Table.FromList','Tabela','Cria uma tabela a partir de uma lista.','Table.FromList(list, [splitter], [columns], [default], [extraValues])','Table.FromList(Datas, Splitter.SplitByNothing(), {"Data"})','',],
+['Table.Max','Tabela','Devolve a linha (registro) com o maior valor de uma coluna.','Table.Max(table, comparisonCriteria, [default])','Table.Max(Fonte, "Data")','Para o menor, Table.Min. O resultado é um registro: Table.Max(Fonte, "Data")[Valor].'],
+['Table.RemoveRowsWithErrors','Tabela','Remove as linhas que têm erro.','Table.RemoveRowsWithErrors(table, [columns])','Table.RemoveRowsWithErrors(Fonte, {"Valor"})','Para ver só as linhas com erro, use Table.SelectRowsWithErrors.'],
+['Table.IsEmpty','Tabela','Verdadeiro se a tabela não tem linhas.','Table.IsEmpty(table)','Table.IsEmpty(Filtrado)','',],
+// ---- Texto
+['Text.Trim','Texto','Remove espaços do início e do fim.','Text.Trim(text, [trim])','Text.Trim("  ana  ")','Também: Text.TrimStart e Text.TrimEnd.'],
+['Text.Clean','Texto','Remove caracteres de controle (quebras de linha, tabulações) do texto.','Text.Clean(text)','Text.Clean([Observação])','Combine com Text.Trim: Text.Trim(Text.Clean([Col])).'],
+['Text.Upper','Texto','Converte para MAIÚSCULAS.','Text.Upper(text, [culture])','Text.Upper("ana")','Também: Text.Lower.'],
+['Text.Lower','Texto','Converte para minúsculas.','Text.Lower(text, [culture])','Text.Lower("ANA")','',],
+['Text.Proper','Texto','Primeira Letra De Cada Palavra Em Maiúscula.','Text.Proper(text, [culture])','Text.Proper("maria da silva")','Também deixa "Da" maiúsculo: não é inteligente com preposições.'],
+['Text.Length','Texto','Conta os caracteres do texto.','Text.Length(text)','Text.Length("Power Query")','',],
+['Text.Start','Texto','Os primeiros N caracteres.','Text.Start(text, count)','Text.Start("ABC123", 3)','Os últimos: Text.End.'],
+['Text.End','Texto','Os últimos N caracteres.','Text.End(text, count)','Text.End("ABC123", 3)','',],
+['Text.Middle','Texto','Um trecho: a partir de uma posição (começa em 0), com certa quantidade.','Text.Middle(text, start, [count])','Text.Middle("Power Query", 6, 5)','Resultado do exemplo: "Query".'],
+['Text.Contains','Texto','Verdadeiro se o texto contém o trecho.','Text.Contains(text, substring, [comparer])','Text.Contains([Nome], "silva", Comparer.OrdinalIgnoreCase)','Diferencia maiúsculas, a menos que use Comparer.OrdinalIgnoreCase. Com null devolve null.'],
+['Text.StartsWith','Texto','Verdadeiro se o texto começa com o trecho.','Text.StartsWith(text, substring, [comparer])','Text.StartsWith([Código], "AB")','',],
+['Text.EndsWith','Texto','Verdadeiro se o texto termina com o trecho.','Text.EndsWith(text, substring, [comparer])','Text.EndsWith([Arquivo], ".pdf")','',],
+['Text.Replace','Texto','Troca um trecho por outro em todas as ocorrências.','Text.Replace(text, old, new)','Text.Replace([Valor], ",", ".")','Diferencia maiúsculas.'],
+['Text.Split','Texto','Divide o texto em uma lista, usando um separador.','Text.Split(text, separator)','Text.Split("a;b;c", ";")','Para virar linhas, use Table.ExpandListColumn depois.'],
+['Text.Combine','Texto','Junta uma lista de textos em um só, com separador.','Text.Combine(texts, [separator])','Text.Combine({"a", "b", "c"}, "-")','Itens null são ignorados.'],
+['Text.Select','Texto','Mantém só os caracteres da lista indicada.','Text.Select(text, selectChars)','Text.Select("R$ 1.234", {"0".."9"})','Resultado do exemplo: "1234". Para tirar caracteres, use Text.Remove.'],
+['Text.Remove','Texto','Remove os caracteres da lista indicada.','Text.Remove(text, removeChars)','Text.Remove("(11) 9999-8888", {"(", ")", "-", " "})','',],
+['Text.BeforeDelimiter','Texto','Tudo o que vem antes do delimitador.','Text.BeforeDelimiter(text, delimiter, [index])','Text.BeforeDelimiter("ana@mail.com", "@")','',],
+['Text.AfterDelimiter','Texto','Tudo o que vem depois do delimitador.','Text.AfterDelimiter(text, delimiter, [index])','Text.AfterDelimiter("ana@mail.com", "@")','',],
+['Text.BetweenDelimiters','Texto','O trecho entre dois delimitadores.','Text.BetweenDelimiters(text, startDelimiter, endDelimiter, [startIndex], [endIndex])','Text.BetweenDelimiters("Produto (A12)", "(", ")")','',],
+['Text.PadStart','Texto','Completa à esquerda até certo tamanho.','Text.PadStart(text, count, [character])','Text.PadStart("7", 3, "0")','Resultado do exemplo: "007".'],
+['Text.From','Texto','Converte qualquer valor (número, data) em texto.','Text.From(value, [culture])','Text.From(2025)','Necessário antes de concatenar número com texto usando &.'],
+['Text.Format','Texto','Monta um texto com marcadores #{0}, #{1}…','Text.Format(formatString, arguments, [culture])','Text.Format("Total: #{0}", {100})','',],
+['Text.PositionOf','Texto','Posição da primeira ocorrência (começa em 0; -1 se não achar).','Text.PositionOf(text, substring, [occurrence], [comparer])','Text.PositionOf("abc", "b")','',],
+// ---- Número
+['Number.From','Número','Converte um valor (texto, data, lógico) em número.','Number.From(value, [culture])','Number.From("123")','',],
+['Number.FromText','Número','Converte texto em número, respeitando a cultura.','Number.FromText(text, [culture])','Number.FromText("1.234,56", "pt-BR")','Resultado do exemplo: 1234.56.'],
+['Number.ToText','Número','Converte número em texto, com formato e cultura.','Number.ToText(number, [format], [culture])','Number.ToText(1234.5, "N2", "pt-BR")','Resultado do exemplo: "1.234,50".'],
+['Number.Round','Número','Arredonda para certo número de casas.','Number.Round(number, [digits], [roundingMode])','Number.Round([Valor], 2, RoundingMode.AwayFromZero)','Por padrão arredonda metades para o par mais próximo (2,5 vira 2). Para o arredondamento comum, use RoundingMode.AwayFromZero.'],
+['Number.RoundUp','Número','Arredonda sempre para cima.','Number.RoundUp(number, [digits])','Number.RoundUp(2.1)','Também: Number.RoundDown.'],
+['Number.RoundDown','Número','Arredonda sempre para baixo.','Number.RoundDown(number, [digits])','Number.RoundDown(2.9)','',],
+['Number.Abs','Número','Valor absoluto (sem sinal).','Number.Abs(number)','Number.Abs(-5)','',],
+['Number.Mod','Número','Resto da divisão.','Number.Mod(number, divisor)','Number.Mod(10, 3)','',],
+['Number.IntegerDivide','Número','Parte inteira da divisão.','Number.IntegerDivide(number1, number2)','Number.IntegerDivide(10, 3)','',],
+['Number.Power','Número','Potência.','Number.Power(number, power)','Number.Power(2, 10)','',],
+// ---- Data e hora
+['Date.Year','Data e hora','O ano de uma data.','Date.Year(dateTime)','Date.Year([Data])','Com null devolve null.'],
+['Date.Month','Data e hora','O mês (1 a 12).','Date.Month(dateTime)','Date.Month([Data])','',],
+['Date.Day','Data e hora','O dia do mês.','Date.Day(dateTime)','Date.Day([Data])','',],
+['Date.QuarterOfYear','Data e hora','O trimestre (1 a 4).','Date.QuarterOfYear(dateTime)','Date.QuarterOfYear([Data])','',],
+['Date.MonthName','Data e hora','O nome do mês, no idioma da cultura.','Date.MonthName(date, [culture])','Date.MonthName([Data], "pt-BR")','Em português vem minúsculo ("janeiro"); use Text.Proper para capitalizar.'],
+['Date.DayOfWeek','Data e hora','O dia da semana como número (0 a 6).','Date.DayOfWeek(dateTime, [firstDayOfWeek])','Date.DayOfWeek([Data], Day.Monday)','Com Day.Monday, a segunda é 0. O padrão é domingo = 0.'],
+['Date.DayOfWeekName','Data e hora','O nome do dia da semana.','Date.DayOfWeekName(date, [culture])','Date.DayOfWeekName([Data], "pt-BR")','',],
+['Date.WeekOfYear','Data e hora','O número da semana no ano.','Date.WeekOfYear(dateTime, [firstDayOfWeek])','Date.WeekOfYear([Data], Day.Monday)','',],
+['Date.StartOfMonth','Data e hora','O primeiro dia do mês.','Date.StartOfMonth(dateTime)','Date.StartOfMonth([Data])','Também: EndOfMonth, StartOfYear, EndOfYear, StartOfWeek.'],
+['Date.EndOfMonth','Data e hora','O último dia do mês.','Date.EndOfMonth(dateTime)','Date.EndOfMonth([Data])','',],
+['Date.StartOfYear','Data e hora','O primeiro dia do ano.','Date.StartOfYear(dateTime)','Date.StartOfYear([Data])','',],
+['Date.StartOfWeek','Data e hora','O primeiro dia da semana.','Date.StartOfWeek(dateTime, [firstDayOfWeek])','Date.StartOfWeek([Data], Day.Monday)','',],
+['Date.AddDays','Data e hora','Soma (ou subtrai, com número negativo) dias.','Date.AddDays(dateTime, numberOfDays)','Date.AddDays([Data], 30)','Também: AddMonths, AddYears, AddWeeks, AddQuarters.'],
+['Date.AddMonths','Data e hora','Soma meses.','Date.AddMonths(dateTime, numberOfMonths)','Date.AddMonths([Data], -1)','',],
+['Date.AddYears','Data e hora','Soma anos.','Date.AddYears(dateTime, numberOfYears)','Date.AddYears([Data], 1)','',],
+['Date.From','Data e hora','Converte um valor (texto, data e hora) em data.','Date.From(value, [culture])','Date.From(DateTime.LocalNow())','Resultado do exemplo: a data de hoje.'],
+['Date.FromText','Data e hora','Converte texto em data, com formato e cultura.','Date.FromText(text, [options])','Date.FromText("31/12/2025", [Format = "dd/MM/yyyy", Culture = "pt-BR"])','Para AAAAMMDD use Format = "yyyyMMdd".'],
+['Date.ToText','Data e hora','Converte data em texto, com formato.','Date.ToText(date, [options])','Date.ToText([Data], [Format = "dd/MM/yyyy"])','Mês é MM maiúsculo (mm seria minutos). O resultado é texto, não data.'],
+['Date.DaysInMonth','Data e hora','Quantos dias tem o mês da data.','Date.DaysInMonth(dateTime)','Date.DaysInMonth([Data])','',],
+['DateTime.LocalNow','Data e hora','Data e hora de agora, no fuso do computador.','DateTime.LocalNow()','Date.From(DateTime.LocalNow())','O valor muda a cada atualização da consulta.'],
+['Duration.Days','Data e hora','Parte de dias de uma duração.','Duration.Days(duration)','Duration.Days([Fim] - [Início])','Subtrair duas datas dá uma duração. Para dias com fração, Duration.TotalDays.'],
+['#date','Data e hora','Cria uma data a partir de ano, mês e dia.','#date(year, month, day)','#date(2025, 12, 31)','Também: #datetime e #duration.'],
+// ---- Lista
+['List.Sum','Lista','Soma os itens.','List.Sum(list, [precision])','List.Sum({1, 2, 3})','Ignora null. Uma coluna é uma lista: List.Sum(Fonte[Valor]).'],
+['List.Average','Lista','Média dos itens.','List.Average(list, [precision])','List.Average(Fonte[Valor])','',],
+['List.Min','Lista','O menor item.','List.Min(list, [default], [comparisonCriteria], [includeNulls])','List.Min(Fonte[Data])','Também: List.Max.'],
+['List.Max','Lista','O maior item.','List.Max(list, [default], [comparisonCriteria], [includeNulls])','List.Max(Fonte[Data])','',],
+['List.Count','Lista','Quantos itens (inclui null).','List.Count(list)','List.Count(Fonte[Cliente])','Para ignorar vazios: List.NonNullCount.'],
+['List.Distinct','Lista','Remove itens repetidos.','List.Distinct(list, [equationCriteria])','List.Distinct(Fonte[Cliente])','Contar distintos: List.Count(List.Distinct(...)).'],
+['List.Sort','Lista','Ordena a lista.','List.Sort(list, [comparisonCriteria])','List.Sort({3, 1, 2}, Order.Descending)','',],
+['List.Transform','Lista','Aplica uma função a cada item e devolve a nova lista.','List.Transform(list, transform)','List.Transform({1, 2, 3}, each _ * 2)','Dentro do each, _ é o item atual.'],
+['List.Select','Lista','Mantém os itens que atendem à condição.','List.Select(list, selection)','List.Select({1, 5, 10}, each _ > 3)','',],
+['List.Contains','Lista','Verdadeiro se o item está na lista.','List.Contains(list, value, [equationCriteria])','List.Contains({"A", "B"}, [Tipo])','Útil como filtro "está em".'],
+['List.ContainsAny','Lista','Verdadeiro se a lista contém qualquer um dos valores.','List.ContainsAny(list, values, [equationCriteria])','List.ContainsAny(Fonte[Tipo], {"A", "B"})','',],
+['List.Combine','Lista','Junta várias listas em uma.','List.Combine(lists)','List.Combine({{1, 2}, {3}})','',],
+['List.Zip','Lista','Combina listas item a item.','List.Zip(lists)','List.Zip({{1, 2}, {"a", "b"}})','',],
+['List.Numbers','Lista','Gera uma sequência de números.','List.Numbers(start, count, [increment])','List.Numbers(1, 12)','Resultado do exemplo: 1 a 12.'],
+['List.Dates','Lista','Gera uma sequência de datas.','List.Dates(start, count, step)','List.Dates(#date(2025, 1, 1), 365, #duration(1, 0, 0, 0))','Base de uma tabela calendário.'],
+['List.First','Lista','O primeiro item.','List.First(list, [defaultValue])','List.First(Fonte[Data])','Também: List.Last.'],
+['List.Last','Lista','O último item.','List.Last(list, [defaultValue])','List.Last(Fonte[Data])','',],
+['List.FirstN','Lista','Os N primeiros itens.','List.FirstN(list, countOrCondition)','List.FirstN({1, 2, 3, 4}, 2)','',],
+['List.Range','Lista','Um trecho da lista (posição começa em 0).','List.Range(list, offset, [count])','List.Range({1, 2, 3, 4}, 1, 2)','',],
+['List.PositionOf','Lista','Posição de um item (começa em 0; -1 se não achar).','List.PositionOf(list, value, [occurrence], [equationCriteria])','List.PositionOf({"a", "b"}, "b")','',],
+['List.Median','Lista','Mediana dos itens.','List.Median(list, [comparisonCriteria])','List.Median(Fonte[Valor])','',],
+['List.RemoveNulls','Lista','Remove os itens null.','List.RemoveNulls(list)','List.RemoveNulls({1, null, 2})','',],
+['List.RemoveMatchingItems','Lista','Remove os itens que aparecem em outra lista.','List.RemoveMatchingItems(list1, list2, [equationCriteria])','List.RemoveMatchingItems({"a", "", "b"}, {""})','',],
+['List.Accumulate','Lista','Acumula um valor percorrendo a lista (como um loop).','List.Accumulate(list, seed, accumulator)','List.Accumulate({1, 2, 3}, 0, (soma, item) => soma + item)','Poderosa, mas lenta em listas grandes.'],
+['List.Generate','Lista','Gera uma lista com uma regra (início, condição, próximo).','List.Generate(initial, condition, next, [selector])','List.Generate(() => 1, each _ <= 5, each _ + 1)','',],
+['List.Union','Lista','União de listas, sem repetir itens.','List.Union(lists, [equationCriteria])','List.Union({{1, 2}, {2, 3}})','Também: List.Intersect e List.Difference.'],
+['List.IsEmpty','Lista','Verdadeiro se a lista não tem itens.','List.IsEmpty(list)','List.IsEmpty(Fonte[Valor])','',],
+// ---- Registro
+['Record.Field','Registro','O valor de um campo de um registro, pelo nome.','Record.Field(record, field)','Record.Field(_, "Valor")','Útil quando o nome da coluna está em uma variável.'],
+['Record.FieldNames','Registro','A lista com os nomes dos campos.','Record.FieldNames(record)','Record.FieldNames([A = 1, B = 2])','',],
+['Record.FieldValues','Registro','A lista com os valores dos campos.','Record.FieldValues(record)','Record.FieldValues(_)','Dentro de uma linha da tabela, _ é o registro da linha.'],
+['Record.ToTable','Registro','Converte um registro em tabela de Nome e Valor.','Record.ToTable(record)','Record.ToTable([A = 1, B = 2])','',],
+['Record.AddField','Registro','Adiciona um campo a um registro.','Record.AddField(record, fieldName, value)','Record.AddField([A = 1], "B", 2)','',],
+// ---- Fontes de dados
+['Csv.Document','Fontes de dados','Lê o conteúdo de um arquivo CSV ou de texto delimitado.','Csv.Document(source, [columns], [delimiter], [extraValues], [encoding])','Csv.Document(File.Contents("C:\\Dados\\vendas.csv"), [Delimiter = ";", Encoding = 65001, QuoteStyle = QuoteStyle.Csv])','Encoding 65001 é UTF-8; 1252 é o Windows Latin. Se os acentos saírem errados, troque.'],
+['Excel.Workbook','Fontes de dados','Lê um arquivo Excel e devolve uma tabela com as abas, tabelas e intervalos.','Excel.Workbook(workbook, [useHeaders], [delayTypes])','Excel.Workbook(File.Contents("C:\\Dados\\vendas.xlsx"), null, true)','Pegue a aba com Fonte{[Item = "Planilha1", Kind = "Sheet"]}[Data].'],
+['Excel.CurrentWorkbook','Fontes de dados','Lê as tabelas e intervalos nomeados do próprio arquivo Excel aberto.','Excel.CurrentWorkbook()','Excel.CurrentWorkbook(){[Name = "tblVendas"]}[Content]','Só existe no Excel (não no Power BI).'],
+['Folder.Files','Fontes de dados','Lista todos os arquivos de uma pasta e das subpastas.','Folder.Files(path)','Folder.Files("C:\\Dados\\Mensal")','Cada linha traz Content (o conteúdo), Name, Extension e Folder Path.'],
+['Folder.Contents','Fontes de dados','Lista os arquivos e pastas de uma pasta (sem entrar nas subpastas).','Folder.Contents(path)','Folder.Contents("C:\\Dados")','',],
+['File.Contents','Fontes de dados','Lê o conteúdo binário de um arquivo.','File.Contents(path)','File.Contents("C:\\Dados\\vendas.csv")','Use dentro de Csv.Document, Excel.Workbook, Json.Document…'],
+['Web.Contents','Fontes de dados','Lê o conteúdo de um endereço da web.','Web.Contents(url, [options])','Json.Document(Web.Contents("https://api.exemplo.com/dados"))','Credenciais devem ficar nas permissões da fonte, nunca no código.'],
+['Web.Page','Fontes de dados','Extrai as tabelas de uma página HTML.','Web.Page(source)','Web.Page(Web.Contents("https://exemplo.com/tabela"))','',],
+['Json.Document','Fontes de dados','Lê um JSON e devolve listas e registros.','Json.Document(jsonText, [encoding])','Json.Document(File.Contents("C:\\Dados\\dados.json"))','Se for uma lista de objetos, use Table.FromRecords.'],
+['Xml.Tables','Fontes de dados','Lê um XML e devolve tabelas.','Xml.Tables(contents, [options], [encoding])','Xml.Tables(File.Contents("C:\\Dados\\notas.xml"))','',],
+['Sql.Database','Fontes de dados','Conecta a um banco SQL Server.','Sql.Database(server, database, [options])','Sql.Database("servidor", "banco")','No Power Query, muitos passos viram SQL no servidor (query folding).'],
+['SharePoint.Files','Fontes de dados','Lista os arquivos de um site do SharePoint.','SharePoint.Files(siteUrl, [options])','SharePoint.Files("https://empresa.sharepoint.com/sites/Equipe", [ApiVersion = 15])','Use a URL do site, não a de uma pasta.'],
+['Pdf.Tables','Fontes de dados','Extrai tabelas de um PDF.','Pdf.Tables(pdf, [options])','Pdf.Tables(File.Contents("C:\\Dados\\relatorio.pdf"))','Funciona com PDFs de texto, não com imagens digitalizadas.'],
+// ---- Lógica e controle
+['if … then … else','Lógica e controle','Escolhe entre dois resultados conforme uma condição.','if condição then valor1 else valor2','if [Valor] >= 1000 then "Alta" else "Baixa"','O else é obrigatório. Para várias faixas, encadeie else if.'],
+['try … otherwise','Lógica e controle','Tenta calcular; se der erro, usa o valor alternativo.','try expressão otherwise valor','try Number.FromText([Valor], "pt-BR") otherwise null','Esconde erros: use quando o erro for esperado.'],
+['each','Lógica e controle','Atalho para uma função de um parâmetro (_). Em tabelas, _ é a linha.','each expressão','each [Qtd] * [Preço]','Equivale a (_) => _[Qtd] * _[Preço].'],
+['let … in','Lógica e controle','Define passos nomeados e devolve um resultado.','let passo1 = …, passo2 = … in resultado','let a = 1, b = a + 1 in b','É a estrutura de toda consulta.'],
+['error','Lógica e controle','Interrompe com uma mensagem de erro.','error mensagem','if [Valor] < 0 then error "Valor negativo" else [Valor]','Também: Error.Record(razão, mensagem, detalhe).'],
+['#table','Lógica e controle','Cria uma tabela pequena direto no código.','#table(columns, rows)','#table({"Id", "Nome"}, {{1, "Ana"}, {2, "Bia"}})','Boa para tabelas de apoio (de/para).'],
+['??','Lógica e controle','Devolve o primeiro valor se não for null; senão o segundo.','valor ?? alternativa','[Desconto] ?? 0','Operador de coalescência. Em versões muito antigas pode não existir: use if … = null then ….'],
+// ---- Utilitários
+['Splitter.SplitTextByDelimiter','Utilitários','Cria um divisor de texto por delimitador (para Table.SplitColumn).','Splitter.SplitTextByDelimiter(delimiter, [quoteStyle])','Splitter.SplitTextByDelimiter(" - ", QuoteStyle.Csv)','',],
+['Combiner.CombineTextByDelimiter','Utilitários','Cria um combinador de texto com delimitador (para Table.CombineColumns).','Combiner.CombineTextByDelimiter(delimiter, [quoteStyle])','Combiner.CombineTextByDelimiter(" ", QuoteStyle.None)','',],
+['Replacer.ReplaceValue','Utilitários','Substitui o valor inteiro (para Table.ReplaceValue).','Replacer.ReplaceValue','Table.ReplaceValue(Fonte, "N/D", "Pendente", Replacer.ReplaceValue, {"Status"})','Para trocar só um pedaço do texto: Replacer.ReplaceText.'],
+['Comparer.OrdinalIgnoreCase','Utilitários','Comparador que ignora maiúsculas e minúsculas.','Comparer.OrdinalIgnoreCase','Text.Contains([Nome], "silva", Comparer.OrdinalIgnoreCase)','',],
+['Order.Descending','Utilitários','Ordem decrescente (para Table.Sort). A crescente é Order.Ascending.','Order.Descending','Table.Sort(Fonte, {{"Valor", Order.Descending}})','',],
+['JoinKind.LeftOuter','Utilitários','Tipo de junção. Mantém tudo da tabela da esquerda.','JoinKind.LeftOuter','Table.NestedJoin(A, {"Id"}, B, {"Id"}, "B", JoinKind.LeftOuter)','Outros: RightOuter, Inner, FullOuter, LeftAnti (só o que não casa), RightAnti.'],
+['MissingField.Ignore','Utilitários','Ignora colunas que não existem em vez de dar erro.','MissingField.Ignore','Table.RemoveColumns(Fonte, {"Obs"}, MissingField.Ignore)','Outras opções: MissingField.UseNull e MissingField.Error.'],
+['QuoteStyle.Csv','Utilitários','Trata aspas como em um CSV (campos entre aspas podem ter o separador).','QuoteStyle.Csv','Csv.Document(arquivo, [Delimiter = ";", QuoteStyle = QuoteStyle.Csv])','Outra opção: QuoteStyle.None (aspas viram texto comum).'],
+['Tipos (type text, type number…)','Utilitários','Tipos usados em colunas.','type text · type number · type date · type datetime · type logical · Int64.Type · Currency.Type · Percentage.Type','Table.TransformColumnTypes(Fonte, {{"Qtd", Int64.Type}})','Em agregações use type nullable number para aceitar vazios.'],
+];
+const CATS=['Tabela','Texto','Número','Data e hora','Lista','Registro','Fontes de dados','Lógica e controle','Utilitários'];
+const IDX={}; F.forEach(e=>IDX[e[0]]=e);
+const norm=s=>s.normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase();
+const KEYWORDS=['let','in','if','then','else','each','try','otherwise','not','and','or','true','false','null','type','as','is','meta','error','section','shared'];
+
+/* ============ Estado e utilidades ============ */
+const $=s=>document.querySelector(s);
+const el=(t,a={},...k)=>{const e=document.createElement(t);for(const[x,v]of Object.entries(a)){if(x==='class')e.className=v;else if(x.startsWith('on'))e.addEventListener(x.slice(2),v);else if(v===true)e.setAttribute(x,'');else if(v!==false&&v!=null)e.setAttribute(x,v);}for(const c of k.flat())e.append(c&&c.nodeType?c:document.createTextNode(c??''));return e;};
+function copy(text,btn){
+  const done=()=>{const o=btn.textContent;btn.textContent='Copiado!';setTimeout(()=>btn.textContent=o,1200);};
+  if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(text).then(done,fallback);} else fallback();
+  function fallback(){const t=el('textarea',{style:'position:fixed;opacity:0'});t.value=text;document.body.append(t);t.select();try{document.execCommand('copy');done();}catch{btn.textContent='Selecione e copie';}t.remove();}
+}
+const fmtOut=text=>{const b=el('button',{class:'btn',type:'button','aria-label':'Copiar código'},'Copiar');b.addEventListener('click',()=>copy(text,b));return el('div',{class:'row'},el('div',{class:'out'},text),b);};
+
+/* ============ Filtros dos marcadores ⟨campo|filtro⟩ ============ */
+const splitList=s=>s.split(',').map(x=>x.trim()).filter(Boolean);
+const Q=s=>'"'+s.replace(/"/g,'""')+'"';
+const ID=s=>/^[\p{L}_][\p{L}\p{N}_]*$/u.test(s)?s:'#"'+s.replace(/"/g,'""')+'"';
+const TY={texto:'type text',text:'type text',numero:'type number',decimal:'type number',number:'type number',inteiro:'Int64.Type',int:'Int64.Type',data:'type date',date:'type date',datahora:'type datetime',datetime:'type datetime',hora:'type time',moeda:'Currency.Type',porcentagem:'Percentage.Type',logico:'type logical',booleano:'type logical',qualquer:'type any'};
+const unacc=s=>s.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
+const FILT={
+  q:Q,id:ID,
+  list:s=>'{'+splitList(s).map(Q).join(', ')+'}',
+  idlist:s=>'{'+splitList(s).map(ID).join(', ')+'}',
+  pairs:s=>'{'+splitList(s).map(p=>{const[a,...b]=p.split('=');return '{'+Q(a.trim())+', '+Q(b.join('=').trim())+'}';}).join(', ')+'}',
+  types:s=>'{'+splitList(s).map(p=>{const i=p.lastIndexOf(':');const n=i<0?p:p.slice(0,i);const t=i<0?'texto':p.slice(i+1);return '{'+Q(n.trim())+', '+(TY[unacc(t.trim())]||'type any')+'}';}).join(', ')+'}',
+  sort:s=>'{'+splitList(s).map(p=>{const i=p.lastIndexOf(':');const n=i<0?p:p.slice(0,i);const d=i<0?'asc':unacc(p.slice(i+1).trim());return '{'+Q(n.trim())+', '+(/^(d|desc|decrescente)$/.test(d)?'Order.Descending':'Order.Ascending')+'}';}).join(', ')+'}',
+  join:s=>({esquerda:'LeftOuter',direita:'RightOuter',interna:'Inner',completa:'FullOuter','somente esquerda':'LeftAnti','somente direita':'RightAnti'}[unacc(s)]||'LeftOuter'),
+  date:s=>{let m=/^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(s);if(m)return `#date(${+m[1]}, ${+m[2]}, ${+m[3]})`;m=/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(s);if(m)return `#date(${+m[3]}, ${+m[2]}, ${+m[1]})`;return s;},
+  aggs:s=>'{'+splitList(s).map(p=>{
+    const m=/^(.+?)\s*=\s*([\p{L}_]+)\s*(?:\((.*)\))?$/u.exec(p);if(!m)return '{"?", each null}';
+    const nome=Q(m[1].trim()),fn=unacc(m[2]),c=(m[3]||'').trim(),col='['+c+']';
+    if(/^(soma|sum)$/.test(fn))return `{${nome}, each List.Sum(${col}), type nullable number}`;
+    if(/^(media|avg|average)$/.test(fn))return `{${nome}, each List.Average(${col}), type nullable number}`;
+    if(/^(min|minimo)$/.test(fn))return `{${nome}, each List.Min(${col}), type any}`;
+    if(/^(max|maximo)$/.test(fn))return `{${nome}, each List.Max(${col}), type any}`;
+    if(fn==='mediana')return `{${nome}, each List.Median(${col}), type nullable number}`;
+    if(/^(contar|count)$/.test(fn))return `{${nome}, each Table.RowCount(_), Int64.Type}`;
+    if(/^(distintos|contarunicos|distinct)$/.test(fn))return `{${nome}, each List.Count(List.Distinct(${col})), Int64.Type}`;
+    return `{${nome}, each null, type any}`;
+  }).join(', ')+'}'
+};
+
+/* ============ Receitas ============
+   campos: [chave, rótulo, padrão, dica]  |  kind: 'full' (consulta completa) ou 'step' (passo para colar) */
+const PREV=['prev','Passo anterior','Fonte','nome do passo que vem antes'];
+const R=[
+// ---------- Fontes de dados
+{id:'csv',cat:'Fontes de dados',kind:'full',title:'Importar um arquivo CSV',goal:'Ler um .csv ou .txt e usar a primeira linha como cabeçalho.',
+ fields:[['caminho','Caminho do arquivo','C:\\Dados\\vendas.csv'],['delim','Separador',';','para tabulação, digite #(tab)'],['tipos','Tipos das colunas (opcional)','Data:data, Cliente:texto, Valor:número','Nome:tipo, separados por vírgula (texto, número, inteiro, data, datahora, moeda)']],
+ main:{label:'CSV com cabeçalho',tpl:`let
+    Fonte = Csv.Document(
+        File.Contents(⟨caminho|q⟩),
+        [Delimiter = ⟨delim|q⟩, Encoding = 65001, QuoteStyle = QuoteStyle.Csv]
+    ),
+    Cabecalhos = Table.PromoteHeaders(Fonte, [PromoteAllScalars = true])
+in
+    Cabecalhos`,note:'Encoding 65001 é UTF-8. Se os acentos aparecerem errados, use a versão com 1252 (Windows Latin).'},
+ alts:[{label:'Com tipos definidos',tpl:`let
+    Fonte = Csv.Document(
+        File.Contents(⟨caminho|q⟩),
+        [Delimiter = ⟨delim|q⟩, Encoding = 65001, QuoteStyle = QuoteStyle.Csv]
+    ),
+    Cabecalhos = Table.PromoteHeaders(Fonte, [PromoteAllScalars = true]),
+    Tipos = Table.TransformColumnTypes(Cabecalhos, ⟨tipos|types⟩, "pt-BR")
+in
+    Tipos`,note:'A cultura "pt-BR" no fim faz o Power Query ler 31/12/2025 como data e 1.234,56 como número.'},
+  {label:'Acentos errados? Use 1252 (Windows Latin)',tpl:`let
+    Fonte = Csv.Document(
+        File.Contents(⟨caminho|q⟩),
+        [Delimiter = ⟨delim|q⟩, Encoding = 1252, QuoteStyle = QuoteStyle.Csv]
+    ),
+    Cabecalhos = Table.PromoteHeaders(Fonte, [PromoteAllScalars = true])
+in
+    Cabecalhos`,note:'Arquivos exportados por sistemas antigos costumam estar em 1252 em vez de UTF-8.'}]},
+{id:'excel',cat:'Fontes de dados',kind:'full',title:'Importar uma planilha do Excel',goal:'Ler uma aba ou tabela de um arquivo .xlsx.',
+ fields:[['caminho','Caminho do arquivo','C:\\Dados\\vendas.xlsx'],['aba','Nome da aba','Vendas'],['tabela','Nome da tabela do Excel','tblVendas']],
+ main:{label:'Aba (Sheet)',tpl:`let
+    Fonte = Excel.Workbook(File.Contents(⟨caminho|q⟩), null, true),
+    Aba = Fonte{[Item = ⟨aba|q⟩, Kind = "Sheet"]}[Data],
+    Cabecalhos = Table.PromoteHeaders(Aba, [PromoteAllScalars = true])
+in
+    Cabecalhos`,note:'O true no fim só acelera o carregamento (tipos adiados); os cabeçalhos são promovidos no passo seguinte.'},
+ alts:[{label:'Tabela nomeada do arquivo (Table)',tpl:`let
+    Fonte = Excel.Workbook(File.Contents(⟨caminho|q⟩), null, true),
+    Tabela = Fonte{[Item = ⟨tabela|q⟩, Kind = "Table"]}[Data]
+in
+    Tabela`,note:'Tabelas do Excel (Ctrl+T) já trazem os cabeçalhos e crescem sozinhas, então são a fonte mais robusta.'},
+  {label:'Tabela do próprio arquivo aberto (só no Excel)',tpl:`let
+    Fonte = Excel.CurrentWorkbook(){[Name = ⟨tabela|q⟩]}[Content]
+in
+    Fonte`,note:'Não depende de caminho. Só existe no Excel, não no Power BI.'}]},
+{id:'pasta',cat:'Fontes de dados',kind:'full',title:'Combinar todos os arquivos de uma pasta',goal:'Empilhar vários arquivos iguais (um por mês, por filial…) em uma só tabela.',
+ fields:[['pasta','Caminho da pasta','C:\\Dados\\Mensal'],['ext','Extensão dos arquivos','.csv'],['delim','Separador do CSV',';']],
+ main:{label:'Vários CSVs',tpl:`let
+    Fonte = Folder.Files(⟨pasta|q⟩),
+    Filtrados = Table.SelectRows(Fonte, each Text.Lower([Extension]) = ⟨ext|q⟩),
+    Lidos = Table.AddColumn(
+        Filtrados,
+        "Dados",
+        each Table.PromoteHeaders(
+            Csv.Document([Content], [Delimiter = ⟨delim|q⟩, Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+            [PromoteAllScalars = true]
+        )
+    ),
+    Combinado = Table.Combine(Lidos[Dados])
+in
+    Combinado`,note:'Todos os arquivos precisam ter as mesmas colunas. Novos arquivos na pasta entram sozinhos na próxima atualização.'},
+ alts:[{label:'Guardando o nome do arquivo em cada linha',tpl:`let
+    Fonte = Folder.Files(⟨pasta|q⟩),
+    Filtrados = Table.SelectRows(Fonte, each Text.Lower([Extension]) = ⟨ext|q⟩),
+    Lidos = Table.AddColumn(
+        Filtrados,
+        "Dados",
+        each let
+            nome = [Name],
+            dados = Table.PromoteHeaders(
+                Csv.Document([Content], [Delimiter = ⟨delim|q⟩, Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+                [PromoteAllScalars = true]
+            )
+        in
+            Table.AddColumn(dados, "Arquivo", each nome, type text)
+    ),
+    Combinado = Table.Combine(Lidos[Dados])
+in
+    Combinado`,note:'O nome é guardado numa variável (nome) porque, dentro do segundo each, [Name] apontaria para a tabela de dentro.'},
+  {label:'Vários arquivos Excel (primeira aba de cada)',tpl:`let
+    Fonte = Folder.Files(⟨pasta|q⟩),
+    Filtrados = Table.SelectRows(Fonte, each Text.Lower([Extension]) = ".xlsx" and not Text.StartsWith([Name], "~$")),
+    Lidos = Table.AddColumn(Filtrados, "Dados", each Excel.Workbook([Content], true){0}[Data]),
+    Combinado = Table.Combine(Lidos[Dados])
+in
+    Combinado`,note:'O filtro por "~$" ignora os arquivos temporários que o Excel cria quando o arquivo está aberto.'}]},
+{id:'json',cat:'Fontes de dados',kind:'full',title:'Ler um JSON (arquivo ou API)',goal:'Transformar uma lista de objetos JSON em tabela.',
+ fields:[['origem','Endereço (URL) ou caminho do arquivo','https://api.exemplo.com/vendas'],['campo','Campo que contém a lista (se houver)','dados']],
+ main:{label:'JSON da web (lista de objetos)',tpl:`let
+    Fonte = Json.Document(Web.Contents(⟨origem|q⟩)),
+    Tabela = Table.FromRecords(Fonte)
+in
+    Tabela`,note:'Funciona quando o JSON é uma lista de objetos. Credenciais e tokens devem ficar nas permissões da fonte, não no código.'},
+ alts:[{label:'Lista dentro de um campo',tpl:`let
+    Fonte = Json.Document(Web.Contents(⟨origem|q⟩)),
+    Tabela = Table.FromRecords(Fonte[⟨campo⟩])
+in
+    Tabela`,note:'Use quando o JSON for { "dados": [ … ] }.'},
+  {label:'Arquivo JSON local',tpl:`let
+    Fonte = Json.Document(File.Contents(⟨origem|q⟩)),
+    Tabela = Table.FromRecords(Fonte)
+in
+    Tabela`,note:'Troque o endereço por um caminho de arquivo, como C:\\Dados\\dados.json.'}]},
+{id:'sharepoint',cat:'Fontes de dados',kind:'full',title:'Arquivo Excel no SharePoint',goal:'Ler uma planilha guardada em um site do SharePoint ou Teams.',
+ fields:[['site','URL do site','https://empresa.sharepoint.com/sites/Equipe'],['pasta','URL da pasta (termina com /)','https://empresa.sharepoint.com/sites/Equipe/Documentos Compartilhados/'],['arquivo','Nome do arquivo','Vendas.xlsx'],['aba','Nome da aba','Vendas']],
+ main:{label:'Aba de um arquivo no SharePoint',tpl:`let
+    Fonte = SharePoint.Files(⟨site|q⟩, [ApiVersion = 15]),
+    Arquivo = Fonte{[Name = ⟨arquivo|q⟩, #"Folder Path" = ⟨pasta|q⟩]}[Content],
+    Pasta = Excel.Workbook(Arquivo, null, true),
+    Aba = Pasta{[Item = ⟨aba|q⟩, Kind = "Sheet"]}[Data],
+    Cabecalhos = Table.PromoteHeaders(Aba, [PromoteAllScalars = true])
+in
+    Cabecalhos`,note:'Use a URL do site (não a da pasta) no primeiro argumento. O campo "Folder Path" precisa ser igual ao do SharePoint, inclusive a barra final.'},
+ alts:[]},
+// ---------- Limpeza
+{id:'tipos',cat:'Limpeza',kind:'step',title:'Definir tipos de coluna',goal:'Dizer ao Power Query o que é texto, número, data…',
+ fields:[PREV,['tipos','Colunas e tipos','Data:data, Cliente:texto, Valor:número, Qtd:inteiro','Nome:tipo, separados por vírgula (texto, número, inteiro, data, datahora, hora, moeda, porcentagem, lógico)']],
+ main:{label:'Tipos',tpl:`Tipos = Table.TransformColumnTypes(⟨prev|id⟩, ⟨tipos|types⟩)`,note:'Depois de promover os cabeçalhos, todo valor vem como texto: este é o passo que acerta os tipos.'},
+ alts:[{label:'Lendo formato brasileiro (31/12/2025 e 1.234,56)',tpl:`Tipos = Table.TransformColumnTypes(⟨prev|id⟩, ⟨tipos|types⟩, "pt-BR")`,note:'O 3º argumento é a cultura: ela decide como textos viram data e número. Sem ela, o resultado depende do idioma do computador.'},
+  {label:'Todas as colunas como texto',tpl:`Tipos = Table.TransformColumnTypes(⟨prev|id⟩, List.Transform(Table.ColumnNames(⟨prev|id⟩), each {_, type text}))`,note:'Útil para importar sem perder zeros à esquerda (CEP, CPF, códigos).'}]},
+{id:'cabecalho',cat:'Limpeza',kind:'step',title:'Pular linhas e promover cabeçalho',goal:'Tirar o título do relatório e usar a linha certa como nome das colunas.',
+ fields:[PREV,['n','Linhas a pular no topo','3'],['m','Linhas a remover no fim','1']],
+ main:{label:'Pular o topo e promover cabeçalho',tpl:`PuladoTopo = Table.Skip(⟨prev|id⟩, ⟨n⟩),
+Cabecalhos = Table.PromoteHeaders(PuladoTopo, [PromoteAllScalars = true])`,note:'São dois passos: cole os dois, separados por vírgula.'},
+ alts:[{label:'Remover as últimas linhas (rodapé, totais)',tpl:`SemRodape = Table.RemoveLastN(⟨prev|id⟩, ⟨m⟩)`,note:''},
+  {label:'Remover linhas totalmente vazias',tpl:`SemVazias = Table.SelectRows(⟨prev|id⟩, each not List.IsEmpty(List.RemoveMatchingItems(Record.FieldValues(_), {"", null})))`,note:'Dentro do each, _ é a linha; Record.FieldValues(_) lista os valores dela.'},
+  {label:'Rebaixar o cabeçalho (a primeira linha vira dado)',tpl:`Rebaixado = Table.DemoteHeaders(⟨prev|id⟩)`,note:''}]},
+{id:'colunas',cat:'Limpeza',kind:'step',title:'Escolher, remover e renomear colunas',goal:'Ficar só com as colunas que interessam e dar nomes claros.',
+ fields:[PREV,['manter','Colunas a manter','Data, Cliente, Valor'],['remover','Colunas a remover','Observação, Temp'],['renomear','Renomear (antigo=novo)','Valor=Receita, Cli=Cliente']],
+ main:{label:'Manter só as colunas indicadas',tpl:`Selecionadas = Table.SelectColumns(⟨prev|id⟩, ⟨manter|list⟩)`,note:'Mais seguro que remover quando podem aparecer colunas novas na origem. Dá erro se uma coluna citada não existir.'},
+ alts:[{label:'Remover colunas',tpl:`Removidas = Table.RemoveColumns(⟨prev|id⟩, ⟨remover|list⟩)`,note:'Dá erro se a coluna não existir.'},
+  {label:'Remover colunas sem dar erro se faltar alguma',tpl:`Removidas = Table.RemoveColumns(⟨prev|id⟩, ⟨remover|list⟩, MissingField.Ignore)`,note:''},
+  {label:'Renomear colunas',tpl:`Renomeadas = Table.RenameColumns(⟨prev|id⟩, ⟨renomear|pairs⟩)`,note:''},
+  {label:'Reordenar colunas',tpl:`Reordenadas = Table.ReorderColumns(⟨prev|id⟩, ⟨manter|list⟩)`,note:'As colunas não citadas ficam no fim.'}]},
+{id:'texto',cat:'Limpeza',kind:'step',title:'Limpar texto (espaços, caixa)',goal:'Tirar espaços sobrando e padronizar maiúsculas e minúsculas.',
+ fields:[PREV,['cols','Colunas','Cliente, Cidade']],
+ main:{label:'Remover espaços do início e do fim',tpl:`Aparado = Table.TransformColumns(⟨prev|id⟩, List.Transform(⟨cols|list⟩, each {_, Text.Trim, type text}))`,note:'Espaços invisíveis são a causa mais comum de mesclagens que não casam e de duplicatas que "não" são duplicatas.'},
+ alts:[{label:'Remover espaços e caracteres de controle',tpl:`Limpo = Table.TransformColumns(⟨prev|id⟩, List.Transform(⟨cols|list⟩, each {_, each Text.Trim(Text.Clean(_)), type text}))`,note:'Text.Clean tira quebras de linha e tabulações escondidas.'},
+  {label:'Primeira Letra Maiúscula',tpl:`Proper = Table.TransformColumns(⟨prev|id⟩, List.Transform(⟨cols|list⟩, each {_, Text.Proper, type text}))`,note:''},
+  {label:'MAIÚSCULAS',tpl:`Maiusculas = Table.TransformColumns(⟨prev|id⟩, List.Transform(⟨cols|list⟩, each {_, Text.Upper, type text}))`,note:'Para minúsculas, troque Text.Upper por Text.Lower.'}]},
+{id:'substituir',cat:'Limpeza',kind:'step',title:'Substituir valores e preencher vazios',goal:'Trocar um valor por outro, tratar nulos e repetir o valor de cima.',
+ fields:[PREV,['cols','Colunas','Status'],['de','Valor a procurar','N/D'],['para','Novo valor','Pendente'],['num','Valor numérico para os vazios','0']],
+ main:{label:'Trocar um valor por outro',tpl:`Substituido = Table.ReplaceValue(⟨prev|id⟩, ⟨de|q⟩, ⟨para|q⟩, Replacer.ReplaceValue, ⟨cols|list⟩)`,note:'Troca o conteúdo inteiro da célula. Para trocar só um pedaço do texto, use a versão abaixo.'},
+ alts:[{label:'Trocar só um pedaço do texto',tpl:`Substituido = Table.ReplaceValue(⟨prev|id⟩, ⟨de|q⟩, ⟨para|q⟩, Replacer.ReplaceText, ⟨cols|list⟩)`,note:''},
+  {label:'Vazios (null) viram um texto',tpl:`SemNulos = Table.ReplaceValue(⟨prev|id⟩, null, ⟨para|q⟩, Replacer.ReplaceValue, ⟨cols|list⟩)`,note:''},
+  {label:'Vazios (null) viram um número',tpl:`SemNulos = Table.ReplaceValue(⟨prev|id⟩, null, ⟨num⟩, Replacer.ReplaceValue, ⟨cols|list⟩)`,note:'Em colunas numéricas, deixe o vazio virar 0 antes de somar ou comparar.'},
+  {label:'Preencher para baixo (repetir o valor de cima)',tpl:`Preenchido = Table.FillDown(⟨prev|id⟩, ⟨cols|list⟩)`,note:'Só preenche células null. Se as células estiverem com texto vazio (""), troque por null antes.'}]},
+{id:'duplicatas',cat:'Limpeza',kind:'step',title:'Remover duplicatas e vazios',goal:'Ficar com uma linha por chave e descartar linhas sem valor.',
+ fields:[PREV,['cols','Colunas que definem a duplicata','ClienteID'],['col','Coluna que não pode ser vazia','ClienteID']],
+ main:{label:'Remover duplicatas pelas colunas',tpl:`SemDuplicatas = Table.Distinct(⟨prev|id⟩, ⟨cols|list⟩)`,note:'Mantém a primeira ocorrência. Diferencia maiúsculas e espaços: limpe o texto antes.'},
+ alts:[{label:'Remover linhas totalmente iguais',tpl:`SemDuplicatas = Table.Distinct(⟨prev|id⟩)`,note:''},
+  {label:'Remover linhas com a coluna vazia',tpl:`SemVazios = Table.SelectRows(⟨prev|id⟩, each [⟨col⟩] <> null and [⟨col⟩] <> "")`,note:''}]},
+{id:'erros',cat:'Limpeza',kind:'step',title:'Tratar erros',goal:'Lidar com células com erro (conversão que falhou, divisão por zero).',
+ fields:[PREV,['col','Coluna','Valor'],['cols','Colunas (para remover linhas com erro)','Valor'],['pad','Valor padrão para o erro','0']],
+ main:{label:'Trocar erros por um valor',tpl:`SemErros = Table.ReplaceErrorValues(⟨prev|id⟩, {{⟨col|q⟩, ⟨pad⟩}})`,note:'Antes de esconder, vale entender a causa: a versão "ver só as linhas com erro" ajuda.'},
+ alts:[{label:'Ver só as linhas com erro (para investigar)',tpl:`ComErro = Table.SelectRowsWithErrors(⟨prev|id⟩, ⟨cols|list⟩)`,note:''},
+  {label:'Remover as linhas com erro',tpl:`SemErros = Table.RemoveRowsWithErrors(⟨prev|id⟩, ⟨cols|list⟩)`,note:''},
+  {label:'Converter com segurança (try … otherwise)',tpl:`Convertido = Table.AddColumn(⟨prev|id⟩, "Valor Limpo", each try Number.FromText([⟨col⟩], "pt-BR") otherwise null, type number)`,note:'Se a conversão falhar, a célula fica vazia em vez de dar erro.'}]},
+{id:'regional',cat:'Limpeza',kind:'step',title:'Converter datas e números em texto (formato brasileiro)',goal:'Transformar 31/12/2025, 20251231 ou "R$ 1.234,56" em valores de verdade.',
+ fields:[PREV,['col','Coluna','Valor']],
+ main:{label:'Texto em data (31/12/2025)',tpl:`Convertido = Table.TransformColumnTypes(⟨prev|id⟩, {{⟨col|q⟩, type date}}, "pt-BR")`,note:'A cultura pt-BR faz o dia vir antes do mês.'},
+ alts:[{label:'Texto em número (1.234,56)',tpl:`Convertido = Table.TransformColumns(⟨prev|id⟩, {{⟨col|q⟩, each Number.FromText(_, "pt-BR"), type number}})`,note:''},
+  {label:'Valor com R$ e pontos (R$ 1.234,56)',tpl:`Convertido = Table.TransformColumns(⟨prev|id⟩, {{⟨col|q⟩, each Number.FromText(Text.Select(_, {"0".."9", ",", "-"}), "pt-BR"), type number}})`,note:'Text.Select mantém só dígitos, vírgula e sinal; o ponto de milhar e o R$ somem.'},
+  {label:'Data no formato AAAAMMDD (20251231)',tpl:`Convertido = Table.TransformColumns(⟨prev|id⟩, {{⟨col|q⟩, each Date.FromText(Text.From(_), [Format = "yyyyMMdd"]), type date}})`,note:''}]},
+// ---------- Colunas
+{id:'dividir',cat:'Colunas',kind:'step',title:'Dividir uma coluna',goal:'Separar o conteúdo de uma coluna em várias, ou em várias linhas.',
+ fields:[PREV,['col','Coluna','Produto'],['delim','Delimitador',' - '],['novas','Nomes das novas colunas','Código, Descrição']],
+ main:{label:'Dividir em colunas por delimitador',tpl:`Dividida = Table.SplitColumn(⟨prev|id⟩, ⟨col|q⟩, Splitter.SplitTextByDelimiter(⟨delim|q⟩, QuoteStyle.Csv), ⟨novas|list⟩)`,note:'Indique tantos nomes quantos pedaços esperar.'},
+ alts:[{label:'Dividir em linhas (um item por linha)',tpl:`EmLinhas = Table.ExpandListColumn(Table.TransformColumns(⟨prev|id⟩, {{⟨col|q⟩, each Text.Split(_, ⟨delim|q⟩)}}), ⟨col|q⟩)`,note:'Bom para células com vários itens separados por vírgula ou ponto e vírgula.'},
+  {label:'Só o que vem antes do delimitador',tpl:`Antes = Table.TransformColumns(⟨prev|id⟩, {{⟨col|q⟩, each Text.BeforeDelimiter(_, ⟨delim|q⟩), type text}})`,note:''},
+  {label:'Só o que vem depois do delimitador',tpl:`Depois = Table.TransformColumns(⟨prev|id⟩, {{⟨col|q⟩, each Text.AfterDelimiter(_, ⟨delim|q⟩), type text}})`,note:''}]},
+{id:'mesclarcol',cat:'Colunas',kind:'step',title:'Juntar colunas de texto',goal:'Montar uma coluna a partir de outras (nome completo, código composto).',
+ fields:[PREV,['cols','Colunas a juntar','Nome, Sobrenome'],['sep','Separador',' '],['novo','Nome da nova coluna','Nome Completo']],
+ main:{label:'Juntar com separador',tpl:`Combinada = Table.CombineColumns(⟨prev|id⟩, ⟨cols|list⟩, Combiner.CombineTextByDelimiter(⟨sep|q⟩, QuoteStyle.None), ⟨novo|q⟩)`,note:'As colunas originais são substituídas pela nova. Para manter as originais, use a coluna personalizada.'},
+ alts:[{label:'Coluna personalizada (mantém as originais)',tpl:`Combinada = Table.AddColumn(⟨prev|id⟩, ⟨novo|q⟩, each Text.Combine({[⟨cols|first⟩], [⟨cols|second⟩]}, ⟨sep|q⟩), type text)`,note:'Text.Combine ignora valores vazios, ao contrário do operador &. Se a coluna for número ou data, use Text.From antes.'}]},
+{id:'condicional',cat:'Colunas',kind:'step',title:'Coluna condicional (se … então …)',goal:'Criar uma coluna com categorias a partir de regras.',
+ fields:[PREV,['nova','Nome da nova coluna','Faixa'],['col','Coluna testada','Valor'],['lim1','Limite 1','1000'],['rotA','Rótulo se ≥ limite 1','Alta'],['lim2','Limite 2','500'],['rotB','Rótulo se ≥ limite 2','Média'],['rotC','Rótulo nos demais casos','Baixa']],
+ main:{label:'Três faixas',tpl:`ComFaixa = Table.AddColumn(
+    ⟨prev|id⟩,
+    ⟨nova|q⟩,
+    each if [⟨col⟩] >= ⟨lim1⟩ then ⟨rotA|q⟩
+    else if [⟨col⟩] >= ⟨lim2⟩ then ⟨rotB|q⟩
+    else ⟨rotC|q⟩,
+    type text
+)`,note:'O else é obrigatório. As regras são avaliadas de cima para baixo: a primeira que valer ganha.'},
+ alts:[{label:'Duas faixas',tpl:`ComFaixa = Table.AddColumn(⟨prev|id⟩, ⟨nova|q⟩, each if [⟨col⟩] >= ⟨lim1⟩ then ⟨rotA|q⟩ else ⟨rotC|q⟩, type text)`,note:''},
+  {label:'Tratando vazios (null)',tpl:`ComFaixa = Table.AddColumn(
+    ⟨prev|id⟩,
+    ⟨nova|q⟩,
+    each if [⟨col⟩] = null then "Sem valor"
+    else if [⟨col⟩] >= ⟨lim1⟩ then ⟨rotA|q⟩
+    else ⟨rotC|q⟩,
+    type text
+)`,note:'Sem esse teste, o null cairia no último else.'}]},
+{id:'colunacalc',cat:'Colunas',kind:'step',title:'Coluna personalizada (cálculo)',goal:'Criar uma coluna a partir de contas entre outras colunas.',
+ fields:[PREV,['nome','Nome da nova coluna','Total'],['a','Coluna A','Quantidade'],['b','Coluna B','Preço']],
+ main:{label:'Multiplicar',tpl:`Calculada = Table.AddColumn(⟨prev|id⟩, ⟨nome|q⟩, each [⟨a⟩] * [⟨b⟩], type number)`,note:'Os valores precisam ser numéricos (defina os tipos antes).'},
+ alts:[{label:'Dividir com segurança (sem erro de divisão por zero)',tpl:`Calculada = Table.AddColumn(⟨prev|id⟩, ⟨nome|q⟩, each if [⟨b⟩] = null or [⟨b⟩] = 0 then null else [⟨a⟩] / [⟨b⟩], type number)`,note:''},
+  {label:'Concatenar com texto',tpl:`Calculada = Table.AddColumn(⟨prev|id⟩, ⟨nome|q⟩, each Text.From([⟨a⟩]) & " - " & Text.From([⟨b⟩]), type text)`,note:'O & exige textos nos dois lados; Text.From converte números e datas. Se algum lado for null, o resultado é null.'},
+  {label:'Valor fixo',tpl:`Calculada = Table.AddColumn(⟨prev|id⟩, ⟨nome|q⟩, each "Matriz", type text)`,note:''},
+  {label:'Data de hoje',tpl:`Calculada = Table.AddColumn(⟨prev|id⟩, ⟨nome|q⟩, each Date.From(DateTime.LocalNow()), type date)`,note:'Muda a cada atualização da consulta.'}]},
+{id:'extrair',cat:'Colunas',kind:'step',title:'Extrair parte de um texto',goal:'Pegar o início, o fim, os dígitos ou o que está entre delimitadores.',
+ fields:[PREV,['col','Coluna','Código'],['n','Quantidade de caracteres','3'],['ini','Delimitador inicial','('],['fim','Delimitador final',')']],
+ main:{label:'Primeiros N caracteres',tpl:`Extraido = Table.AddColumn(⟨prev|id⟩, "Início", each Text.Start([⟨col⟩], ⟨n⟩), type text)`,note:''},
+ alts:[{label:'Últimos N caracteres',tpl:`Extraido = Table.AddColumn(⟨prev|id⟩, "Fim", each Text.End([⟨col⟩], ⟨n⟩), type text)`,note:''},
+  {label:'Só os dígitos',tpl:`Extraido = Table.AddColumn(⟨prev|id⟩, "Dígitos", each Text.Select([⟨col⟩], {"0".."9"}), type text)`,note:'Útil para limpar CPF, CNPJ e telefone.'},
+  {label:'Entre dois delimitadores',tpl:`Extraido = Table.AddColumn(⟨prev|id⟩, "Trecho", each Text.BetweenDelimiters([⟨col⟩], ⟨ini|q⟩, ⟨fim|q⟩), type text)`,note:''}]},
+{id:'indice',cat:'Colunas',kind:'step',title:'Coluna de índice (numeração)',goal:'Numerar as linhas.',
+ fields:[PREV,['nome','Nome da coluna','Índice'],['ini','Começar em','1']],
+ main:{label:'Índice',tpl:`ComIndice = Table.AddIndexColumn(⟨prev|id⟩, ⟨nome|q⟩, ⟨ini⟩, 1, Int64.Type)`,note:'O 4º argumento é o incremento.'},alts:[]},
+// ---------- Linhas
+{id:'filtrotexto',cat:'Linhas',kind:'step',title:'Filtrar linhas por texto',goal:'Manter só as linhas que atendem a uma condição de texto.',
+ fields:[PREV,['col','Coluna','Status'],['valor','Valor','Ativo'],['lista','Lista de valores','Ativo, Pendente']],
+ main:{label:'Igual a',tpl:`Filtrado = Table.SelectRows(⟨prev|id⟩, each [⟨col⟩] = ⟨valor|q⟩)`,note:'Diferencia maiúsculas de minúsculas.'},
+ alts:[{label:'Diferente de',tpl:`Filtrado = Table.SelectRows(⟨prev|id⟩, each [⟨col⟩] <> ⟨valor|q⟩)`,note:''},
+  {label:'Contém (ignorando maiúsculas)',tpl:`Filtrado = Table.SelectRows(⟨prev|id⟩, each [⟨col⟩] <> null and Text.Contains([⟨col⟩], ⟨valor|q⟩, Comparer.OrdinalIgnoreCase))`,note:'O teste <> null evita erro quando a célula está vazia.'},
+  {label:'Começa com',tpl:`Filtrado = Table.SelectRows(⟨prev|id⟩, each [⟨col⟩] <> null and Text.StartsWith([⟨col⟩], ⟨valor|q⟩))`,note:''},
+  {label:'Está em uma lista',tpl:`Filtrado = Table.SelectRows(⟨prev|id⟩, each List.Contains(⟨lista|list⟩, [⟨col⟩]))`,note:''},
+  {label:'Não está vazio',tpl:`Filtrado = Table.SelectRows(⟨prev|id⟩, each [⟨col⟩] <> null and [⟨col⟩] <> "")`,note:''}]},
+{id:'filtronum',cat:'Linhas',kind:'step',title:'Filtrar linhas por número ou data',goal:'Manter valores acima de um limite, dentro de uma faixa ou de um período.',
+ fields:[PREV,['num','Coluna numérica','Valor'],['min','Mínimo','100'],['max','Máximo','5000'],['dcol','Coluna de data','Data'],['ini','Data inicial (AAAA-MM-DD ou DD/MM/AAAA)','2025-01-01'],['fim','Data final','2025-12-31']],
+ main:{label:'Maior ou igual a',tpl:`Filtrado = Table.SelectRows(⟨prev|id⟩, each [⟨num⟩] >= ⟨min⟩)`,note:'A coluna precisa estar com o tipo número.'},
+ alts:[{label:'Entre dois valores',tpl:`Filtrado = Table.SelectRows(⟨prev|id⟩, each [⟨num⟩] >= ⟨min⟩ and [⟨num⟩] <= ⟨max⟩)`,note:''},
+  {label:'Entre duas datas',tpl:`Filtrado = Table.SelectRows(⟨prev|id⟩, each [⟨dcol⟩] >= ⟨ini|date⟩ and [⟨dcol⟩] <= ⟨fim|date⟩)`,note:'A coluna precisa estar com o tipo data (não texto).'},
+  {label:'Ano atual',tpl:`Filtrado = Table.SelectRows(⟨prev|id⟩, each Date.Year([⟨dcol⟩]) = Date.Year(DateTime.LocalNow()))`,note:'Muda sozinho a cada atualização.'},
+  {label:'Últimos 30 dias',tpl:`Filtrado = Table.SelectRows(⟨prev|id⟩, each [⟨dcol⟩] >= Date.AddDays(Date.From(DateTime.LocalNow()), -30))`,note:''}]},
+{id:'ordenar',cat:'Linhas',kind:'step',title:'Ordenar, top N e ranking',goal:'Ordenar a tabela e pegar as maiores ou menores linhas.',
+ fields:[PREV,['ordem','Ordenar por (coluna:asc ou desc)','Valor:desc, Data:asc'],['n','Quantas linhas (top N)','10']],
+ main:{label:'Ordenar',tpl:`Ordenado = Table.Sort(⟨prev|id⟩, ⟨ordem|sort⟩)`,note:'Várias colunas: a primeira manda, as seguintes desempatam.'},
+ alts:[{label:'Top N (maiores linhas)',tpl:`Ordenado = Table.Sort(⟨prev|id⟩, ⟨ordem|sort⟩),
+TopN = Table.FirstN(Ordenado, ⟨n⟩)`,note:'Dois passos. Ordene do maior para o menor (desc) para pegar os maiores.'},
+  {label:'Ranking (numerar depois de ordenar)',tpl:`Ordenado = Table.Sort(⟨prev|id⟩, ⟨ordem|sort⟩),
+Ranking = Table.AddIndexColumn(Ordenado, "Ranking", 1, 1, Int64.Type)`,note:'O ranking numera as linhas; valores iguais recebem números diferentes.'}]},
+{id:'agrupar',cat:'Linhas',kind:'step',title:'Agrupar e resumir (soma, contagem…)',goal:'Uma linha por grupo, com totais, contagens e médias.',
+ fields:[PREV,['grupo','Agrupar por','Cliente'],['agg','Cálculos (nome=função(coluna))','Total=soma(Valor), Pedidos=contar, Média=média(Valor)','funções: soma, média, mín, máx, mediana, contar, distintos(coluna)'],['ord','Coluna de data (para o mais recente)','Data']],
+ main:{label:'Agrupar com cálculos',tpl:`Agrupado = Table.Group(⟨prev|id⟩, ⟨grupo|list⟩, ⟨agg|aggs⟩)`,note:'Funciona como a tabela dinâmica: uma linha por valor de grupo.'},
+ alts:[{label:'Manter só a linha mais recente de cada grupo',tpl:`Ordenado = Table.Sort(⟨prev|id⟩, {{⟨ord|q⟩, Order.Descending}}),
+Buffer = Table.Buffer(Ordenado),
+MaisRecente = Table.Distinct(Buffer, ⟨grupo|list⟩)`,note:'Table.Buffer garante que a ordem seja respeitada antes de remover as duplicatas.'}]},
+// ---------- Combinar e reformatar
+{id:'mesclar',cat:'Combinar e reformatar',kind:'step',title:'Mesclar consultas (PROCV / JOIN)',goal:'Trazer colunas de outra tabela, casando por uma chave.',
+ fields:[['prev','Consulta principal','Vendas','nome da consulta (ou passo)'],['outra','Consulta a trazer','Clientes'],['chavea','Chave na principal','ClienteID'],['chaveb','Chave na outra','ClienteID'],['cols','Colunas a trazer','Nome, Cidade'],['tipo','Tipo de junção','esquerda','esquerda, direita, interna, completa, somente esquerda, somente direita']],
+ main:{label:'Mesclar e expandir',tpl:`Mesclada = Table.NestedJoin(⟨prev|id⟩, ⟨chavea|list⟩, ⟨outra|id⟩, ⟨chaveb|list⟩, "Detalhe", JoinKind.⟨tipo|join⟩),
+Expandida = Table.ExpandTableColumn(Mesclada, "Detalhe", ⟨cols|list⟩)`,note:'Dois passos. As chaves precisam ter o mesmo tipo (texto × número) e o mesmo formato (espaços e maiúsculas contam). Junção esquerda = PROCV.'},
+ alts:[{label:'Só quem NÃO existe na outra tabela (anti-junção)',tpl:`SemCorrespondencia = Table.NestedJoin(⟨prev|id⟩, ⟨chavea|list⟩, ⟨outra|id⟩, ⟨chaveb|list⟩, "Detalhe", JoinKind.LeftAnti),
+SemColuna = Table.RemoveColumns(SemCorrespondencia, {"Detalhe"})`,note:'Ótimo para achar clientes sem compra, códigos sem cadastro, etc.'}]},
+{id:'acrescentar',cat:'Combinar e reformatar',kind:'step',title:'Acrescentar consultas (empilhar)',goal:'Juntar tabelas com as mesmas colunas, uma embaixo da outra.',
+ fields:[['tabelas','Consultas a empilhar','Vendas2024, Vendas2025']],
+ main:{label:'Empilhar',tpl:`Combinado = Table.Combine(⟨tabelas|idlist⟩)`,note:'As colunas são unidas pelo nome; o que só existe em uma tabela fica vazio (null) nas outras.'},alts:[]},
+{id:'despivotar',cat:'Combinar e reformatar',kind:'step',title:'Despivotar (colunas viram linhas)',goal:'Transformar uma tabela larga (um mês por coluna) em uma tabela longa.',
+ fields:[PREV,['fixas','Colunas que ficam como estão','Produto, Região'],['attr','Nome da coluna de atributo','Mês'],['val','Nome da coluna de valor','Valor'],['cols','Colunas a despivotar','Jan, Fev, Mar']],
+ main:{label:'Despivotar as outras colunas',tpl:`Despivotado = Table.UnpivotOtherColumns(⟨prev|id⟩, ⟨fixas|list⟩, ⟨attr|q⟩, ⟨val|q⟩)`,note:'Melhor opção quando surgem colunas novas (meses novos) com o tempo.'},
+ alts:[{label:'Despivotar só as colunas escolhidas',tpl:`Despivotado = Table.Unpivot(⟨prev|id⟩, ⟨cols|list⟩, ⟨attr|q⟩, ⟨val|q⟩)`,note:''}]},
+{id:'pivotar',cat:'Combinar e reformatar',kind:'step',title:'Pivotar (linhas viram colunas)',goal:'Transformar os valores de uma coluna em colunas, somando os valores.',
+ fields:[PREV,['attr','Coluna cujos valores viram colunas','Mês'],['val','Coluna de valores','Valor']],
+ main:{label:'Pivotar somando',tpl:`Pivotado = Table.Pivot(⟨prev|id⟩, List.Distinct(⟨prev|id⟩[⟨attr⟩]), ⟨attr|q⟩, ⟨val|q⟩, List.Sum)`,note:'A coluna de atributo precisa ser texto. Outras agregações: List.Count, List.Average, List.Max.'},alts:[]},
+// ---------- Datas
+{id:'datas',cat:'Datas',kind:'step',title:'Extrair ano, mês, trimestre…',goal:'Criar colunas de análise a partir de uma data.',
+ fields:[PREV,['col','Coluna de data','Data']],
+ main:{label:'Ano, mês, nome do mês, trimestre e início do mês',tpl:`Ano = Table.AddColumn(⟨prev|id⟩, "Ano", each Date.Year([⟨col⟩]), Int64.Type),
+Mes = Table.AddColumn(Ano, "Mês", each Date.Month([⟨col⟩]), Int64.Type),
+NomeMes = Table.AddColumn(Mes, "Nome do mês", each Text.Proper(Date.MonthName([⟨col⟩], "pt-BR")), type text),
+Trimestre = Table.AddColumn(NomeMes, "Trimestre", each "T" & Text.From(Date.QuarterOfYear([⟨col⟩])), type text),
+InicioMes = Table.AddColumn(Trimestre, "Início do mês", each Date.StartOfMonth([⟨col⟩]), type date)`,note:'Cinco passos encadeados: cole todos. A coluna de origem precisa estar com o tipo data.'},
+ alts:[{label:'Dia da semana (nome)',tpl:`DiaSemana = Table.AddColumn(⟨prev|id⟩, "Dia da semana", each Text.Proper(Date.DayOfWeekName([⟨col⟩], "pt-BR")), type text)`,note:''},
+  {label:'AnoMês numérico (ordena certo): 202512',tpl:`AnoMes = Table.AddColumn(⟨prev|id⟩, "AnoMês", each Date.Year([⟨col⟩]) * 100 + Date.Month([⟨col⟩]), Int64.Type)`,note:'Útil para ordenar o nome do mês cronologicamente.'}]},
+{id:'calendario',cat:'Datas',kind:'full',title:'Tabela calendário',goal:'Gerar uma tabela de datas contínua, com ano, mês e trimestre.',
+ fields:[['ini','Data inicial','2020-01-01'],['fim','Data final','2030-12-31']],
+ main:{label:'Calendário entre duas datas',tpl:`let
+    Inicio = ⟨ini|date⟩,
+    Fim = ⟨fim|date⟩,
+    Dias = Duration.Days(Fim - Inicio) + 1,
+    Datas = List.Dates(Inicio, Dias, #duration(1, 0, 0, 0)),
+    Tabela = Table.FromList(Datas, Splitter.SplitByNothing(), {"Data"}),
+    Tipada = Table.TransformColumnTypes(Tabela, {{"Data", type date}}),
+    Ano = Table.AddColumn(Tipada, "Ano", each Date.Year([Data]), Int64.Type),
+    Mes = Table.AddColumn(Ano, "Mês", each Date.Month([Data]), Int64.Type),
+    NomeMes = Table.AddColumn(Mes, "Nome do mês", each Text.Proper(Date.MonthName([Data], "pt-BR")), type text),
+    Trimestre = Table.AddColumn(NomeMes, "Trimestre", each "T" & Text.From(Date.QuarterOfYear([Data])), type text),
+    DiaSemana = Table.AddColumn(Trimestre, "Dia da semana", each Text.Proper(Date.DayOfWeekName([Data], "pt-BR")), type text)
+in
+    DiaSemana`,note:'No Power BI, relacione a coluna Data com a tabela de fatos e marque a tabela como "tabela de datas". Cubra anos completos.'},
+ alts:[{label:'Até o fim do ano atual',tpl:`let
+    Inicio = ⟨ini|date⟩,
+    Fim = Date.EndOfYear(Date.From(DateTime.LocalNow())),
+    Dias = Duration.Days(Fim - Inicio) + 1,
+    Datas = List.Dates(Inicio, Dias, #duration(1, 0, 0, 0)),
+    Tabela = Table.FromList(Datas, Splitter.SplitByNothing(), {"Data"}),
+    Tipada = Table.TransformColumnTypes(Tabela, {{"Data", type date}})
+in
+    Tipada`,note:'Cresce sozinha a cada atualização; só tem a coluna Data (adicione as demais como no outro exemplo).'}]},
+// ---------- Avançado
+{id:'funcao',cat:'Avançado',kind:'full',title:'Função personalizada',goal:'Criar uma função reutilizável (ex.: ler um arquivo) e aplicá-la a uma lista de arquivos.',
+ fields:[['nome','Nome da função','LerCsv'],['delim','Separador do CSV',';']],
+ main:{label:'Função que lê um CSV (consulta própria)',tpl:`(caminho as text) as table =>
+let
+    Fonte = Csv.Document(File.Contents(caminho), [Delimiter = ⟨delim|q⟩, Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+    Cabecalhos = Table.PromoteHeaders(Fonte, [PromoteAllScalars = true])
+in
+    Cabecalhos`,note:'Salve esta consulta com o nome da função (ex.: LerCsv). O Power Query reconhece que é uma função e mostra o botão Invocar.'},
+ alts:[{label:'Usar a função em cada arquivo de uma pasta',tpl:`Lidos = Table.AddColumn(Fonte, "Dados", each ⟨nome|id⟩([Folder Path] & [Name])),
+Combinado = Table.Combine(Lidos[Dados])`,note:'Passos para a consulta que lista a pasta (Folder.Files). O caminho completo do arquivo é [Folder Path] & [Name].'}]}
+];
+// ajustes de filtros usados só por uma receita
+FILT.first=s=>splitList(s)[0]||'';FILT.second=s=>splitList(s)[1]||splitList(s)[0]||'';
+
+let curR=R[0].id,rFilter='';const vals={};
+function setHash(h){try{history.replaceState(null,'','#'+h);}catch{}}
+function renderRList(){
+  const box=$('#rlist');box.replaceChildren();const q=norm(rFilter);
+  const items=R.filter(r=>!q||norm(r.title+' '+r.goal+' '+r.cat).includes(q));
+  [...new Set(items.map(r=>r.cat))].forEach(c=>{
+    box.append(el('div',{class:'grp'},c));
+    items.filter(r=>r.cat===c).forEach(r=>box.append(el('button',{class:'rbtn',type:'button','aria-pressed':String(r.id===curR),onclick:()=>{curR=r.id;renderRList();renderRPanel();setHash('receitas/'+r.id);if(window.innerWidth<=820)$('#rpanel').scrollIntoView({behavior:'smooth',block:'start'});}},r.title)));
+  });
+  if(!items.length)box.append(el('p',{class:'hint',style:'padding:14px'},'Nenhuma receita encontrada. Veja o Catálogo.'));
+}
+function fill(tpl,r){
+  const v=vals[r.id]||{};
+  const res=tpl.replace(/⟨(\w+)(?:\|(\w+))?⟩/g,(m,k,f)=>{
+    const fd=r.fields.find(x=>x[0]===k);if(!fd)return m;
+    const x=String(v[k]??fd[2]).trim()||String(fd[2]);
+    return f&&FILT[f]?FILT[f](x):x;
+  });
+  return r.kind==='step'?prettySteps(res):res;
+}
+function renderRPanel(){
+  const r=R.find(x=>x.id===curR);const p=$('#rpanel');p.replaceChildren();
+  const v=vals[r.id]=vals[r.id]||{};const outBox=el('div');
+  const draw=()=>{outBox.replaceChildren();
+    const mk=(lab,tpl,note)=>el('div',{class:'variant'},el('h3',{},lab),fmtOut(fill(tpl,r)),note?el('p',{class:'note'},note):null);
+    outBox.append(mk(r.main.label,r.main.tpl,r.main.note));r.alts.forEach(a=>outBox.append(mk(a.label,a.tpl,a.note)));};
+  const fields=el('div',{class:'fields'},r.fields.map(f=>{
+    const inp=el('input',{type:'text',value:v[f[0]]??f[2],spellcheck:'false','aria-label':f[1]});
+    inp.addEventListener('input',()=>{v[f[0]]=inp.value;draw();});
+    return el('label',{class:'f'},f[1],el('small',{},f[3]||' '),inp);
+  }));
+  const tag=el('span',{class:'badge2'},r.kind==='full'?'consulta completa':'passo para colar');
+  const how=r.kind==='full'?'Cole no Editor Avançado, substituindo o conteúdo da consulta.':'Cole dentro do let, depois do passo anterior (com vírgula entre os passos), e aponte o in para o último passo.';
+  p.append(el('div',{class:'card'},el('h2',{style:'margin:0 0 4px;font-size:19px'},r.title,tag),el('p',{class:'note',style:'margin:0'},r.goal),el('p',{class:'hint',style:'margin:6px 0 0'},how),outBox,el('h3',{style:'margin:18px 0 0;font-size:14px'},'Ajuste os nomes para a sua consulta'),fields));
+  draw();
+}
+
+/* ============ Catálogo ============ */
+let cCat='',cQ='';
+function renderCats(){
+  const box=$('#ccats');box.replaceChildren();
+  [['','Todas'],...CATS.map(c=>[c,c])].forEach(([v,t])=>box.append(el('button',{class:'chip',type:'button','aria-pressed':String(cCat===v),onclick:()=>{cCat=v;renderCats();renderCatalog();}},t)));
+}
+function renderCatalog(){
+  const box=$('#clist');box.replaceChildren();const q=norm(cQ);
+  const items=F.filter(e=>(!cCat||e[1]===cCat)&&(!q||norm(e[0]+' '+e[1]+' '+e[2]).includes(q)));
+  if(!items.length){box.append(el('p',{class:'hint'},'Nenhuma função encontrada.'));return;}
+  items.forEach(e=>box.append(el('div',{class:'fn'},
+    el('h3',{},e[0],el('span',{},e[1])),el('p',{},e[2]),
+    el('div',{class:'out',style:'margin:6px 0'},e[3]),fmtOut(e[4]),
+    e[5]?el('div',{class:'tip'},'💡 '+e[5]):null)));
+}
+
+/* ============ Formatar e explicar ============ */
+const W=96;
+function lex(src){
+  const t=[];let i=0;const n=src.length;
+  const ID_RE=/[\p{L}_][\p{L}\p{N}_]*(?:\.[\p{L}_][\p{L}\p{N}_]*)*/uy, NUM_RE=/(?:0[xX][0-9a-fA-F]+|\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)/y;
+  const str=(j0)=>{let j=j0;while(j<n){if(src[j]==='"'){if(src[j+1]==='"'){j+=2;continue;}return {end:j+1,ok:true};}j++;}return {end:n,ok:false};};
+  while(i<n){
+    const c=src[i];
+    if(/\s/.test(c)){let j=i;while(j<n&&/\s/.test(src[j]))j++;t.push({k:'ws',s:src.slice(i,j),p:i});i=j;continue;}
+    if(src.startsWith('//',i)){let j=src.indexOf('\n',i);if(j<0)j=n;t.push({k:'com',s:src.slice(i,j),p:i});i=j;continue;}
+    if(src.startsWith('/*',i)){let j=src.indexOf('*/',i+2);j=j<0?n:j+2;t.push({k:'com',s:src.slice(i,j),p:i});i=j;continue;}
+    if(c==='"'){const r=str(i+1);t.push({k:'str',s:src.slice(i,r.end),p:i,bad:!r.ok});i=r.end;continue;}
+    if(c==='#'&&src[i+1]==='"'){const r=str(i+2);t.push({k:'qid',s:src.slice(i,r.end),p:i,bad:!r.ok});i=r.end;continue;}
+    if(c==='#'&&/[A-Za-z]/.test(src[i+1]||'')){const m=/^#[A-Za-z]+/.exec(src.slice(i,i+20));t.push({k:'id',s:m[0],p:i});i+=m[0].length;continue;}
+    ID_RE.lastIndex=i;let m=ID_RE.exec(src);if(m&&m.index===i){t.push({k:'id',s:m[0],p:i});i+=m[0].length;continue;}
+    NUM_RE.lastIndex=i;m=NUM_RE.exec(src);if(m&&m.index===i){t.push({k:'num',s:m[0],p:i});i+=m[0].length;continue;}
+    const two=src.substr(i,2);
+    if(['=>','<>','<=','>=','..','??'].includes(two)){t.push({k:'op',s:two,p:i});i+=2;continue;}
+    t.push({k:'op',s:c,p:i});i++;
+  }
+  return t;
+}
+const lineOf=(src,p)=>src.slice(0,p).split('\n').length;
+const sigIdx=(toks,j)=>{while(j<toks.length&&(toks[j].k==='ws'||toks[j].k==='com'))j++;return j;};
+const qname=s=>s.startsWith('#"')?s.slice(2,-1).replace(/""/g,'"'):s;
+
+/* árvore de parênteses/colchetes/chaves para quebrar linhas */
+function parseTree(toks){
+  const root={items:[[]]};const st=[root];
+  for(const t of toks){
+    if(t.k==='com')continue;
+    const top=st[st.length-1];
+    if(t.k==='op'&&(t.s==='('||t.s==='['||t.s==='{')){const g={g:1,open:t.s,close:'',items:[[]]};top.items[top.items.length-1].push(g);st.push(g);}
+    else if(t.k==='op'&&(t.s===')'||t.s===']'||t.s==='}')){if(st.length>1){top.close=t.s;st.pop();}else top.items[top.items.length-1].push(t);}
+    else if(t.k==='op'&&t.s===','&&st.length>1){top.items.push([]);}
+    else top.items[top.items.length-1].push(t);
+  }
+  return root.items[0];
+}
+function flat(nodes){
+  let s='';
+  for(const n of nodes){
+    if(n.g){const it=n.items.map(flat);s+=n.open+((it.length===1&&!it[0])?'':it.join(', '))+n.close;}
+    else if(n.k==='ws'){if(s&&!/[\s(\[{]$/.test(s))s+=' ';}
+    else s+=n.s;
+  }
+  return s.replace(/\s+$/,'');
+}
+function render(nodes,ind,col){
+  const f=flat(nodes);if(col+f.length<=W)return f;
+  let out='';
+  const lineLen=()=>{const i=out.lastIndexOf('\n');return i<0?col+out.length:out.length-i-1;};
+  for(const n of nodes){
+    if(n.g){
+      const gf=flat([n]);
+      if(lineLen()+gf.length<=W){out+=gf;continue;}
+      if(n.items.length===1&&!flat(n.items[0])){out+=n.open+n.close;continue;}
+      const pad=' '.repeat(ind+4);
+      out+=n.open+'\n'+n.items.map(it=>pad+render(it,ind+4,ind+4)).join(',\n')+'\n'+' '.repeat(ind)+n.close;
+    }else if(n.k==='ws'){if(out&&!/\s$/.test(out))out+=' ';}
+    else out+=n.s;
+  }
+  return out.replace(/\s+$/,'');
+}
+
+/* divide a consulta em passos */
+function splitSteps(toks){
+  const nt=toks.length;let i=sigIdx(toks,0);
+  if(!(toks[i]&&toks[i].k==='id'&&toks[i].s==='let'))return null;
+  i++;
+  const steps=[];let cur=[];let pd=0,ld=0,result=null,hasIn=false;
+  for(;i<nt;i++){
+    const t=toks[i];
+    if(t.k==='op'){
+      if(t.s==='('||t.s==='['||t.s==='{')pd++;
+      else if(t.s===')'||t.s===']'||t.s==='}')pd--;
+      else if(t.s===','&&pd===0&&ld===0){steps.push(cur);cur=[];continue;}
+    }else if(t.k==='id'&&t.s==='let')ld++;
+    else if(t.k==='id'&&t.s==='in'){
+      if(ld>0)ld--;
+      else{hasIn=true;steps.push(cur);result=toks.slice(i+1);break;}
+    }
+    cur.push(t);
+  }
+  if(!hasIn)steps.push(cur);
+  return {steps,result,hasIn};
+}
+const isBlank=ts=>ts.every(t=>t.k==='ws'||t.k==='com');
+
+function analyze(src){
+  const toks=lex(src);const errors=[];const warns=[];
+  const hasCom=toks.some(t=>t.k==='com');
+  toks.forEach(t=>{if(t.bad)errors.push(`Texto entre aspas não foi fechado (linha ${lineOf(src,t.p)}).`);});
+  // parênteses
+  const st=[];const pairs={')':'(',']':'[','}':'{'};
+  for(const t of toks){
+    if(t.k!=='op')continue;
+    if('([{'.includes(t.s)&&t.s.length===1)st.push(t);
+    else if(')]}'.includes(t.s)&&t.s.length===1){
+      if(!st.length){errors.push(`Há um "${t.s}" sem abertura correspondente (linha ${lineOf(src,t.p)}).`);}
+      else if(st[st.length-1].s!==pairs[t.s]){errors.push(`"${st[st.length-1].s}" da linha ${lineOf(src,st[st.length-1].p)} foi fechado com "${t.s}" (linha ${lineOf(src,t.p)}).`);st.pop();}
+      else st.pop();
+    }
+  }
+  st.forEach(t=>errors.push(`"${t.s}" da linha ${lineOf(src,t.p)} não foi fechado.`));
+  const sp=splitSteps(toks);
+  let steps=[],result=null,resultToks=[];
+  if(sp){
+    if(!sp.hasIn)errors.push('A consulta começa com let, mas não tem o in com o resultado.');
+    let list=sp.steps;
+    if(list.length&&isBlank(list[list.length-1])&&list.length>1){warns.push('Há uma vírgula sobrando antes do in (o último passo não leva vírgula).');list=list.slice(0,-1);}
+    list.forEach((s,idx)=>{
+      const a=sigIdx(s,0);
+      if(a>=s.length){errors.push(`O passo ${idx+1} está vazio (vírgula duplicada?).`);return;}
+      const nameTok=s[a];const b=sigIdx(s,a+1);
+      if(!(nameTok.k==='id'||nameTok.k==='qid')||!(s[b]&&s[b].k==='op'&&s[b].s==='=')){errors.push(`O passo ${idx+1} não tem o formato Nome = expressão (linha ${lineOf(src,nameTok.p)}).`);return;}
+      const exprToks=s.slice(b+1);
+      // vírgula faltando: um "Nome =" no começo de linha no meio da expressão
+      let d=0;for(let k=0;k<exprToks.length;k++){const t=exprToks[k];
+        if(t.k==='op'){if('([{'.includes(t.s)&&t.s.length===1)d++;else if(')]}'.includes(t.s)&&t.s.length===1)d--;}
+        if(d===0&&(t.k==='id'||t.k==='qid')&&k>0&&exprToks[k-1].k==='ws'&&/\n/.test(exprToks[k-1].s)){const nx=sigIdx(exprToks,k+1);
+          if(exprToks[nx]&&exprToks[nx].k==='op'&&exprToks[nx].s==='='&&!KEYWORDS.includes(t.s)){warns.push(`Possível vírgula faltando antes de "${t.s} =" (linha ${lineOf(src,t.p)}).`);}}
+      }
+      steps.push({name:qname(nameTok.s),raw:nameTok.s,expr:exprToks,line:lineOf(src,nameTok.p)});
+    });
+    resultToks=sp.result||[];
+    const rs=sigIdx(resultToks,0);
+    if(sp.hasIn&&rs>=resultToks.length)errors.push('Falta o resultado depois do in.');
+    else if(sp.hasIn){const only=resultToks.filter(t=>t.k!=='ws'&&t.k!=='com');if(only.length===1&&(only[0].k==='id'||only[0].k==='qid'))result=qname(only[0].s);}
+    const seen={};steps.forEach(s=>{if(seen[s.name])errors.push(`O nome de passo "${s.name}" aparece mais de uma vez (linha ${s.line}).`);seen[s.name]=1;});
+  }
+  return {toks,errors,warns,hasCom,sp,steps,result,resultToks};
+}
+
+function fmtStep(s){
+  const nodes=parseTree(s.expr);
+  const hasLet=s.expr.some(t=>t.k==='id'&&t.s==='let');
+  return '    '+s.raw+' = '+(hasLet?flat(nodes):render(nodes,4,4+s.raw.length+3));
+}
+function formatQuery(a){
+  const rn=parseTree(a.resultToks);
+  const hasLet=a.resultToks.some(t=>t.k==='id'&&t.s==='let');
+  return 'let\n'+a.steps.map(fmtStep).join(',\n')+'\nin\n    '+(hasLet?flat(rn):render(rn,4,4));
+}
+/* organiza o código gerado pelas receitas de passo (só quebra linhas longas) */
+function prettySteps(code){
+  try{const a=analyze('let\n'+code+'\nin\n    X');if(a.errors.length||!a.steps.length||a.hasCom)return code;return a.steps.map(fmtStep).join(',\n');}
+  catch{return code;}
+}
+
+const paramsOf=syn=>{const m=/\((.*)\)\s*$/.exec(syn);if(!m)return null;return m[1].split(',').map(x=>x.replace(/[\[\]]/g,'').replace(/\.\.\./g,'').trim()).filter(Boolean);};
+function callInfo(expr){
+  const nodes=parseTree(expr).filter(n=>n.g||n.k!=='ws');
+  if(nodes.length>=2&&!nodes[0].g&&nodes[0].k==='id'&&nodes[1].g&&nodes[1].open==='(')return {fn:nodes[0].s,args:nodes[1].items.map(flat).filter((x,i,arr)=>x||arr.length>1),rest:nodes.slice(2)};
+  return {first:nodes[0],second:nodes[1],nodes};
+}
+const clip=(s,n=90)=>s.length>n?s.slice(0,n-1)+'…':s;
+
+function explainStep(s,names){
+  const ci=callInfo(s.expr);
+  const out={desc:'',tag:'',args:[]};
+  const refName=x=>names.find(n=>x===n||x==='#"'+n.replace(/"/g,'""')+'"');
+  if(ci.fn){
+    out.tag=ci.fn;
+    const e=IDX[ci.fn];
+    out.desc=e?e[2]:'Função que não está no catálogo desta página (pode ser válida, nova ou específica).';
+    const ps=e?paramsOf(e[3]):null;
+    ci.args.forEach((a,i)=>{const nm=ps&&ps[i]?ps[i]:'argumento '+(i+1);out.args.push([nm,clip(a),i===0&&refName(a)?'passo anterior':'']);});
+    if(ci.rest&&ci.rest.length){const r=flat(ci.rest);if(r)out.args.push(['depois da chamada',clip(r),'seleciona um item ou campo do resultado']);}
+  }else if(ci.first&&!ci.first.g&&(ci.first.k==='id'||ci.first.k==='qid')&&ci.second&&ci.second.g&&(ci.second.open==='{'||ci.second.open==='[')){
+    out.tag='navegação';out.desc='Navega dentro de «'+qname(ci.first.s)+'»: escolhe um item (aba, tabela, arquivo) ou um campo e pega o conteúdo.';
+    out.args.push(['expressão',clip(flat(parseTree(s.expr)))]);
+  }else if(ci.first&&ci.first.k==='id'&&ci.first.s==='each'){out.tag='each';out.desc='Define uma função de um parâmetro (_).';}
+  else if(ci.first&&ci.first.g&&ci.first.open==='('&&s.expr.some(t=>t.k==='op'&&t.s==='=>')){out.tag='função';out.desc='Define uma função personalizada, que pode ser chamada em outros passos.';}
+  else if(ci.first&&(ci.first.k==='str'||ci.first.k==='num'||(ci.first.k==='id'&&ci.first.s.startsWith('#')))){out.tag='valor';out.desc='Valor fixo (constante ou parâmetro).';}
+  else{out.tag='expressão';out.desc='Expressão personalizada.';}
+  return out;
+}
+
+function explain(){
+  const out=$('#xout');out.replaceChildren();
+  const src=$('#xin').value.trim();
+  if(!src){out.append(el('p',{class:'hint'},'Cole uma consulta acima.'));return;}
+  const a=analyze(src);
+  const card=el('div',{class:'card'});
+  card.append(el('p',{},a.sp?el('span',{},'Passos encontrados: ',el('b',{},String(a.steps.length)),'. '):'',
+    a.errors.length?el('span',{class:'err'},'Atenção: '+a.errors.join(' ')):el('span',{class:'ok'},'Estrutura sem erros de parênteses ou de passos.')));
+  a.warns.forEach(w=>card.append(el('div',{class:'warn'},w)));
+  if(!a.sp)card.append(el('div',{class:'warn'},'O código não começa com let: a organização por passos só funciona com uma consulta completa. Veja as funções usadas e as sugestões abaixo.'));
+  let text=src;
+  if(a.sp&&!a.errors.length&&!a.hasCom){text=formatQuery(a);card.append(el('h3',{style:'margin:14px 0 4px;font-size:15px'},'Código organizado'),fmtOut(text));}
+  else if(a.sp&&a.hasCom&&!a.errors.length)card.append(el('div',{class:'warn'},'O código tem comentários (// ou /* */), então a organização automática foi pulada para não alterá-los. A explicação dos passos continua abaixo.'));
+  else if(a.sp&&a.errors.length)card.append(el('div',{class:'warn'},'Corrija os erros acima para o código ser organizado.'));
+  out.append(card);
+
+  if(a.sp&&a.steps.length){
+    const names=a.steps.map(s=>s.name);
+    const c2=el('div',{class:'card'});c2.append(el('h3',{style:'margin:0 0 4px;font-size:15px'},'O que cada passo faz'));
+    a.steps.forEach((s,i)=>{
+      const ex=explainStep(s,names);
+      const box=el('div',{class:'fn'},el('h3',{},(i+1)+'. '+s.name,el('span',{style:'text-transform:none;letter-spacing:0;font-size:13px'},ex.tag)),el('p',{},ex.desc));
+      if(ex.args.length)box.append(el('ul',{class:'args'},ex.args.map(([k,v,n])=>el('li',{},el('b',{},k),' → ',el('code',{},v),n?' ('+n+')':''))));
+      c2.append(box);
+    });
+    const last=a.steps[a.steps.length-1];
+    c2.append(el('div',{class:'tip'},a.result?('Resultado final: «'+a.result+'»'+(last&&a.result!==last.name?' (não é o último passo da lista)':'')+'.'):'O resultado final é uma expressão depois do in.'));
+    out.append(c2);
+  }
+
+  // funções usadas
+  const used=[];const wrongCase=[];
+  for(let i=0;i<a.toks.length;i++){
+    const t=a.toks[i];if(t.k!=='id'||!t.s.includes('.'))continue;
+    const nx=sigIdx(a.toks,i+1);const isCall=a.toks[nx]&&a.toks[nx].k==='op'&&a.toks[nx].s==='(';
+    if(!isCall&&!IDX[t.s])continue;
+    if(IDX[t.s]){if(!used.includes(t.s))used.push(t.s);}
+    else{const alt=F.find(e=>e[0].toLowerCase()===t.s.toLowerCase());if(alt)wrongCase.push([t.s,alt[0],lineOf(src,t.p)]);else if(!used.includes(t.s))used.push(t.s);}
+  }
+  const c3=el('div',{class:'card'});c3.append(el('h3',{style:'margin:0 0 4px;font-size:15px'},'Funções usadas'));
+  if(!used.length)c3.append(el('p',{class:'hint'},'Nenhuma função encontrada.'));
+  used.forEach(u=>{const e=IDX[u];
+    if(e)c3.append(el('div',{class:'fn'},el('h3',{},e[0],el('span',{},e[1])),el('p',{},e[2]),el('div',{class:'out',style:'margin:6px 0'},e[3]),e[5]?el('div',{class:'tip'},'💡 '+e[5]):null));
+    else c3.append(el('div',{class:'fn'},el('h3',{},u),el('p',{class:'hint'},'Não está no catálogo desta página (pode ser uma função válida, nova ou específica).')));});
+  out.append(c3);
+
+  // sugestões
+  const hints=[];
+  wrongCase.forEach(([w,r,l])=>hints.push(`"${w}" (linha ${l}) não existe: o M diferencia maiúsculas de minúsculas. O correto é ${r}.`));
+  a.toks.forEach((t,i)=>{
+    if(t.k!=='id')return;
+    if(['Let','In','If','Then','Else','Each','Try','Otherwise','True','False','Null'].includes(t.s)){
+      let d=0;for(let j=0;j<i;j++){const o=a.toks[j];if(o.k==='op'&&o.s==='[')d++;else if(o.k==='op'&&o.s===']')d--;}
+      if(d<=0)hints.push(`"${t.s}" (linha ${lineOf(src,t.p)}): as palavras da linguagem são sempre minúsculas ("${t.s.toLowerCase()}").`);
+    }
+  });
+  const body=a.toks.filter(t=>t.k!=='ws'&&t.k!=='com');
+  if(body.some(t=>t.k==='str'&&/^"([A-Za-z]:\\|\\\\)/.test(t.s)))hints.push('O código tem um caminho de arquivo fixo (C:\\… ou \\\\servidor). Se o arquivo mudar de lugar ou for usado por outra pessoa, crie um parâmetro com o caminho e use-o na consulta.');
+  if(a.steps.some(s=>/Table\.RemoveColumns/.test(flat(parseTree(s.expr)))&&!/MissingField/.test(flat(parseTree(s.expr)))))hints.push('Table.RemoveColumns dá erro se uma coluna deixar de existir na origem. Acrescente MissingField.Ignore como 3º argumento, ou prefira Table.SelectColumns.');
+  const nTypes=a.steps.filter(s=>/Table\.TransformColumnTypes/.test(flat(parseTree(s.expr)))).length;
+  if(nTypes>=3)hints.push(`Há ${nTypes} passos de tipo de coluna. Juntar os tipos em um passo só deixa a consulta mais curta e rápida.`);
+  if(a.steps.some(s=>/Table\.(NestedJoin|Join)\b/.test(flat(parseTree(s.expr)))))hints.push('Na mesclagem, as colunas-chave precisam ter o mesmo tipo (texto × número) e o mesmo formato: espaços e maiúsculas contam. Limpe o texto das duas tabelas antes.');
+  if(a.steps.some(s=>{const f=flat(parseTree(s.expr));return /Text\.(Contains|StartsWith|EndsWith)/.test(f)&&!/<>\s*null/.test(f)&&/Table\.SelectRows/.test(f);}))hints.push('Table.SelectRows com Text.Contains pode dar erro se a coluna tiver células vazias (null). Teste [Coluna] <> null and … antes.');
+  a.steps.forEach((s,i)=>{if(/Table\.Sort/.test(flat(parseTree(s.expr)))){const nx=a.steps[i+1];if(nx&&/Table\.Distinct/.test(flat(parseTree(nx.expr)))&&!a.steps.some(z=>/Table\.Buffer/.test(flat(parseTree(z.expr)))))hints.push(`Table.Distinct logo depois de Table.Sort (passo «${nx.name}») pode não respeitar a ordem. Use Table.Buffer no resultado do Sort antes de remover as duplicatas.`);}});
+  if(a.sp&&!a.errors.length){
+    a.steps.forEach((s,i)=>{
+      if(s.name===a.result)return;
+      const later=a.steps.slice(i+1).flatMap(z=>z.expr).concat(a.resultToks);
+      if(!later.some(t=>(t.k==='id'||t.k==='qid')&&qname(t.s)===s.name))hints.push(`O passo «${s.name}» não é usado por nenhum passo seguinte nem pelo resultado.`);
+    });
+  }
+  const uniq=[...new Set(hints)];
+  if(uniq.length){const c4=el('div',{class:'card'});c4.append(el('h3',{style:'margin:0 0 6px;font-size:15px'},'Sugestões'));uniq.forEach(h=>c4.append(el('div',{class:'warn'},h)));out.append(c4);}
+}
+
+/* ============ Abas ============ */
+function setTab(id){
+  ['receitas','catalogo','explicar'].forEach(t=>{$('#p-'+t).classList.toggle('hide',t!==id);$('#tab-'+t).setAttribute('aria-selected',String(t===id));});
+  setHash(id==='receitas'?'receitas/'+curR:id);
+}
+document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>setTab(b.dataset.tab)));
+$('#rq').addEventListener('input',e=>{rFilter=e.target.value;renderRList();});
+$('#cq').addEventListener('input',e=>{cQ=e.target.value;renderCatalog();});
+$('#xgo').addEventListener('click',explain);
+{let tmr;$('#xin').addEventListener('input',()=>{clearTimeout(tmr);tmr=setTimeout(explain,400);});}
+$('#xex').addEventListener('click',()=>{$('#xin').value='let Fonte = Excel.Workbook(File.Contents("C:\\Dados\\Vendas.xlsx"), null, true), Aba = Fonte{[Item="Vendas",Kind="Sheet"]}[Data], Cab = Table.PromoteHeaders(Aba, [PromoteAllScalars=true]), Tipos = Table.TransformColumnTypes(Cab,{{"Data", type date},{"Cliente", type text},{"Valor", type number}}), Filtrado = Table.SelectRows(Tipos, each [Valor] > 100 and [Cliente] <> null), Agrupado = Table.Group(Filtrado, {"Cliente"}, {{"Total", each List.Sum([Valor]), type nullable number}, {"Pedidos", each Table.RowCount(_), Int64.Type}}) in Agrupado';explain();});
+renderRList();renderRPanel();renderCats();renderCatalog();
+{const [t,rid]=location.hash.slice(1).split('/');if(rid&&R.some(r=>r.id===rid)){curR=rid;renderRList();renderRPanel();}if(['receitas','catalogo','explicar'].includes(t))setTab(t);}
+</script>
+<script>(function(){var b=document.getElementById('themeBtn');if(!b)return;var r=document.documentElement;function lab(){var l=r.dataset.theme==='light';b.textContent=l?'☾ Modo escuro':'☀ Modo claro';b.setAttribute('aria-label',l?'Mudar para o modo escuro':'Mudar para o modo claro');var m=document.querySelector('meta[name=theme-color]');if(m)m.content=l?'#f7f6fa':'#030305'}b.addEventListener('click',function(){var n=r.dataset.theme==='light'?'dark':'light';r.dataset.theme=n;try{localStorage.setItem('ferramentas-tema',n)}catch(e){}lab()});lab()})();</script>
+</body>
+</html>

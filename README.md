@@ -18,8 +18,9 @@ Ferramentas gratuitas que rodam **100% no navegador**: sem upload, sem cadastro,
 | **Fórmulas do Excel** | [`/excel/`](https://eduardonunes.dev/Ferramentas/excel/) | Receitas para preencher, catálogo de 100 funções e conversor de fórmulas entre português (`;`) e inglês (`,`). |
 | **Fórmulas DAX** | [`/dax/`](https://eduardonunes.dev/Ferramentas/dax/) | Receitas de medidas para Power BI, catálogo de 109 funções e formatador com conversão de separador (`,` ⇄ `;`). |
 | **Consultas SQL** | [`/sql/`](https://eduardonunes.dev/Ferramentas/sql/) | 35 receitas, catálogo de 73 comandos e formatador que explica a consulta passo a passo e converte entre SQLite, T-SQL e PostgreSQL. **Não executa SQL**: não há banco conectado. |
+| **Power Query (M)** | [`/powerquery/`](https://eduardonunes.dev/Ferramentas/powerquery/) | 30 receitas de consultas (fontes de dados, limpeza, colunas, linhas, combinar, datas), catálogo de 165 funções da linguagem M e formatador que organiza a consulta e explica cada passo. **Não executa M**: gera e analisa o código. |
 
-As páginas de Excel, DAX e SQL aceitam links diretos, por exemplo `/excel/#receitas/ses`, `/dax/#catalogo` e `/sql/#explicar`.
+As páginas de Excel, DAX, SQL e Power Query aceitam links diretos, por exemplo `/excel/#receitas/ses`, `/dax/#catalogo`, `/sql/#explicar` e `/powerquery/#receitas/csv`.
 
 ### PDF Local
 
@@ -40,7 +41,8 @@ pdf/index.html      PDF Local (GERADO por build.py; arquivo único e offline)
 excel/index.html    Fórmulas do Excel (HTML único, sem build)
 dax/index.html      Fórmulas DAX (HTML único, sem build)
 sql/index.html      Consultas SQL (HTML único, sem build)
-assets/tema.css     tema compartilhado (landing, Excel, DAX e SQL)
+powerquery/index.html  Power Query / linguagem M (HTML único, sem build)
+assets/tema.css     tema compartilhado (landing, Excel, DAX, SQL e Power Query)
 assets/fonts/       Space Grotesk e Roboto Slab (as mesmas do eduardonunes.dev)
 assets/favicon.svg  ícone do site
 src/pdf/            código-fonte do PDF Local (veja abaixo)
