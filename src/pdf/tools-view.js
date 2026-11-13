@@ -49,7 +49,7 @@ function drawEl(c, el, s) {
 function mountEditor(root, { sign }) {
   let cur = null, pdf = null, V = null;
   const EL = {};                       // página (1-based) -> elementos
-  let sel = null, tool = sign ? 'sig' : 'select', sigImg = null, drag = null, ta = null, hover = null;
+  let sel = null, tool = sign ? 'sig' : 'edit', sigImg = null, drag = null, ta = null, hover = null;
   const TI = {};                       // página -> trechos de texto existentes (para "Editar texto do PDF")
   const undoStack = [];
   const P = { color: '#d11a2a', fill: '#ffe600', lw: 2, size: 16, family: 'Helvetica' };
@@ -57,7 +57,7 @@ function mountEditor(root, { sign }) {
 
   const TOOLS = [['select', '↖ Selecionar'], ['edit', '✎ Editar texto do PDF'], ['text', 'T Texto'], ['rect', '▭ Retângulo'], ['hl', '▮ Realçar'], ['cover', '▯ Cobrir (branco)'], ['line', '╱ Linha'], ['free', '✎ Desenho livre'], ['img', '🖼 Imagem'], ['sig', '✍ Assinatura'], ['field', '▤ Campo de texto'], ['check', '☑ Caixa de seleção']];
   const tbar = h('div', { class: 'tbar' });
-  const hints = { select: 'Clique em um item para selecioná-lo; arraste para mover. Delete remove.', edit: 'Passe o mouse sobre o texto do PDF e clique nele para alterar. O texto original é coberto e o novo é escrito no lugar (fonte aproximada: Helvetica, Times ou Courier). Para apagar de verdade o texto antigo do arquivo, use "Ocultar".', text: 'Clique na página e digite. Enter confirma, Shift+Enter quebra a linha.', rect: 'Arraste para desenhar o contorno.', hl: 'Arraste sobre o texto para realçar.', cover: 'Arraste para cobrir uma área com branco (não apaga o texto de verdade: para isso use "Ocultar").', line: 'Arraste para traçar uma linha.', free: 'Mantenha o botão pressionado e desenhe.', img: 'Escolha uma imagem e clique na página para posicioná-la.', sig: 'Crie a assinatura abaixo e clique na página para colocá-la.', field: 'Arraste para criar um campo de texto preenchível.', check: 'Arraste para criar uma caixa de seleção.' };
+  const hints = { select: 'Clique em um item que você adicionou para selecioná-lo; arraste para mover. Delete remove. Clicar em um texto que já estava no PDF também o edita.', edit: 'Passe o mouse sobre o texto do PDF e clique nele para alterar. O texto original é coberto e o novo é escrito no lugar (fonte aproximada: Helvetica, Times ou Courier). Para apagar de verdade o texto antigo do arquivo, use "Ocultar".', text: 'Clique na página e digite. Enter confirma, Shift+Enter quebra a linha.', rect: 'Arraste para desenhar o contorno.', hl: 'Arraste sobre o texto para realçar.', cover: 'Arraste para cobrir uma área com branco (não apaga o texto de verdade: para isso use "Ocultar").', line: 'Arraste para traçar uma linha.', free: 'Mantenha o botão pressionado e desenhe.', img: 'Escolha uma imagem e clique na página para posicioná-la.', sig: 'Crie a assinatura abaixo e clique na página para colocá-la.', field: 'Arraste para criar um campo de texto preenchível.', check: 'Arraste para criar uma caixa de seleção.' };
   const hint = h('p', { class: 'note', style: 'margin:0 0 8px' });
   const setTool = t => {
     tool = t; if (ta) { ta.remove(); ta = null; }
@@ -170,6 +170,8 @@ function mountEditor(root, { sign }) {
     return { bg: hex(bg), fg: hex(fg) };
   };
 
+  const beginEdit = r => { const st = sampleRun(r); hover = null; startText({ x: r.x, y: r.y }, { run: r, text: r.text, size: r.size, family: r.fam, bold: r.bold, color: st.fg, w: r.w, cover: { bg: st.bg, x: r.x - 1.5, y: r.y - r.size * .88, w: r.w + 3, h: r.size * 1.13 } }); };
+
   /* texto: caixa de digitação sobre a página (novo texto, ou edição de um trecho existente quando o.run vem preenchido) */
   const startText = (p, o = {}) => {
     if (ta) ta.remove();
@@ -197,7 +199,7 @@ function mountEditor(root, { sign }) {
   /* desenho e interação */
   const draw = (c, v) => {
     const s = v.scale; (EL[v.n] || []).forEach(el => drawEl(c, el, s));
-    if (tool === 'edit' && hover && !ta) { c.save(); c.fillStyle = 'rgba(138,91,216,.16)'; c.strokeStyle = '#8a5bd8'; c.lineWidth = 1.2; const x = (hover.x - 1.5) * s, y = (hover.y - hover.size * .88) * s, w = (hover.w + 3) * s, hh = hover.size * 1.13 * s; c.fillRect(x, y, w, hh); c.strokeRect(x, y, w, hh); c.restore(); }
+    if ((tool === 'edit' || tool === 'select') && hover && !ta) { c.save(); c.fillStyle = 'rgba(138,91,216,.16)'; c.strokeStyle = '#8a5bd8'; c.lineWidth = 1.2; const x = (hover.x - 1.5) * s, y = (hover.y - hover.size * .88) * s, w = (hover.w + 3) * s, hh = hover.size * 1.13 * s; c.fillRect(x, y, w, hh); c.strokeRect(x, y, w, hh); c.restore(); }
     if (drag && drag.preview) drawEl(c, drag.preview, s);
     if (sel && (EL[v.n] || []).includes(sel)) { const b = boxOf(sel); c.save(); c.strokeStyle = '#a58be6'; c.lineWidth = 1.5; c.setLineDash([5, 3]); c.strokeRect((b.x - 3) * s, (b.y - 3) * s, (b.w + 6) * s, (b.h + 6) * s); c.restore(); }
   };
@@ -208,11 +210,12 @@ function mountEditor(root, { sign }) {
       for (let i = l.length - 1; i >= 0; i--) if (hitEl(l[i], p)) { sel = l[i]; break; }
       if (sel) { drag = { mode: 'move', last: p, start: { ...p }, moved: false }; V.top.setPointerCapture(e.pointerId);
         if (sel.color) { pc.value = sel.color; P.color = sel.color; } if (sel.t === 'text') { psz.value = sel.size; P.size = sel.size; pfam.value = sel.family; P.family = sel.family; } if (sel.t === 'img' && !sel.baseW) sel.baseW = sel.w; }
+      if (!sel) { const r = hitRun(p); if (r) { e.preventDefault(); beginEdit(r); return; } }
       V.redraw(); return;
     }
     if (tool === 'edit') {
       e.preventDefault(); const r = hitRun(p);
-      if (r) { const st = sampleRun(r); hover = null; startText({ x: r.x, y: r.y }, { run: r, text: r.text, size: r.size, family: r.fam, bold: r.bold, color: st.fg, w: r.w, cover: { bg: st.bg, x: r.x - 1.5, y: r.y - r.size * .88, w: r.w + 3, h: r.size * 1.13 } }); }
+      if (r) beginEdit(r);
       else if (TI[V.n] && !TI[V.n].length) toast('Esta página não tem texto selecionável (talvez seja uma imagem digitalizada). Use "Cobrir" e "Texto".', 'err');
       return;
     }
@@ -227,7 +230,7 @@ function mountEditor(root, { sign }) {
     if (tool === 'free') drag.preview = { t: 'free', pts: [p], color: P.color, lw: P.lw };
   };
   const onMove = e => {
-    if (!drag) { if (tool === 'edit' && !ta) { const r = hitRun(V.pos(e)) || null; if (r !== hover) { hover = r; V.redraw(); } } return; }
+    if (!drag) { if ((tool === 'edit' || tool === 'select') && !ta) { const q = V.pos(e); const r = (tool === 'select' && list().some(el => hitEl(el, q))) ? null : (hitRun(q) || null); if (r !== hover) { hover = r; V.redraw(); } } return; }
     const p = V.pos(e);
     if (drag.mode === 'move') { moveEl(sel, p.x - drag.last.x, p.y - drag.last.y); drag.last = p; drag.moved = true; V.redraw(); return; }
     const a = drag.a, box = { x: Math.min(a.x, p.x), y: Math.min(a.y, p.y), w: Math.abs(p.x - a.x), h: Math.abs(p.y - a.y) };
