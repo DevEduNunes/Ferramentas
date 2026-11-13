@@ -14,7 +14,7 @@ Ferramentas gratuitas que rodam **100% no navegador**: sem upload, sem cadastro,
 
 | Ferramenta | Endereço | O que faz |
 |---|---|---|
-| **PDF Local** | [`/pdf/`](https://eduardonunes.dev/Ferramentas/pdf/) | 24 ferramentas para PDF, ver [abaixo](#pdf-local). Funciona offline. |
+| **PDF Local** | [`/pdf/`](https://eduardonunes.dev/Ferramentas/pdf/) | 26 ferramentas para PDF, ver [abaixo](#pdf-local). Funciona offline. |
 | **Fórmulas do Excel** | [`/excel/`](https://eduardonunes.dev/Ferramentas/excel/) | Receitas para preencher, catálogo de 100 funções e conversor de fórmulas entre português (`;`) e inglês (`,`). |
 | **Fórmulas DAX** | [`/dax/`](https://eduardonunes.dev/Ferramentas/dax/) | Receitas de medidas para Power BI, catálogo de 109 funções e formatador com conversão de separador (`,` ⇄ `;`). |
 | **Consultas SQL** | [`/sql/`](https://eduardonunes.dev/Ferramentas/sql/) | 35 receitas, catálogo de 73 comandos e formatador que explica a consulta passo a passo e converte entre SQLite, T-SQL e PostgreSQL. **Não executa SQL**: não há banco conectado. |
@@ -53,10 +53,11 @@ src/pdf/
   tools-core.js     visualizador de página com camada de desenho, rasterização, texto invisível
   tools-basic.js    girar, recortar, números, metadados, reparar, texto → PDF, digitalizar
   tools-convert.js  PDF → texto / Markdown, PDF → Word
-  tools-view.js     editar, assinar, formulários, ocultar, comparar
+  tools-view.js     editar (inclui texto já existente), assinar (visual), formulários, ocultar, comparar
+  tools-sign.js     criar certificado (.pfx) e assinar digitalmente (PKCS#7)
   tools-secure.js   proteger (AES-256), remover senha, página de limites
   build.py          gera pdf/index.html
-  *.min.js          pdf-lib, pdf.js (+ worker) e JSZip
+  *.min.js          pdf-lib, pdf.js (+ worker), JSZip e node-forge
 ```
 
 ## Privacidade
@@ -133,7 +134,10 @@ Cada `git push` na `main` republica o site em cerca de 1 a 3 minutos. Evite abri
   - "Ocultar" também rasteriza as páginas afetadas, de propósito, para o texto escondido sumir de verdade.
   - "Proteger" usa uma implementação própria de AES-256 (revisão 6), conferida com o pdf.js; ainda não foi aberta no Adobe Reader.
   - "PDF → Word" e "PDF → Texto" só extraem texto: tabelas, colunas e imagens não são reconstruídas.
-  - "Assinar" é uma assinatura visual, sem certificado digital.
+  - "Assinar PDF" é uma assinatura visual (imagem), sem valor criptográfico.
+  - "Assinar digitalmente" grava uma assinatura PKCS#7 destacada (adbe.pkcs7.detached) com um certificado `.pfx`/`.p12`. Foi conferida com o OpenSSL (assinatura válida; arquivo adulterado é rejeitado), mas ainda não aberta no Adobe Reader. Não há carimbo de tempo de uma autoridade (a data é a do relógio do computador) nem suporte a A3 (token/cartão). Reescrever o PDF invalida assinaturas anteriores.
+  - "Criar certificado" gera um certificado **autoassinado**: protege a integridade, mas nenhuma autoridade atesta a identidade. Para valor jurídico pleno no Brasil use um certificado ICP-Brasil A1.
+  - Em "Editar PDF", a edição de texto existente cobre o original e escreve o novo por cima (fonte aproximada); o texto antigo continua no arquivo. Use "Ocultar" para removê-lo de verdade.
   - Textos novos usam fontes padrão do PDF (Helvetica, Times e Courier): letras latinas e acentos comuns.
 - **Excel:** os nomes em português foram conferidos na documentação, mas não em um Excel instalado. Funções marcadas como 365/2019 dependem da versão.
 - **DAX:** os exemplos não foram executados no Power BI. O formatador não reorganiza código com comentários (`//` ou `--`); ele só converte o separador.
@@ -141,4 +145,4 @@ Cada `git push` na `main` republica o site em cerca de 1 a 3 minutos. Evite abri
 
 ## Licença das bibliotecas e fontes
 
-O PDF Local embute pdf-lib (MIT), pdf.js (Apache-2.0) e JSZip (MIT ou GPL-3.0). Os arquivos originais ficam em `src/pdf/`. As fontes Space Grotesk e Roboto Slab (SIL Open Font License) ficam em `assets/fonts/`.
+O PDF Local embute pdf-lib (MIT), pdf.js (Apache-2.0) e JSZip (MIT ou GPL-3.0) e node-forge (BSD-3-Clause ou GPL-2.0). Os arquivos originais ficam em `src/pdf/`. As fontes Space Grotesk e Roboto Slab (SIL Open Font License) ficam em `assets/fonts/`.

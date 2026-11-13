@@ -127,7 +127,7 @@ tools.push({ id: 'limites', icon: 'ℹ', title: 'O que não dá para fazer aqui'
       ['Resumir e traduzir com IA', 'Exigem um modelo de linguagem, que roda em servidor. Enviar o documento a um serviço externo contraria a proposta desta página: nada sai do seu computador.'],
       ['HTML → PDF a partir de um endereço (URL)', 'Buscar uma página na internet exige acesso à rede, que esta página bloqueia de propósito. Para páginas que você já abriu, use "Imprimir → Salvar como PDF" do navegador.'],
       ['PDF/A (arquivamento)', 'Precisa embutir fontes, perfil de cor e metadados XMP validados. Sem um validador, qualquer "PDF/A" gerado aqui não teria garantia.'],
-      ['Assinatura digital com certificado (ICP-Brasil, etc.)', '"Assinar PDF" faz apenas a assinatura visual. Certificados exigem chave privada, carimbo de tempo e validação própria.'],
+      ['Carimbo de tempo e assinatura de longo prazo (PAdES-LTV)', '"Assinar digitalmente" grava a assinatura com o relógio do seu computador e sem carimbo de uma autoridade de tempo. Certificados em token ou cartão (A3) também não são acessíveis por uma página web: use um certificado em arquivo (A1, .pfx).'],
     ];
     root.append(h('div', { class: 'card' }, h('table', { class: 't' }, h('thead', {}, h('tr', {}, h('th', {}, 'Recurso'), h('th', {}, 'Por que não está aqui'))), h('tbody', {}, rowsData.map(([a, b]) => h('tr', {}, h('td', {}, h('strong', {}, a)), h('td', {}, b)))))),
       h('p', { class: 'note' }, 'Esse é o preço de verdade da privacidade: tudo o que está nesta página roda no seu computador, e o que não dá para rodar aqui fica de fora em vez de ir para um servidor.'));
