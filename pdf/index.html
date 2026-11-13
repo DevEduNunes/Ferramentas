@@ -1846,24 +1846,106 @@ async function signPdf(bytes, id, o) {
   for (let i = 0; i < hexSig.length; i++) out[hs + 1 + i] = hexSig.charCodeAt(i);
   return { bytes: out, name, range };
 }
-/* confere a assinatura de um PDF gerado: resumo (SHA-256) do conteúdo e assinatura RSA do signatário */
-async function verifySigned(out) {
-  const s = binStr(out), m = /\/ByteRange\s*\[\s*0\s+(\d+)\s+(\d+)\s+(\d+)\s*\]/.exec(s);
-  if (!m) return { ok: false, why: 'ByteRange ausente' };
-  const a = +m[1], b = +m[2], c = +m[3];
-  if (b + c !== out.length) return { ok: false, why: 'ByteRange não cobre o arquivo' };
-  const data = new Uint8Array(a + c); data.set(out.subarray(0, a), 0); data.set(out.subarray(b), a);
-  const derBytes = forge.util.hexToBytes(s.slice(a + 1, b - 1));
-  const p7 = forge.pkcs7.messageFromAsn1(forge.asn1.fromDer(derBytes, { parseAllBytes: false })), rc = p7.rawCapture;
-  const attrs = rc.authenticatedAttributes, cert = p7.certificates[0];
-  const dg = new Uint8Array(await crypto.subtle.digest('SHA-256', data)), want = binStr(dg);
-  const mdAttr = attrs.find(x => forge.asn1.derToOid(x.value[0].value) === forge.pki.oids.messageDigest);
-  if (!mdAttr || mdAttr.value[1].value[0].value !== want) return { ok: false, why: 'o conteúdo não confere com o resumo assinado' };
-  const set = forge.asn1.create(forge.asn1.Class.UNIVERSAL, forge.asn1.Type.SET, true, attrs);
-  const md = forge.md.sha256.create(); md.update(forge.asn1.toDer(set).getBytes());
-  const ok = cert.publicKey.verify(md.digest().getBytes(), rc.signature);
-  return { ok, why: ok ? '' : 'assinatura RSA inválida', cert };
+/* ---------- validar assinaturas de um PDF ---------- */
+const OID_DIGEST = { '1.3.14.3.2.26': ['SHA-1', 'sha1'], '2.16.840.1.101.3.4.2.1': ['SHA-256', 'sha256'], '2.16.840.1.101.3.4.2.2': ['SHA-384', 'sha384'], '2.16.840.1.101.3.4.2.3': ['SHA-512', 'sha512'] };
+/* lê uma string de dicionário PDF (hexadecimal ou entre parênteses) */
+function pdfText(dict, key) {
+  const m = new RegExp(`/${key}\\s*(<[0-9A-Fa-f\\s]*>|\\((?:\\\\[\\s\\S]|[^\\\\)])*\\))`).exec(dict); if (!m) return '';
+  let b;
+  if (m[1][0] === '<') { const x = m[1].slice(1, -1).replace(/\s+/g, ''); b = forge.util.hexToBytes(x.length % 2 ? x + '0' : x); }
+  else b = m[1].slice(1, -1).replace(/\\([nrtbf()\\]|[0-7]{1,3})/g, (_, c) => ({ n: '\n', r: '\r', t: '\t', b: '\b', f: '\f' })[c] ?? (/^[0-7]+$/.test(c) ? String.fromCharCode(parseInt(c, 8)) : c));
+  if (b.startsWith('\xfe\xff')) { let o = ''; for (let i = 2; i + 1 < b.length; i += 2) o += String.fromCharCode(b.charCodeAt(i) << 8 | b.charCodeAt(i + 1)); return o; }
+  return b;
 }
+const parseCertFile = bytes => {            // aceita .cer/.crt em DER ou PEM
+  const s = binStr(bytes);
+  return /-----BEGIN CERTIFICATE-----/.test(s) ? forge.pki.certificateFromPem(s) : forge.pki.certificateFromAsn1(forge.asn1.fromDer(s));
+};
+/* devolve uma entrada por assinatura encontrada: { ok, hashOk, sigOk, later, cert, ... } */
+async function inspectSignatures(bytes) {
+  const s = binStr(bytes), res = [], re = /\/ByteRange\s*\[\s*(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s*\]/g;
+  let m;
+  while ((m = re.exec(s))) {
+    const off1 = +m[1], len1 = +m[2], off2 = +m[3], len2 = +m[4];
+    const o = s.lastIndexOf(' obj', m.index), e = s.indexOf('endobj', m.index), dict = s.slice(Math.max(o, 0), e < 0 ? m.index + 600 : e);
+    const r = { subFilter: (/\/SubFilter\s*\/([\w.]+)/.exec(dict) || [])[1] || '', reason: pdfText(dict, 'Reason'), location: pdfText(dict, 'Location'), claimedName: pdfText(dict, 'Name'), claimedDate: pdfText(dict, 'M'), ok: false, later: false };
+    res.push(r);
+    try {
+      if (/RFC3161/i.test(r.subFilter)) throw new Error('carimbo de tempo do documento (não é uma assinatura de pessoa)');
+      if (off1 !== 0 || len1 > off2 || off2 + len2 > bytes.length) throw new Error('intervalo de bytes (ByteRange) inválido');
+      const tail = bytes.subarray(off2 + len2); r.later = tail.some(b => b > 32);
+      const der = forge.util.hexToBytes(s.slice(len1 + 1, off2 - 1).replace(/\s+/g, ''));
+      const p7 = forge.pkcs7.messageFromAsn1(forge.asn1.fromDer(der, { parseAllBytes: false })), rc = p7.rawCapture;
+      const dOid = forge.asn1.derToOid(rc.digestAlgorithm), alg = OID_DIGEST[dOid];
+      if (!alg) throw new Error('algoritmo de resumo não suportado (' + dOid + ')');
+      const certs = p7.certificates || [], sn = forge.util.bytesToHex(rc.serial || '').replace(/^0+/, '');
+      const cert = certs.find(c => c.serialNumber.replace(/^0+/, '') === sn) || certs[0];
+      if (!cert) throw new Error('a assinatura não traz o certificado do assinante');
+      if (!cert.publicKey || !cert.publicKey.n) throw new Error('tipo de chave não suportado (só RSA)');
+      const data = new Uint8Array(len1 + len2); data.set(bytes.subarray(off1, off1 + len1), 0); data.set(bytes.subarray(off2, off2 + len2), len1);
+      const dg = binStr(new Uint8Array(await crypto.subtle.digest(alg[0], data)));
+      const attrs = rc.authenticatedAttributes;
+      if (attrs && attrs.length) {
+        const mdA = attrs.find(x => forge.asn1.derToOid(x.value[0].value) === forge.pki.oids.messageDigest);
+        r.hashOk = !!mdA && mdA.value[1].value[0].value === dg;
+        const set = forge.asn1.create(forge.asn1.Class.UNIVERSAL, forge.asn1.Type.SET, true, attrs), md = forge.md[alg[1]].create();
+        md.update(forge.asn1.toDer(set).getBytes());
+        r.sigOk = cert.publicKey.verify(md.digest().getBytes(), rc.signature);
+        const tA = attrs.find(x => forge.asn1.derToOid(x.value[0].value) === forge.pki.oids.signingTime);
+        if (tA) { const v = tA.value[1].value[0]; try { r.signTime = v.type === forge.asn1.Type.UTCTIME ? forge.asn1.utcTimeToDate(v.value) : forge.asn1.generalizedTimeToDate(v.value); } catch {} }
+      } else { r.hashOk = true; r.sigOk = cert.publicKey.verify(dg, rc.signature); }
+      r.ok = !!(r.hashOk && r.sigOk); r.cert = cert; r.alg = alg[0]; r.certCount = certs.length;
+      r.self = cert.issuer.hash === cert.subject.hash;
+    } catch (err) { r.err = err?.message || String(err); }
+  }
+  return res;
+}
+
+tools.push({ id: 'validar', icon: '✅', title: 'Validar assinatura', desc: 'Confere as assinaturas digitais de um PDF: se o conteúdo foi alterado depois de assinado, quem assinou e a validade do certificado. Tudo no seu computador.',
+  mount(root) {
+    let sigs = null, trustFp = null, trustName = '';
+    const out = h('div');
+    const cerPick = h('input', { type: 'file', accept: '.cer,.crt,.pem,.der', class: 'hide' });
+    const cerLabel = h('span', { class: 'meta' }, 'Opcional: o .cer que o assinante lhe enviou');
+    cerPick.addEventListener('change', async () => {
+      const f = cerPick.files[0]; if (!f) return; cerPick.value = '';
+      try { const c = parseCertFile(await readBytes(f)); trustFp = certFingerprint(c); trustName = certCN(c); cerLabel.textContent = f.name + ' · ' + trustName; render(); }
+      catch { toast('Não foi possível ler esse certificado (use um .cer/.crt em DER ou PEM).', 'err'); }
+    });
+    const dt = d => d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR');
+    const line = (k, v) => h('div', { class: 'meta', style: 'margin-top:4px;word-break:break-all' }, [h('b', {}, k + ': '), v]);
+    const render = () => {
+      if (!sigs) { out.replaceChildren(); return; }
+      if (!sigs.length) { out.replaceChildren(h('p', { class: 'warn' }, 'Este PDF não tem assinatura digital. (Uma assinatura desenhada ou imagem sobre a página, como a de "Assinar PDF", não conta: não tem valor criptográfico.)')); return; }
+      out.replaceChildren(...sigs.map((r, i) => {
+        const head = r.err ? h('p', { class: 'bad' }, `✘ Assinatura ${i + 1}: não foi possível conferir (${r.err}).`)
+          : !r.ok ? h('p', { class: 'bad' }, `✘ Assinatura ${i + 1}: INVÁLIDA. ${!r.hashOk ? 'O conteúdo do PDF foi alterado depois de assinado.' : 'A assinatura não confere com o certificado (arquivo corrompido ou adulterado).'}`)
+          : r.later ? h('p', { class: 'warn' }, `⚠ Assinatura ${i + 1}: íntegra, mas o arquivo tem conteúdo acrescentado depois dela (outra assinatura ou uma edição). O que foi assinado não mudou; confira o que veio depois.`)
+          : h('p', { class: 'ok' }, `✔ Assinatura ${i + 1}: íntegra. O documento não foi alterado desde a assinatura.`);
+        const kids = [head];
+        if (r.cert) {
+          const c = r.cert, na = c.validity.notAfter, nb = c.validity.notBefore, when = r.signTime || null, issuer = (c.issuer.getField('CN') || {}).value || '—', mail = (c.subject.getField('E') || {}).value;
+          const org = (c.subject.getField('O') || {}).value;
+          kids.push(line('Assinante', certCN(c) + (org ? ' · ' + org : '') + (mail ? ' <' + mail + '>' : '')));
+          kids.push(line('Emissor', issuer + (r.self ? ' (certificado autoassinado)' : '')));
+          kids.push(line('Validade do certificado', nb.toLocaleDateString('pt-BR') + ' a ' + na.toLocaleDateString('pt-BR') + (new Date() > na ? ' (expirado hoje)' : '')));
+          if (when) kids.push(line('Data da assinatura', dt(when) + ' (relógio do computador do assinante: não prova a data)')); else if (r.claimedDate) kids.push(line('Data informada', r.claimedDate.replace(/^D:/, '') + ' (informada pelo assinante, não é prova)'));
+          if (when && (when < nb || when > na)) kids.push(h('p', { class: 'warn' }, 'Atenção: a data da assinatura está fora do prazo de validade do certificado.'));
+          if (r.reason) kids.push(line('Motivo', r.reason)); if (r.location) kids.push(line('Local', r.location));
+          kids.push(line('Algoritmo', r.alg + ' com RSA ' + c.publicKey.n.bitLength() + ' bits'));
+          kids.push(line('Impressão digital (SHA-256)', certFingerprint(c)));
+          const fp = certFingerprint(c);
+          kids.push(trustFp ? (fp === trustFp ? h('p', { class: 'ok' }, `✔ O certificado é o mesmo do arquivo que você forneceu (${trustName}). Se você confia nesse .cer, a identidade confere.`) : h('p', { class: 'bad' }, `✘ O certificado desta assinatura NÃO é o do arquivo que você forneceu (${trustName}).`))
+            : h('p', { class: 'note' }, r.self ? 'Certificado autoassinado: nenhuma autoridade atesta quem é o assinante. Para confiar na identidade, peça o .cer ao assinante por um canal seguro e escolha-o acima, ou compare a impressão digital.' : 'A confiança na identidade (cadeia até uma autoridade certificadora) não é verificada aqui. Para ICP-Brasil, confira em validar.iti.gov.br ou no Adobe.'));
+        } else if (r.claimedName) kids.push(line('Nome informado', r.claimedName));
+        return h('div', { class: 'card' }, kids);
+      }));
+    };
+    const holder = h('div');
+    root.append(holder, h('div', { class: 'row', style: 'margin:12px 0' }, h('button', { class: 'btn', onclick: () => cerPick.click() }, 'Escolher certificado do assinante (.cer)…'), cerPick, cerLabel), out,
+      h('p', { class: 'note' }, 'A validação mostra duas coisas: se o arquivo foi alterado depois da assinatura e qual certificado assinou. Ela não decide se você deve confiar nesse certificado: isso depende de quem o emitiu.'));
+    rawPdf(holder, c => run('Validando…', async () => { sigs = await inspectSignatures(c.bytes); render(); }));
+  } });
 
 tools.push({ id: 'assinardig', icon: '🔏', title: 'Assinar digitalmente', desc: 'Assina o PDF com um certificado (.pfx/.p12): ICP-Brasil A1, o que você criou aqui ou outro. A assinatura fica dentro do arquivo e qualquer alteração depois dela é detectada.',
   mount(root) {
@@ -1901,8 +1983,8 @@ tools.push({ id: 'assinardig', icon: '🔏', title: 'Assinar digitalmente', desc
         stamp = { pageIndex: b.page - 1, rect: [Math.min(p1[0], p2[0]), Math.min(p1[1], p2[1]), Math.max(p1[0], p2[0]), Math.max(p1[1], p2[1])] };
       }
       const r = await signPdf(cur.bytes, id, { stamp, reason: reason.value.trim(), location: loc.value.trim(), contact: contact.value.trim() });
-      const v = await verifySigned(r.bytes);
-      if (!v.ok) throw new Error('A verificação da assinatura falhou (' + v.why + '). Nada foi baixado.');
+      const v = (await inspectSignatures(r.bytes)).pop();
+      if (!v || !v.ok) throw new Error('A verificação da assinatura falhou (' + (v?.err || (v && !v.hashOk ? 'o conteúdo não confere com o resumo assinado' : 'assinatura RSA inválida')) + '). Nada foi baixado.');
       await (await loadPdfJs(r.bytes)).getPage(1);                              // o PDF assinado ainda abre
       dlPdf(r.bytes, `${baseName(cur.file.name)}-assinado-digitalmente.pdf`);
       const self = id.cert.issuer.hash === id.cert.subject.hash, now = new Date(), nb = id.cert.validity.notBefore, na = id.cert.validity.notAfter;
@@ -2076,7 +2158,7 @@ const MENU = [
   ['Organizar', ['juntar', 'dividir', 'organizar', 'girar', 'recortar', 'numeros']],
   ['Converter e criar', ['pdf2img', 'img2pdf', 'digitalizar', 'texto2pdf', 'pdf2texto', 'pdf2word', 'comprimir']],
   ['Editar e revisar', ['editar', 'assinar', 'formularios', 'marca', 'ocultar', 'comparar']],
-  ['Assinatura digital', ['certificado', 'assinardig']],
+  ['Assinatura digital', ['certificado', 'assinardig', 'validar']],
   ['Segurança e reparo', ['proteger', 'desbloquear', 'metadados', 'reparar']],
   ['Sobre', ['limites']],
 ];
