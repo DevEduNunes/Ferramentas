@@ -104,9 +104,20 @@ async function signPdf(bytes, id, o) {
   const doc = await PDFDocument.load(bytes), ctx = doc.context, now = new Date();
   const name = certCN(id.cert);
   // carimbo visual (desenhado na página, antes de assinar)
+  let stamp = o.stamp || null, note = '';
+  if (!stamp && o.place) {
+    const pi = o.place.page === 'last' ? doc.getPageCount() - 1 : 0, pg = doc.getPage(pi);
+    if (((pg.getRotation().angle % 360) + 360) % 360) note = 'página girada: assinado sem carimbo visível';
+    else {
+      const mb = pg.getMediaBox(), w = Math.min(210, mb.width - 40), hh = 66, m = 28, c = o.place.corner;
+      const x = c.endsWith('l') ? mb.x + m : c.endsWith('c') ? mb.x + (mb.width - w) / 2 : mb.x + mb.width - w - m;
+      const y = c.startsWith('t') ? mb.y + mb.height - hh - m : mb.y + m;
+      stamp = { pageIndex: pi, rect: [x, y, x + w, y + hh] };
+    }
+  }
   let rect = [0, 0, 0, 0], page = doc.getPage(0);
-  if (o.stamp) {
-    page = doc.getPage(o.stamp.pageIndex); rect = o.stamp.rect;
+  if (stamp) {
+    page = doc.getPage(stamp.pageIndex); rect = stamp.rect;
     const fR = await doc.embedFont(StandardFonts.Helvetica), fB = await doc.embedFont(StandardFonts.HelveticaBold);
     const w = rect[2] - rect[0], hh = rect[3] - rect[1];
     const lines = [['Assinado digitalmente por', fR], [name, fB], ['Data: ' + fmtDate(now) + ' ' + tzStr(now, ':'), fR]];
@@ -158,7 +169,7 @@ async function signPdf(bytes, id, o) {
   if (der.length > SIG_BYTES) throw new Error('O certificado (com a cadeia) é grande demais para o espaço reservado.');
   const hexSig = hex2(der, true).padEnd(SIG_BYTES * 2, '0');
   for (let i = 0; i < hexSig.length; i++) out[hs + 1 + i] = hexSig.charCodeAt(i);
-  return { bytes: out, name, range };
+  return { bytes: out, name, range, stamped: !!stamp, note };
 }
 /* ---------- validar assinaturas de um PDF ---------- */
 const OID_DIGEST = { '1.3.14.3.2.26': ['SHA-1', 'sha1'], '2.16.840.1.101.3.4.2.1': ['SHA-256', 'sha256'], '2.16.840.1.101.3.4.2.2': ['SHA-384', 'sha384'], '2.16.840.1.101.3.4.2.3': ['SHA-512', 'sha512'] };
@@ -215,9 +226,23 @@ async function inspectSignatures(bytes) {
   return res;
 }
 
-tools.push({ id: 'validar', icon: '✅', title: 'Validar assinatura', desc: 'Confere as assinaturas digitais de um PDF: se o conteúdo foi alterado depois de assinado, quem assinou e a validade do certificado. Tudo no seu computador.',
+/* ---- resumo por arquivo e por assinatura (usado na validação em lote) ---- */
+const sigLabel = r => r.err ? '✘ Não foi possível conferir'
+  : !r.ok ? '✘ INVÁLIDA'
+  : r.later ? '⚠ Íntegra, com conteúdo acrescentado depois'
+  : '✔ Íntegra';
+const fileStatus = (sigs, err) => {
+  if (err) return { k: 'bad', text: '✘ Erro ao ler o arquivo' };
+  if (!sigs.length) return { k: 'none', text: 'Sem assinatura digital' };
+  if (sigs.some(r => !r.err && !r.ok)) return { k: 'bad', text: '✘ INVÁLIDA' };
+  if (sigs.some(r => r.err)) return { k: 'bad', text: '✘ Não foi possível conferir' };
+  if (sigs.some(r => r.later)) return { k: 'warn', text: '⚠ Íntegra, com conteúdo depois' };
+  return { k: 'ok', text: '✔ Íntegra' };
+};
+
+tools.push({ id: 'validar', icon: '✅', title: 'Validar assinatura', desc: 'Confere as assinaturas digitais de um ou vários PDFs: se o conteúdo foi alterado depois de assinado, quem assinou e a validade do certificado. Tudo no seu computador.',
   mount(root) {
-    let sigs = null, trustFp = null, trustName = '';
+    let results = [], trustFp = null, trustName = '';
     const out = h('div');
     const cerPick = h('input', { type: 'file', accept: '.cer,.crt,.pem,.der', class: 'hide' });
     const cerLabel = h('span', { class: 'meta' }, 'Opcional: o .cer que o assinante lhe enviou');
@@ -228,37 +253,71 @@ tools.push({ id: 'validar', icon: '✅', title: 'Validar assinatura', desc: 'Con
     });
     const dt = d => d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR');
     const line = (k, v) => h('div', { class: 'meta', style: 'margin-top:4px;word-break:break-all' }, [h('b', {}, k + ': '), v]);
+    const NOSIG = 'Este PDF não tem assinatura digital. (Uma assinatura desenhada ou imagem sobre a página, como a de "Assinar PDF", não conta: não tem valor criptográfico.)';
+    const sigCard = (r, i) => {
+      const head = r.err ? h('p', { class: 'bad' }, `✘ Assinatura ${i + 1}: não foi possível conferir (${r.err}).`)
+        : !r.ok ? h('p', { class: 'bad' }, `✘ Assinatura ${i + 1}: INVÁLIDA. ${!r.hashOk ? 'O conteúdo do PDF foi alterado depois de assinado.' : 'A assinatura não confere com o certificado (arquivo corrompido ou adulterado).'}`)
+        : r.later ? h('p', { class: 'warn' }, `⚠ Assinatura ${i + 1}: íntegra, mas o arquivo tem conteúdo acrescentado depois dela (outra assinatura ou uma edição). O que foi assinado não mudou; confira o que veio depois.`)
+        : h('p', { class: 'ok' }, `✔ Assinatura ${i + 1}: íntegra. O documento não foi alterado desde a assinatura.`);
+      const kids = [head];
+      if (r.cert) {
+        const c = r.cert, na = c.validity.notAfter, nb = c.validity.notBefore, when = r.signTime || null, issuer = (c.issuer.getField('CN') || {}).value || '—', mail = (c.subject.getField('E') || {}).value;
+        const org = (c.subject.getField('O') || {}).value;
+        kids.push(line('Assinante', certCN(c) + (org ? ' · ' + org : '') + (mail ? ' <' + mail + '>' : '')));
+        kids.push(line('Emissor', issuer + (r.self ? ' (certificado autoassinado)' : '')));
+        kids.push(line('Validade do certificado', nb.toLocaleDateString('pt-BR') + ' a ' + na.toLocaleDateString('pt-BR') + (new Date() > na ? ' (expirado hoje)' : '')));
+        if (when) kids.push(line('Data da assinatura', dt(when) + ' (relógio do computador do assinante: não prova a data)')); else if (r.claimedDate) kids.push(line('Data informada', r.claimedDate.replace(/^D:/, '') + ' (informada pelo assinante, não é prova)'));
+        if (when && (when < nb || when > na)) kids.push(h('p', { class: 'warn' }, 'Atenção: a data da assinatura está fora do prazo de validade do certificado.'));
+        if (r.reason) kids.push(line('Motivo', r.reason)); if (r.location) kids.push(line('Local', r.location));
+        kids.push(line('Algoritmo', r.alg + ' com RSA ' + c.publicKey.n.bitLength() + ' bits'));
+        const fp = certFingerprint(c);
+        kids.push(line('Impressão digital (SHA-256)', fp));
+        kids.push(trustFp ? (fp === trustFp ? h('p', { class: 'ok' }, `✔ O certificado é o mesmo do arquivo que você forneceu (${trustName}). Se você confia nesse .cer, a identidade confere.`) : h('p', { class: 'bad' }, `✘ O certificado desta assinatura NÃO é o do arquivo que você forneceu (${trustName}).`))
+          : h('p', { class: 'note' }, r.self ? 'Certificado autoassinado: nenhuma autoridade atesta quem é o assinante. Para confiar na identidade, peça o .cer ao assinante por um canal seguro e escolha-o acima, ou compare a impressão digital.' : 'A confiança na identidade (cadeia até uma autoridade certificadora) não é verificada aqui. Para ICP-Brasil, confira em validar.iti.gov.br ou no Adobe.'));
+      } else if (r.claimedName) kids.push(line('Nome informado', r.claimedName));
+      return h('div', { class: 'card' }, kids);
+    };
+    const cardsOf = f => f.err ? [h('p', { class: 'bad' }, `✘ Não foi possível ler este arquivo (${f.err}).`)] : f.sigs.length ? f.sigs.map(sigCard) : [h('p', { class: 'warn' }, NOSIG)];
+    const trustCell = f => { if (!trustFp) return null; const s = f.sigs.filter(r => r.cert); if (!s.length) return '—'; return s.every(r => certFingerprint(r.cert) === trustFp) ? '✔ confere' : '✘ diferente'; };
+    const csv = () => {
+      const q = v => '"' + String(v ?? '').replace(/"/g, '""') + '"', d = x => x.toLocaleDateString('pt-BR');
+      const rows = [['Arquivo', 'Resultado', 'Assinatura', 'Assinante', 'Emissor', 'Válido de', 'Válido até', 'Data da assinatura', 'Impressão digital SHA-256', 'Observação']];
+      results.forEach(f => {
+        if (f.err || !f.sigs.length) rows.push([f.name, fileStatus(f.sigs, f.err).text, '', '', '', '', '', '', '', f.err || '']);
+        else f.sigs.forEach((r, i) => { const c = r.cert; rows.push([f.name, sigLabel(r), i + 1, c ? certCN(c) : '', c ? (c.issuer.getField('CN') || {}).value || '' : '', c ? d(c.validity.notBefore) : '', c ? d(c.validity.notAfter) : '', r.signTime ? dt(r.signTime) : '', c ? certFingerprint(c) : '', r.err || '']); });
+      });
+      download('\ufeff' + rows.map(r => r.map(q).join(';')).join('\r\n'), 'relatorio-validacao.csv', 'text/csv;charset=utf-8');
+    };
     const render = () => {
-      if (!sigs) { out.replaceChildren(); return; }
-      if (!sigs.length) { out.replaceChildren(h('p', { class: 'warn' }, 'Este PDF não tem assinatura digital. (Uma assinatura desenhada ou imagem sobre a página, como a de "Assinar PDF", não conta: não tem valor criptográfico.)')); return; }
-      out.replaceChildren(...sigs.map((r, i) => {
-        const head = r.err ? h('p', { class: 'bad' }, `✘ Assinatura ${i + 1}: não foi possível conferir (${r.err}).`)
-          : !r.ok ? h('p', { class: 'bad' }, `✘ Assinatura ${i + 1}: INVÁLIDA. ${!r.hashOk ? 'O conteúdo do PDF foi alterado depois de assinado.' : 'A assinatura não confere com o certificado (arquivo corrompido ou adulterado).'}`)
-          : r.later ? h('p', { class: 'warn' }, `⚠ Assinatura ${i + 1}: íntegra, mas o arquivo tem conteúdo acrescentado depois dela (outra assinatura ou uma edição). O que foi assinado não mudou; confira o que veio depois.`)
-          : h('p', { class: 'ok' }, `✔ Assinatura ${i + 1}: íntegra. O documento não foi alterado desde a assinatura.`);
-        const kids = [head];
-        if (r.cert) {
-          const c = r.cert, na = c.validity.notAfter, nb = c.validity.notBefore, when = r.signTime || null, issuer = (c.issuer.getField('CN') || {}).value || '—', mail = (c.subject.getField('E') || {}).value;
-          const org = (c.subject.getField('O') || {}).value;
-          kids.push(line('Assinante', certCN(c) + (org ? ' · ' + org : '') + (mail ? ' <' + mail + '>' : '')));
-          kids.push(line('Emissor', issuer + (r.self ? ' (certificado autoassinado)' : '')));
-          kids.push(line('Validade do certificado', nb.toLocaleDateString('pt-BR') + ' a ' + na.toLocaleDateString('pt-BR') + (new Date() > na ? ' (expirado hoje)' : '')));
-          if (when) kids.push(line('Data da assinatura', dt(when) + ' (relógio do computador do assinante: não prova a data)')); else if (r.claimedDate) kids.push(line('Data informada', r.claimedDate.replace(/^D:/, '') + ' (informada pelo assinante, não é prova)'));
-          if (when && (when < nb || when > na)) kids.push(h('p', { class: 'warn' }, 'Atenção: a data da assinatura está fora do prazo de validade do certificado.'));
-          if (r.reason) kids.push(line('Motivo', r.reason)); if (r.location) kids.push(line('Local', r.location));
-          kids.push(line('Algoritmo', r.alg + ' com RSA ' + c.publicKey.n.bitLength() + ' bits'));
-          kids.push(line('Impressão digital (SHA-256)', certFingerprint(c)));
-          const fp = certFingerprint(c);
-          kids.push(trustFp ? (fp === trustFp ? h('p', { class: 'ok' }, `✔ O certificado é o mesmo do arquivo que você forneceu (${trustName}). Se você confia nesse .cer, a identidade confere.`) : h('p', { class: 'bad' }, `✘ O certificado desta assinatura NÃO é o do arquivo que você forneceu (${trustName}).`))
-            : h('p', { class: 'note' }, r.self ? 'Certificado autoassinado: nenhuma autoridade atesta quem é o assinante. Para confiar na identidade, peça o .cer ao assinante por um canal seguro e escolha-o acima, ou compare a impressão digital.' : 'A confiança na identidade (cadeia até uma autoridade certificadora) não é verificada aqui. Para ICP-Brasil, confira em validar.iti.gov.br ou no Adobe.'));
-        } else if (r.claimedName) kids.push(line('Nome informado', r.claimedName));
-        return h('div', { class: 'card' }, kids);
-      }));
+      if (!results.length) { out.replaceChildren(); return; }
+      if (results.length === 1) { out.replaceChildren(...cardsOf(results[0])); return; }
+      const st = results.map(f => fileStatus(f.sigs, f.err)), n = k => st.filter(s => s.k === k).length;
+      const head = ['Arquivo', 'Resultado', 'Assinante', 'Data da assinatura', trustFp ? 'Confere com o .cer' : null].filter(Boolean);
+      const table = h('table', { class: 't' }, h('thead', {}, h('tr', {}, head.map(t => h('th', {}, t)))),
+        h('tbody', {}, results.map((f, i) => h('tr', {},
+          h('td', { style: 'overflow-wrap:anywhere' }, f.name),
+          h('td', { class: st[i].k === 'ok' ? 'ok' : st[i].k === 'bad' ? 'bad' : '' }, st[i].text),
+          h('td', {}, [...new Set(f.sigs.filter(r => r.cert).map(r => certCN(r.cert)))].join(', ') || '—'),
+          h('td', {}, f.sigs.find(r => r.signTime) ? dt(f.sigs.find(r => r.signTime).signTime) : '—'),
+          trustFp ? h('td', {}, trustCell(f)) : null))));
+      out.replaceChildren(
+        h('p', { class: n('bad') ? 'bad' : n('warn') || n('none') ? 'warn' : 'ok' }, `${results.length} arquivos: ${n('ok')} íntegros, ${n('warn')} com conteúdo posterior, ${n('bad')} inválidos ou com erro, ${n('none')} sem assinatura.`),
+        h('div', { class: 'card', style: 'overflow-x:auto' }, table),
+        h('div', { class: 'row', style: 'margin:12px 0' }, h('button', { class: 'btn', onclick: csv }, 'Baixar relatório (CSV)')),
+        ...results.map((f, i) => h('details', { class: 'card' }, h('summary', { style: 'cursor:pointer' }, `${f.name} — ${st[i].text}`), ...cardsOf(f))));
     };
     const holder = h('div');
+    holder.append(dropzone({ accept: '.pdf,application/pdf', multiple: true, label: 'Arraste um ou vários PDFs assinados aqui', onFiles: files => run('Validando…', async prog => {
+      results = [];
+      for (let i = 0; i < files.length; i++) {
+        prog(i, files.length, `Validando ${i + 1} de ${files.length}…`);
+        try { const b = await readBytes(files[i]); if (!binStr(b.subarray(0, 1024)).includes('%PDF-')) throw new Error('o arquivo não é um PDF válido'); results.push({ name: files[i].name, sigs: await inspectSignatures(b) }); }
+        catch (e) { results.push({ name: files[i].name, sigs: [], err: errMsg(e) }); }
+      }
+      prog(files.length, files.length); render();
+    }) }));
     root.append(holder, h('div', { class: 'row', style: 'margin:12px 0' }, h('button', { class: 'btn', onclick: () => cerPick.click() }, 'Escolher certificado do assinante (.cer)…'), cerPick, cerLabel), out,
       h('p', { class: 'note' }, 'A validação mostra duas coisas: se o arquivo foi alterado depois da assinatura e qual certificado assinou. Ela não decide se você deve confiar nesse certificado: isso depende de quem o emitiu.'));
-    rawPdf(holder, c => run('Validando…', async () => { sigs = await inspectSignatures(c.bytes); render(); }));
   } });
 
 tools.push({ id: 'assinardig', icon: '🔏', title: 'Assinar digitalmente', desc: 'Assina o PDF com um certificado (.pfx/.p12): ICP-Brasil A1, o que você criou aqui ou outro. A assinatura fica dentro do arquivo e qualquer alteração depois dela é detectada.',
@@ -322,4 +381,57 @@ tools.push({ id: 'assinardig', icon: '🔏', title: 'Assinar digitalmente', desc
       opts.classList.remove('hide'); go.disabled = false; await V.go(1); box = box || defaultBox(); V.redraw();
     });
     root.unmount = () => { pdf?.destroy?.(); };
+  } });
+
+/* ---------- assinar vários PDFs de uma vez ---------- */
+const fileErr = e => /parse|header|Invalid PDF/i.test(e?.message || '') ? 'o arquivo não é um PDF válido ou está corrompido' : errMsg(e);
+tools.push({ id: 'assinarlote', icon: '🗂️', title: 'Assinar em lote', desc: 'Assina vários PDFs de uma vez com o mesmo certificado (.pfx/.p12) e entrega tudo num ZIP. O carimbo visível fica na mesma posição em todos os arquivos.',
+  mount(root) {
+    let list = [], pfx = null;
+    const listEl = h('div', { class: 'list' });
+    const count = h('span', { class: 'meta' });
+    const pfxPick = h('input', { type: 'file', accept: '.pfx,.p12,application/x-pkcs12', class: 'hide' });
+    const pfxName = h('span', { class: 'meta' }, 'Nenhum certificado escolhido');
+    pfxPick.addEventListener('change', async () => { const f = pfxPick.files[0]; if (!f) return; pfx = await readBytes(f); pfxName.textContent = f.name + ' · ' + fmtSize(f.size); pfxPick.value = ''; });
+    const pw = h('input', { type: 'password', autocomplete: 'off', style: 'width:220px', placeholder: 'Senha do certificado' });
+    const reason = h('input', { type: 'text', value: 'Assinatura digital', style: 'width:240px' });
+    const loc = h('input', { type: 'text', placeholder: 'Cidade / UF (opcional)', style: 'width:200px' });
+    const contact = h('input', { type: 'text', placeholder: 'E-mail ou telefone (opcional)', style: 'width:220px' });
+    const vis = h('input', { type: 'checkbox', checked: true });
+    const pgSel = h('select', {}, h('option', { value: 'first' }, 'Primeira página'), h('option', { value: 'last' }, 'Última página'));
+    const posSel = h('select', {}, [['br', 'Inferior direito'], ['bl', 'Inferior esquerdo'], ['bc', 'Inferior centro'], ['tr', 'Superior direito'], ['tl', 'Superior esquerdo']].map(([v, t]) => h('option', { value: v }, t)));
+    const out = h('div');
+    const redraw = () => { drawItems(listEl, list, redraw, it => fmtSize(it.size)); count.textContent = list.length ? `${list.length} arquivo(s) na fila` : ''; go.disabled = !list.length; };
+    const go = h('button', { class: 'primary', disabled: true, onclick: () => run('Assinando…', async prog => {
+      out.replaceChildren();
+      if (!list.length) throw new Error('Adicione ao menos um PDF.');
+      if (!pfx) throw new Error('Escolha o arquivo do certificado (.pfx ou .p12).');
+      const id = loadPfx(pfx, pw.value), place = vis.checked ? { page: pgSel.value, corner: posSel.value } : null;
+      const z = new JSZip(), used = new Set(), log = []; let okN = 0;
+      for (let i = 0; i < list.length; i++) {
+        const it = list[i]; prog(i, list.length, `Assinando ${i + 1} de ${list.length}: ${it.name}`);
+        await new Promise(r => setTimeout(r, 0));
+        try {
+          const r = await signPdf(await readBytes(it.file), id, { place, reason: reason.value.trim(), location: loc.value.trim(), contact: contact.value.trim() });
+          const v = (await inspectSignatures(r.bytes)).pop();
+          if (!v || !v.ok) throw new Error('a verificação da assinatura falhou');
+          const base = baseName(it.name) + '-assinado-digitalmente'; let nm = base + '.pdf', k = 1;
+          while (used.has(nm.toLowerCase())) nm = `${base}-${++k}.pdf`;
+          used.add(nm.toLowerCase()); z.file(nm, r.bytes); okN++; log.push({ ok: true, name: it.name, note: r.note || '' });
+        } catch (e) { log.push({ ok: false, name: it.name, note: fileErr(e) }); }
+      }
+      prog(list.length, list.length, 'Gerando ZIP…');
+      out.replaceChildren(
+        h('p', { class: okN === list.length ? 'ok' : okN ? 'warn' : 'bad' }, okN ? `${okN} de ${list.length} PDF(s) assinados e conferidos. O ZIP foi baixado.` : 'Nenhum PDF foi assinado.'),
+        ...log.map(l => h('div', { class: 'meta', style: 'margin-top:4px;word-break:break-all' }, [h('span', { class: l.ok ? 'ok' : 'bad' }, l.ok ? '✔ ' : '✘ '), l.name + (l.note ? ' — ' + l.note : '')])));
+      if (okN) { download(await z.generateAsync({ type: 'blob' }), 'pdfs-assinados.zip'); toast(`${okN} PDF(s) assinado(s).`); }
+    }) }, 'Assinar todos e baixar ZIP');
+    const dz = dropzone({ accept: '.pdf,application/pdf', multiple: true, label: 'Arraste os PDFs aqui', onFiles: fs => { fs.forEach(f => list.push({ name: f.name, size: f.size, file: f })); redraw(); } });
+    root.append(dz, listEl, h('div', { class: 'row', style: 'margin:8px 0' }, count, h('span', { class: 'grow' }), h('button', { class: 'btn', onclick: () => { list.length = 0; redraw(); out.replaceChildren(); } }, 'Limpar lista')),
+      h('div', { class: 'card' },
+        h('div', { class: 'row' }, h('button', { class: 'btn', onclick: () => pfxPick.click() }, 'Escolher certificado (.pfx / .p12)…'), pfxPick, pfxName, h('label', { class: 'f' }, 'Senha', pw)),
+        h('div', { class: 'row', style: 'margin-top:12px' }, h('label', { class: 'f' }, 'Motivo', reason), h('label', { class: 'f' }, 'Local', loc), h('label', { class: 'f' }, 'Contato', contact)),
+        h('div', { class: 'row', style: 'margin-top:12px' }, h('label', { class: 'f inline' }, vis, 'Mostrar o carimbo na página'), h('label', { class: 'f' }, 'Página', pgSel), h('label', { class: 'f' }, 'Posição', posSel)),
+        h('p', { class: 'note' }, 'Cada arquivo recebe a sua própria assinatura e é conferido antes de entrar no ZIP; os que falharem (por exemplo, PDF com senha) aparecem na lista com o motivo. Páginas giradas são assinadas sem carimbo visível. Todos os arquivos ficam na memória do navegador: para lotes muito grandes, divida em partes. Assine por último: editar depois invalida a assinatura.')),
+      h('div', { class: 'row end', style: 'margin-top:14px' }, go), out);
   } });

@@ -14,7 +14,7 @@ Ferramentas gratuitas que rodam **100% no navegador**: sem upload, sem cadastro,
 
 | Ferramenta | Endereço | O que faz |
 |---|---|---|
-| **PDF Local** | [`/pdf/`](https://eduardonunes.dev/Ferramentas/pdf/) | 27 ferramentas para PDF, ver [abaixo](#pdf-local). Funciona offline. |
+| **PDF Local** | [`/pdf/`](https://eduardonunes.dev/Ferramentas/pdf/) | 28 ferramentas para PDF, ver [abaixo](#pdf-local). Funciona offline. |
 | **Fórmulas do Excel** | [`/excel/`](https://eduardonunes.dev/Ferramentas/excel/) | Receitas para preencher, catálogo de 100 funções e conversor de fórmulas entre português (`;`) e inglês (`,`). |
 | **Fórmulas DAX** | [`/dax/`](https://eduardonunes.dev/Ferramentas/dax/) | Receitas de medidas para Power BI, catálogo de 109 funções e formatador com conversão de separador (`,` ⇄ `;`). |
 | **Consultas SQL** | [`/sql/`](https://eduardonunes.dev/Ferramentas/sql/) | 35 receitas, catálogo de 73 comandos e formatador que explica a consulta passo a passo e converte entre SQLite, T-SQL e PostgreSQL. **Não executa SQL**: não há banco conectado. |
@@ -54,7 +54,7 @@ src/pdf/
   tools-basic.js    girar, recortar, números, metadados, reparar, texto → PDF, digitalizar
   tools-convert.js  PDF → texto / Markdown, PDF → Word
   tools-view.js     editar (inclui texto já existente), assinar (visual), formulários, ocultar, comparar
-  tools-sign.js     criar certificado (.pfx), assinar digitalmente (PKCS#7) e validar assinaturas
+  tools-sign.js     criar certificado (.pfx), assinar digitalmente (PKCS#7, individual e em lote) e validar assinaturas (um ou vários PDFs)
   tools-secure.js   proteger (AES-256), remover senha, página de limites
   build.py          gera pdf/index.html
   *.min.js          pdf-lib, pdf.js (+ worker), JSZip e node-forge
@@ -137,6 +137,7 @@ Cada `git push` na `main` republica o site em cerca de 1 a 3 minutos. Evite abri
   - "Assinar PDF" é uma assinatura visual (imagem), sem valor criptográfico.
   - "Assinar digitalmente" grava uma assinatura PKCS#7 destacada (adbe.pkcs7.detached) com um certificado `.pfx`/`.p12`. Foi conferida com o OpenSSL (assinatura válida; arquivo adulterado é rejeitado), mas ainda não aberta no Adobe Reader. Não há carimbo de tempo de uma autoridade (a data é a do relógio do computador) nem suporte a A3 (token/cartão). Reescrever o PDF invalida assinaturas anteriores.
   - "Validar assinatura" confere o resumo e a assinatura RSA (PKCS#7 com RSA e SHA-1/256/384/512) e mostra o certificado do assinante. Não valida a cadeia de confiança até uma autoridade (para ICP-Brasil use validar.iti.gov.br); ECDSA e carimbos de tempo não são suportados.
+  - "Assinar em lote" assina vários PDFs com o mesmo `.pfx` e entrega um ZIP; o carimbo visível usa um canto da primeira ou da última página (páginas giradas são assinadas sem carimbo). Cada arquivo é conferido antes de entrar no ZIP e os que falham aparecem com o motivo. "Validar assinatura" aceita vários PDFs, mostra uma tabela-resumo e gera um relatório CSV. Tudo fica na memória do navegador: para lotes muito grandes, divida em partes.
   - "Criar certificado" gera um certificado **autoassinado**: protege a integridade, mas nenhuma autoridade atesta a identidade. Para valor jurídico pleno no Brasil use um certificado ICP-Brasil A1.
   - Em "Editar PDF", a edição de texto existente cobre o original e escreve o novo por cima (fonte aproximada); o texto antigo continua no arquivo. Use "Ocultar" para removê-lo de verdade.
   - Textos novos usam fontes padrão do PDF (Helvetica, Times e Courier): letras latinas e acentos comuns.
