@@ -88,7 +88,7 @@ function pageViewer(pdf, opt = {}) {
   const zoom = h('select', {}, [1, 1.3, 1.7, 2.2].map(z => h('option', { value: z, selected: z === V.scale }, Math.round(z * 100) + '%')));
   zoom.addEventListener('change', () => { V.scale = +zoom.value; V.go(V.n); });
   const bar = h('div', { class: 'row', style: 'margin-bottom:10px' }, prev, label, next, h('span', { class: 'grow' }), h('label', { class: 'f inline' }, 'Zoom', zoom));
-  V.el = h('div', {}, bar, scroller); V.top = top; V.stage = stage;
+  V.el = h('div', {}, bar, scroller); V.top = top; V.stage = stage; V.base = base;
   V.redraw = () => { const c = top.getContext('2d'); c.clearRect(0, 0, top.width, top.height); opt.draw?.(c, V); };
   V.pos = e => { const r = top.getBoundingClientRect(); return { x: (e.clientX - r.left) * top.width / r.width / V.scale, y: (e.clientY - r.top) * top.height / r.height / V.scale }; };
   V.user = (x, y) => { const [ux, uy] = V.vp1.convertToPdfPoint(x, y); return { x: ux, y: uy }; };   // exibição -> espaço do PDF
