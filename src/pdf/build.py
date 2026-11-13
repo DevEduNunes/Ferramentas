@@ -26,6 +26,10 @@ def font_face(family, weight, fname):
 fonts = font_face("Space Grotesk", "300 700", "spacegrotesk-latin.woff2") + "\n" + font_face("Roboto Slab", "300 900", "robotoslab-latin.woff2")
 html = html.replace("/*__FONTS__*/", fonts)
 
+# favicon (mesmo do eduardonunes.dev) embutido como data URI: a CSP desta página só aceita imagens data: e blob:
+fav = base64.b64encode((here.parent.parent / "assets" / "favicon.svg").read_bytes()).decode()
+html = html.replace("/*__FAVICON__*/", "data:image/svg+xml;base64," + fav)
+
 out.parent.mkdir(parents=True, exist_ok=True)
 out.write_text(html, encoding="utf-8")
 print("OK ->", out, round(out.stat().st_size / 1e6, 2), "MB")
