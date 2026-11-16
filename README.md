@@ -19,8 +19,11 @@ Ferramentas gratuitas que rodam **100% no navegador**: sem upload, sem cadastro,
 | **Fórmulas DAX** | [`/dax/`](https://eduardonunes.dev/Ferramentas/dax/) | Receitas de medidas para Power BI, catálogo de 109 funções e formatador com conversão de separador (`,` ⇄ `;`). |
 | **Consultas SQL** | [`/sql/`](https://eduardonunes.dev/Ferramentas/sql/) | 35 receitas, catálogo de 73 comandos e formatador que explica a consulta passo a passo e converte entre SQLite, T-SQL e PostgreSQL. **Não executa SQL**: não há banco conectado. |
 | **Power Query (M)** | [`/powerquery/`](https://eduardonunes.dev/Ferramentas/powerquery/) | 30 receitas de consultas (fontes de dados, limpeza, colunas, linhas, combinar, datas), catálogo de 165 funções da linguagem M e formatador que organiza a consulta e explica cada passo. **Não executa M**: gera e analisa o código. |
+| **PySpark** | [`/pyspark/`](https://eduardonunes.dev/Ferramentas/pyspark/) | 36 receitas (ler e gravar, colunas, linhas, agrupar, combinar, datas, janelas, Delta), catálogo de 206 itens e formatador que organiza o código encadeado e explica cada passo. Serve para Fabric, Databricks e Spark. **Não executa código**: gera e analisa. |
+| **Microsoft Fabric** | [`/fabric/`](https://eduardonunes.dev/Ferramentas/fabric/) | 20 receitas (notebooks, OneLake, lakehouse, pipelines, Warehouse T-SQL, semantic link), catálogo de 79 itens (notebookutils, expressões de pipeline, conceitos), montador de caminhos OneLake e tabela de capacidades F. **Não se conecta ao Fabric**: gera e consulta. |
+| **Currículo ATS** | [`/curriculo/`](https://eduardonunes.dev/Ferramentas/curriculo/) | Formulário que monta um currículo de coluna única (títulos padrão, sem tabelas nem ícones), conferência de formato, comparação de palavras com o texto de uma vaga e download em Word (`.docx`), PDF (impressão) e `.txt`. Os dados ficam só no `localStorage` do navegador. **Não emula nenhum ATS real.** |
 
-As páginas de Excel, DAX, SQL e Power Query aceitam links diretos, por exemplo `/excel/#receitas/ses`, `/dax/#catalogo`, `/sql/#explicar` e `/powerquery/#receitas/csv`.
+As páginas de Excel, DAX, SQL, Power Query, PySpark, Fabric e Currículo aceitam links diretos, por exemplo `/excel/#receitas/ses`, `/dax/#catalogo`, `/sql/#explicar` e `/powerquery/#receitas/csv` e `/pyspark/#receitas/join` e `/fabric/#ferramentas`.
 
 ### PDF Local
 
@@ -43,6 +46,9 @@ excel/index.html    Fórmulas do Excel (HTML único, sem build)
 dax/index.html      Fórmulas DAX (HTML único, sem build)
 sql/index.html      Consultas SQL (HTML único, sem build)
 powerquery/index.html  Power Query / linguagem M (HTML único, sem build)
+pyspark/index.html  PySpark (HTML único, sem build)
+fabric/index.html   Microsoft Fabric (HTML único, sem build)
+curriculo/index.html  Currículo ATS (GERADO por src/curriculo/build.py; embute o JSZip)
 assets/tema.css     tema compartilhado (landing, Excel, DAX, SQL e Power Query)
 assets/fonts/       Space Grotesk e Roboto Slab (as mesmas do eduardonunes.dev)
 assets/favicon.svg  ícone do site
@@ -66,7 +72,7 @@ src/pdf/
 ## Privacidade
 
 - Todo o processamento acontece no navegador. Não existe backend, banco de dados nem login.
-- Cada página declara uma Content-Security-Policy (`<meta http-equiv="Content-Security-Policy">`) que impede requisições de rede. As páginas de landing, Excel, DAX, SQL e Power Query só carregam CSS e fontes do próprio site (`style-src 'self'`, `font-src 'self'`). O PDF Local não depende de nenhum arquivo externo: as bibliotecas e as fontes estão embutidas nele.
+- Cada página declara uma Content-Security-Policy (`<meta http-equiv="Content-Security-Policy">`) que impede requisições de rede. As páginas de landing, Excel, DAX, SQL, Power Query, PySpark, Fabric e Currículo só carregam CSS e fontes do próprio site (`style-src 'self'`, `font-src 'self'`). O PDF Local não depende de nenhum arquivo externo: as bibliotecas e as fontes estão embutidas nele.
 - Para conferir: abra as ferramentas de desenvolvedor (F12), aba *Network*, e use uma ferramenta. Nenhum upload deve aparecer.
 - No console aparecem dois avisos de CSP do Cloudflare (`beacon.min.js` e `cdn-cgi/challenge-platform`). São esperados e inofensivos: a política os bloqueia de propósito, e por isso o Web Analytics do Cloudflare não conta visitas aqui.
 
@@ -74,10 +80,10 @@ src/pdf/
 
 O padrão é o tema escuro, igual ao eduardonunes.dev, e cada página tem um botão **Modo claro / Modo escuro** (no cabeçalho; no PDF Local, na barra lateral). A escolha fica guardada no navegador (`localStorage`, chave `ferramentas-tema`) e vale para todas as ferramentas. O tema escuro segue o eduardonunes.dev: fundo `#030305`, acento roxo `#8a5bd8` / `#a58be6`, cantos retos, bordas de 1px, títulos em Roboto Slab e rótulos em caixa-alta espaçada. As cores e fontes ficam em variáveis no início de `assets/tema.css`; o modo claro redefine as mesmas variáveis em `html[data-theme=light]`. Use `var(--on)` (e não `#fff`) para texto em destaque ao passar o mouse, senão o contraste quebra no modo claro.
 
-- **Landing, Excel, DAX, SQL e Power Query** usam o `assets/tema.css`.
+- **Landing, Excel, DAX, SQL, Power Query, PySpark, Fabric e Currículo** usam o `assets/tema.css`.
 - **PDF Local** é um único arquivo: o CSS fica dentro do `src/pdf/template.html` e o `build.py` embute as fontes (latin) em base64.
 - Se mudar a paleta (escura ou clara), atualize os dois lugares.
-- **Cache:** o CSS é carregado com versão (`tema.css?v=3`). Ao alterar o `tema.css`, incremente o número nas cinco páginas (landing, Excel, DAX, SQL e Power Query), senão alguns navegadores mostram o site sem estilo.
+- **Cache:** o CSS é carregado com versão (`tema.css?v=3`). Ao alterar o `tema.css`, incremente o número nas oito páginas (landing, Excel, DAX, SQL, Power Query, PySpark, Fabric e Currículo), senão alguns navegadores mostram o site sem estilo.
 
 ## Rodar localmente
 
@@ -105,7 +111,7 @@ Para criar uma ferramenta nova: adicione `tools.push({ id, title, desc, mount(ro
 
 ### Excel, DAX, SQL e Power Query
 
-Arquivos únicos: edite `excel/index.html`, `dax/index.html`, `sql/index.html` ou `powerquery/index.html` diretamente.
+Arquivos únicos: edite `excel/index.html`, `dax/index.html`, `sql/index.html`, `powerquery/index.html`, `pyspark/index.html` ou `fabric/index.html` diretamente. O `curriculo/index.html` é gerado: edite `src/curriculo/template.html` e rode `python src/curriculo/build.py`.
 
 - **Catálogo:** array `F` no início do script. No Excel, cada entrada traz o nome em inglês e em português (os nomes em português seguem o Excel do Brasil; **confirme novos nomes em um Excel em português de verdade**, não na documentação: a lista oficial mistura nomes traduzidos e não traduzidos, e a documentação já levou a erros, como `PROCURAR`/`LOCALIZAR` invertidos. Veja a [verificação contra o Excel](#validação)). No SQL, as entradas são criadas com `E(nome, categoria, dialetos, descrição, sintaxe, exemplo, dica, equivalentes)`, em que `dialetos` é uma string com `s` (SQLite), `t` (T-SQL) e `p` (PostgreSQL).
 - **Receitas:** array `R`. No Excel e no DAX as fórmulas ficam em formato canônico (inglês, vírgula) com marcadores `{campo}` (Excel) ou `⟨campo⟩` (DAX). No SQL, os modelos usam `⟨campo⟩` e podem ser um texto ou um objeto por dialeto (`s`, `t`, `p`, `sp`, `st`, `tp`, `c`). No Power Query, cada receita é `kind: 'full'` (consulta completa) ou `kind: 'step'` (passo para colar antes do `in`) e os marcadores aceitam filtros, como `⟨campo|list⟩` (lista de textos), `⟨campo|id⟩`, `⟨campo|types⟩`, `⟨campo|sort⟩` e `⟨campo|aggs⟩`.

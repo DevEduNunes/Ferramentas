@@ -7,10 +7,10 @@
 <!-- Nenhuma requisição de rede é permitida além dos arquivos do próprio site. -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'none'">
 <title>Ferramentas · Eduardo Nunes</title>
-<meta name="description" content="Ferramentas gratuitas que rodam no navegador, sem upload e sem cadastro: PDF Local, fórmulas do Excel, fórmulas DAX para Power BI e consultas SQL.">
+<meta name="description" content="Ferramentas gratuitas que rodam no navegador, sem upload e sem cadastro: PDF Local, fórmulas do Excel, fórmulas DAX para Power BI, consultas SQL, Power Query, PySpark, Microsoft Fabric e currículo ATS.">
 <meta name="theme-color" content="#030305">
 <meta property="og:title" content="Ferramentas · Eduardo Nunes">
-<meta property="og:description" content="PDF Local, fórmulas do Excel, fórmulas DAX e consultas SQL. Tudo no navegador, nada é enviado.">
+<meta property="og:description" content="PDF Local, Excel, DAX, SQL, Power Query, PySpark, Microsoft Fabric e currículo ATS. Tudo no navegador, nada é enviado.">
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="assets/tema.css?v=3">
 <style>
@@ -63,7 +63,7 @@
   <header class="topbar">
     <a class="logo" href="./">Ferramentas<i>.</i></a>
     <nav style="display:flex;gap:26px;flex-wrap:wrap">
-      <a href="pdf/">PDF</a><a href="excel/">Excel</a><a href="dax/">DAX</a><a href="sql/">SQL</a><a href="powerquery/">Power Query</a>
+      <a href="pdf/">PDF</a><a href="excel/">Excel</a><a href="dax/">DAX</a><a href="sql/">SQL</a><a href="powerquery/">Power Query</a><a href="pyspark/">PySpark</a><a href="fabric/">Fabric</a><a href="curriculo/">Currículo</a>
       <a href="https://eduardonunes.dev">eduardonunes.dev ↗</a><button class="theme-btn" id="themeBtn" type="button">☀ Modo claro</button>
     </nav>
   </header>
@@ -130,6 +130,36 @@
           <code class="ex">Table.SelectRows(Fonte, each [Valor] &gt; 100)</code>
         </div>
         <ul class="tg"><li>30 receitas</li><li>165 funções</li><li>Explica passos</li></ul>
+        <span class="go">Abrir</span>
+      </a>
+      <a class="tool" href="pyspark/">
+        <span class="n">06</span>
+        <div>
+          <h3>PySpark</h3>
+          <p>Receitas para notebooks do Fabric, Databricks e Spark, catálogo de funções e um formatador que organiza o código encadeado e explica cada passo.</p>
+          <code class="ex">df.filter(F.col("valor") &gt; 100).groupBy("cliente").agg(F.sum("valor"))</code>
+        </div>
+        <ul class="tg"><li>36 receitas</li><li>206 itens</li><li>Explica passos</li></ul>
+        <span class="go">Abrir</span>
+      </a>
+      <a class="tool" href="fabric/">
+        <span class="n">07</span>
+        <div>
+          <h3>Microsoft Fabric</h3>
+          <p>Receitas para notebooks, OneLake, pipelines, Warehouse e semantic link, catálogo de notebookutils e de expressões de pipeline, e montador de caminhos OneLake.</p>
+          <code class="ex">abfss://workspace@onelake.dfs.fabric.microsoft.com/lakehouse.Lakehouse/Files</code>
+        </div>
+        <ul class="tg"><li>20 receitas</li><li>79 itens</li><li>Caminho OneLake</li></ul>
+        <span class="go">Abrir</span>
+      </a>
+      <a class="tool" href="curriculo/">
+        <span class="n">08</span>
+        <div>
+          <h3>Currículo ATS</h3>
+          <p>Monte um currículo de coluna única que os sistemas de recrutamento leem bem, compare com o texto de uma vaga e baixe em Word, PDF ou texto.</p>
+          <code class="ex">Experiência Profissional · Formação Acadêmica · Habilidades</code>
+        </div>
+        <ul class="tg"><li>Word</li><li>PDF</li><li>Compara com a vaga</li></ul>
         <span class="go">Abrir</span>
       </a>
     </div>

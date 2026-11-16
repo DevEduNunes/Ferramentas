@@ -1,0 +1,546 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<script>try{var t=localStorage.getItem('ferramentas-tema');document.documentElement.dataset.theme=(t==='light'?'light':'dark')}catch(e){document.documentElement.dataset.theme='dark'}</script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#030305">
+<!-- Nenhuma requisição de rede é permitida: tudo roda no navegador. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'none'">
+<title>Microsoft Fabric · Ferramentas</title>
+<meta name="description" content="Receitas para o Microsoft Fabric (notebooks, OneLake, pipelines, Warehouse e semantic link), catálogo de notebookutils e expressões de pipeline, montador de caminhos OneLake e tabela de capacidades. Tudo no navegador.">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../assets/tema.css?v=3">
+<style>
+.badge2{display:inline-block;margin-left:8px;padding:1px 7px;border:1px solid var(--line2);font:500 10.5px var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);vertical-align:middle}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px 16px}
+table.sku{width:100%;border-collapse:collapse;font-size:14px;margin-top:10px}
+table.sku th,table.sku td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line)}
+table.sku th{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);font-weight:600}
+table.sku tr.sel td{background:var(--panel3);color:var(--on)}
+table.sku tr.sel td:first-child{box-shadow:inset 2px 0 0 var(--accent)}
+.sbtn{font:inherit;background:transparent;border:0;color:inherit;cursor:pointer;padding:0;text-decoration:underline;text-decoration-color:var(--line2);text-underline-offset:3px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="topbar"><a class="logo" href="../">Ferramentas<i>.</i></a><nav style="display:flex;gap:26px;flex-wrap:wrap"><a href="../pdf/">PDF</a><a href="../excel/">Excel</a><a href="../dax/">DAX</a><a href="../sql/">SQL</a><a href="../powerquery/">Power Query</a><a href="../pyspark/">PySpark</a><a href="../fabric/">Fabric</a><a href="../curriculo/">Currículo</a><a href="https://eduardonunes.dev">eduardonunes.dev ↗</a><button class="theme-btn" id="themeBtn" type="button">☀ Modo claro</button></nav></header>
+<div class="kicker"><span class="count">07 / 08</span><span class="bar"></span><span class="label">Plataforma de dados</span></div>
+<h1>Microsoft <em>Fabric</em></h1>
+<p class="sub">Receitas para notebooks, OneLake, pipelines, Warehouse e semantic link, catálogo de <code>notebookutils</code> e de expressões de pipeline, montador de caminhos OneLake e tabela de capacidades. Tudo roda no seu navegador: nada do que você digita é enviado a lugar nenhum.</p>
+
+<details class="guide card">
+  <summary>Conceitos essenciais (leia uma vez, ajuda em tudo)</summary>
+  <dl>
+    <dt>Workspace, itens e OneLake</dt><dd>Tudo no Fabric vive em um <b>workspace</b>, que guarda <b>itens</b> (Lakehouse, Warehouse, notebook, pipeline…). Os dados ficam no <b>OneLake</b>, um único armazenamento por organização, no formato aberto Delta/Parquet. Os itens se enxergam sem copiar dados.</dd>
+    <dt>Lakehouse × Warehouse</dt><dd>O <b>Lakehouse</b> guarda arquivos (<code>Files/</code>) e tabelas Delta (<code>Tables/</code>) e é trabalhado com Spark (notebooks). O <b>Warehouse</b> é um banco relacional com T-SQL completo para leitura e escrita. O Lakehouse também ganha um <b>endpoint SQL</b>, que aceita T-SQL só para leitura.</dd>
+    <dt>Lakehouse padrão do notebook</dt><dd>Ao ligar um Lakehouse ao notebook, ele vira o padrão: caminhos relativos como <code>Files/vendas.csv</code> e <code>Tables/vendas</code> apontam para ele, e <code>spark.read.table("vendas")</code> funciona direto. Fora dele, use o caminho <code>abfss://</code> completo (aba <i>Caminho OneLake</i>).</dd>
+    <dt><code>notebookutils</code></dt><dd>Biblioteca já disponível nos notebooks, com funções para arquivos, segredos, executar outros notebooks e ler o contexto. Antes se chamava <code>mssparkutils</code>, e o nome antigo ainda funciona em muitos ambientes. Veja <code>notebookutils.help()</code> no seu notebook.</dd>
+    <dt>Pipelines usam expressões, não Python</dt><dd>Nos campos dinâmicos de um pipeline você escreve expressões como <code>@concat('a', 'b')</code>. O <code>@</code> inicial marca expressão; dentro de uma expressão as funções são escritas sem <code>@</code>. Datas usam formato .NET: <code>yyyy-MM-dd</code> (<code>MM</code> é mês, <code>mm</code> é minuto).</dd>
+    <dt>Fuso horário</dt><dd>As funções de data (<code>utcnow()</code>) devolvem UTC. Para horário de Brasília, converta com o fuso <code>E. South America Standard Time</code>.</dd>
+    <dt>Capacidade</dt><dd>Cada workspace roda em uma <b>capacidade</b> (F2, F4…F2048, ou a de avaliação). Ela define quanto poder de cálculo você consome, em unidades de capacidade (CU), e vale para todos os itens.</dd>
+    <dt>Segredos</dt><dd>Nunca escreva senha ou token em notebook ou pipeline. Use o Key Vault (<code>notebookutils.credentials.getSecret</code>) ou as conexões do próprio Fabric.</dd>
+    <dt>Isto muda rápido</dt><dd>O Fabric recebe novidades todo mês. Nomes de menus, funções e limites podem mudar: confira na documentação da Microsoft antes de usar em produção.</dd>
+  </dl>
+</details>
+
+<div class="ctl">
+  <div class="seg" role="tablist" aria-label="Seções">
+    <button role="tab" id="tab-receitas" aria-selected="true" data-tab="receitas">Receitas</button>
+    <button role="tab" id="tab-catalogo" aria-selected="false" data-tab="catalogo">Catálogo</button>
+    <button role="tab" id="tab-ferramentas" aria-selected="false" data-tab="ferramentas">Caminho OneLake e capacidade</button>
+  </div>
+</div>
+
+<section id="p-receitas">
+  <div class="layout">
+    <div>
+      <input type="search" id="rq" placeholder="Buscar receita…" aria-label="Buscar receita">
+      <div class="rlist" id="rlist" style="margin-top:10px"></div>
+    </div>
+    <div id="rpanel"></div>
+  </div>
+</section>
+
+<section id="p-catalogo" class="hide">
+  <input type="search" id="cq" placeholder="Buscar (ex.: formatDateTime, shortcut)…" aria-label="Buscar no catálogo">
+  <div class="chips" id="ccats"></div>
+  <div class="card" id="clist"></div>
+</section>
+
+<section id="p-ferramentas" class="hide">
+  <div class="card">
+    <h2 style="margin:0 0 4px;font-size:19px">Montar caminho do OneLake</h2>
+    <p class="note" style="margin:0 0 12px">Preencha e copie o caminho no formato que precisar. Nada é verificado no Fabric: a página só monta o texto.</p>
+    <div class="grid3">
+      <label class="f">Workspace (nome ou ID)<input type="text" id="pw" value="MeuWorkspace" spellcheck="false"></label>
+      <label class="f">Item (nome ou ID)<input type="text" id="pi" value="MeuLakehouse" spellcheck="false"></label>
+      <label class="f">Tipo do item<select id="pt"><option>Lakehouse</option><option>Warehouse</option></select></label>
+      <label class="f">Seção<select id="ps"><option>Files</option><option>Tables</option></select></label>
+      <label class="f">Subpasta ou tabela<input type="text" id="pp" value="vendas/2025" spellcheck="false"></label>
+      <label class="f">Formato (só para o código)<select id="pf"><option>parquet</option><option>delta</option><option>csv</option><option>json</option></select></label>
+    </div>
+    <div id="pout" style="margin-top:12px"></div>
+  </div>
+  <div class="card">
+    <h2 style="margin:0 0 4px;font-size:19px">Capacidades do Fabric (SKU F)</h2>
+    <p class="note" style="margin:0">Cada CU (unidade de capacidade) equivale a 2 Spark VCores. Clique em uma linha para ver o resumo.</p>
+    <div id="sout" class="tip" style="margin-top:10px"></div>
+    <table class="sku" id="skut"></table>
+  </div>
+</section>
+
+<footer>As receitas seguem a documentação do Microsoft Fabric, mas esta página não se conecta ao Fabric nem executa nada: teste no seu workspace. A plataforma muda com frequência. Não afiliado à Microsoft.</footer>
+</div>
+
+<script>
+'use strict';
+/* ============ Catálogo ============
+   [nome, categoria, descrição, sintaxe, exemplo, dica] */
+const F=[
+// ---- notebookutils
+['notebookutils.fs.ls','notebookutils','Lista arquivos e pastas.','notebookutils.fs.ls(path)','for f in notebookutils.fs.ls("Files/vendas"):\n    print(f.name, f.size)','Cada item tem name, path, size e isDir.'],
+['notebookutils.fs.mkdirs','notebookutils','Cria uma pasta (e as intermediárias).','notebookutils.fs.mkdirs(path)','notebookutils.fs.mkdirs("Files/saida/2025")','',],
+['notebookutils.fs.cp','notebookutils','Copia arquivo ou pasta.','notebookutils.fs.cp(origem, destino, [recurse])','notebookutils.fs.cp("Files/a.csv", "Files/backup/a.csv")','Para pastas, use recurse=True.'],
+['notebookutils.fs.mv','notebookutils','Move (ou renomeia) arquivo ou pasta.','notebookutils.fs.mv(origem, destino, [create_path], [overwrite])','notebookutils.fs.mv("Files/a.csv", "Files/processados/a.csv", True)','',],
+['notebookutils.fs.rm','notebookutils','Apaga arquivo ou pasta.','notebookutils.fs.rm(path, [recurse])','notebookutils.fs.rm("Files/temp", True)','Não vai para lixeira: confira o caminho antes.'],
+['notebookutils.fs.head','notebookutils','Lê os primeiros bytes de um arquivo de texto.','notebookutils.fs.head(path, [maxBytes])','print(notebookutils.fs.head("Files/a.csv", 500))','Boa para espiar um arquivo antes de ler.'],
+['notebookutils.fs.put','notebookutils','Grava texto em um arquivo.','notebookutils.fs.put(path, content, [overwrite])','notebookutils.fs.put("Files/log.txt", "ok", True)','',],
+['notebookutils.notebook.run','notebookutils','Executa outro notebook e espera terminar.','notebookutils.notebook.run(name, [timeoutSeconds], [parameters])','resultado = notebookutils.notebook.run("Limpeza", 600, {"data_ref": "2025-01-31"})','Devolve o valor passado ao notebook.exit do outro notebook.'],
+['notebookutils.notebook.runMultiple','notebookutils','Executa vários notebooks, em paralelo ou com dependências.','notebookutils.notebook.runMultiple(lista_ou_dag)','notebookutils.notebook.runMultiple(["Limpeza_A", "Limpeza_B"])','Aceita um DAG para definir a ordem entre eles.'],
+['notebookutils.notebook.exit','notebookutils','Encerra o notebook devolvendo um texto a quem o chamou.','notebookutils.notebook.exit(value)','notebookutils.notebook.exit("ok")','Em pipeline, o valor aparece na saída da atividade.'],
+['notebookutils.credentials.getSecret','notebookutils','Lê um segredo do Azure Key Vault.','notebookutils.credentials.getSecret(akvUrl, secretName)','senha = notebookutils.credentials.getSecret("https://meu-cofre.vault.azure.net/", "senha-sql")','Quem executa precisa ter permissão de leitura no cofre. Nunca imprima o segredo.'],
+['notebookutils.credentials.getToken','notebookutils','Obtém um token de acesso para um serviço (audiência).','notebookutils.credentials.getToken(audience)','token = notebookutils.credentials.getToken("storage")','Trate o token como senha.'],
+['notebookutils.runtime.context','notebookutils','Dicionário com informações da execução atual (notebook, workspace, lakehouse).','notebookutils.runtime.context','print(notebookutils.runtime.context)','As chaves variam por versão: imprima e veja o que existe.'],
+['notebookutils.help','notebookutils','Lista os módulos e comandos disponíveis na sua versão.','notebookutils.help([modulo])','notebookutils.help("fs")','Mostra o que realmente existe no seu ambiente.'],
+// ---- Expressões de pipeline
+['utcnow','Expressões de pipeline','Data e hora atuais em UTC.','utcnow([format])','@utcnow()','Devolve texto em UTC, não horário de Brasília.'],
+['formatDateTime','Expressões de pipeline','Formata data e hora como texto.','formatDateTime(timestamp, format)','@formatDateTime(utcnow(), \'yyyy-MM-dd\')','Formato .NET: yyyy ano, MM mês, dd dia, HH hora, mm minuto, ss segundo.'],
+['convertTimeZone','Expressões de pipeline','Converte de um fuso para outro.','convertTimeZone(timestamp, sourceTimeZone, destinationTimeZone, [format])','@convertTimeZone(utcnow(), \'UTC\', \'E. South America Standard Time\')','Horário de Brasília: E. South America Standard Time.'],
+['convertFromUtc','Expressões de pipeline','Converte de UTC para o fuso informado.','convertFromUtc(timestamp, destinationTimeZone, [format])','@convertFromUtc(utcnow(), \'E. South America Standard Time\')','',],
+['addDays','Expressões de pipeline','Soma dias (negativo subtrai).','addDays(timestamp, days, [format])','@addDays(utcnow(), -1)','Para ontem, use -1.'],
+['addHours','Expressões de pipeline','Soma horas.','addHours(timestamp, hours, [format])','@addHours(utcnow(), -3)','',],
+['addMinutes','Expressões de pipeline','Soma minutos.','addMinutes(timestamp, minutes, [format])','@addMinutes(utcnow(), 30)','',],
+['subtractFromTime','Expressões de pipeline','Subtrai um intervalo de uma data.','subtractFromTime(timestamp, interval, timeUnit, [format])','@subtractFromTime(utcnow(), 7, \'Day\')','Unidades: Second, Minute, Hour, Day, Week, Month, Year.'],
+['startOfDay','Expressões de pipeline','Início do dia (00:00).','startOfDay(timestamp, [format])','@startOfDay(utcnow())','',],
+['startOfMonth','Expressões de pipeline','Primeiro dia do mês, às 00:00.','startOfMonth(timestamp, [format])','@formatDateTime(startOfMonth(utcnow()), \'yyyy-MM-dd\')','',],
+['dayOfWeek','Expressões de pipeline','Dia da semana: 0 é domingo, 6 é sábado.','dayOfWeek(timestamp)','@dayOfWeek(utcnow())','',],
+['concat','Expressões de pipeline','Junta textos.','concat(text1, text2, ...)','@concat(\'Files/vendas/\', formatDateTime(utcnow(), \'yyyy/MM/dd\'))','Dentro de textos, use aspas simples.'],
+['substring','Expressões de pipeline','Pedaço do texto: início (a partir de 0) e tamanho.','substring(text, startIndex, length)','@substring(\'2025-01-31\', 0, 4)','A primeira posição é 0.'],
+['replace','Expressões de pipeline','Troca um trecho do texto por outro.','replace(text, oldString, newString)','@replace(item().nome, \' \', \'_\')','',],
+['split','Expressões de pipeline','Divide o texto em uma lista.','split(text, delimiter)','@split(\'a;b;c\', \';\')','Combine com ForEach para percorrer as partes.'],
+['toLower','Expressões de pipeline','Texto em minúsculas.','toLower(text)','@toLower(pipeline().parameters.nome)','',],
+['toUpper','Expressões de pipeline','Texto em maiúsculas.','toUpper(text)','@toUpper(pipeline().parameters.nome)','',],
+['trim','Expressões de pipeline','Tira espaços das pontas.','trim(text)','@trim(pipeline().parameters.nome)','',],
+['startsWith','Expressões de pipeline','Verdadeiro se o texto começa com o trecho.','startsWith(text, searchText)','@startsWith(item().name, \'vendas_\')','Não diferencia maiúsculas de minúsculas.'],
+['endsWith','Expressões de pipeline','Verdadeiro se o texto termina com o trecho.','endsWith(text, searchText)','@endsWith(item().name, \'.csv\')','',],
+['contains','Expressões de pipeline','Verdadeiro se o texto (ou lista) contém o valor.','contains(collection, value)','@contains(pipeline().parameters.nome, \'teste\')','',],
+['indexOf','Expressões de pipeline','Posição do trecho no texto (a partir de 0). -1 se não achar.','indexOf(text, searchText)','@indexOf(\'a-b\', \'-\')','',],
+['length','Expressões de pipeline','Tamanho do texto ou quantidade de itens da lista.','length(collection)','@length(activity(\'Lookup1\').output.value)','',],
+['string','Expressões de pipeline','Converte para texto.','string(value)','@string(pipeline().parameters.qtd)','',],
+['int','Expressões de pipeline','Converte para número inteiro.','int(value)','@int(pipeline().parameters.qtd)','',],
+['float','Expressões de pipeline','Converte para número decimal.','float(value)','@float(\'3.5\')','',],
+['json','Expressões de pipeline','Converte texto JSON em objeto, para acessar campos.','json(value)','@json(activity(\'Web1\').output.Response).id','',],
+['if','Expressões de pipeline','Condição SE: devolve um valor ou outro.','if(condition, valueIfTrue, valueIfFalse)','@if(equals(pipeline().parameters.modo, \'completo\'), \'overwrite\', \'append\')','',],
+['equals','Expressões de pipeline','Verdadeiro se os dois valores são iguais.','equals(value1, value2)','@equals(pipeline().parameters.modo, \'completo\')','',],
+['not','Expressões de pipeline','Inverte verdadeiro/falso.','not(expression)','@not(empty(pipeline().parameters.nome))','',],
+['and','Expressões de pipeline','Verdadeiro se todas as condições são verdadeiras.','and(expr1, expr2, ...)','@and(greater(length(x), 0), not(empty(y)))','',],
+['or','Expressões de pipeline','Verdadeiro se alguma condição é verdadeira.','or(expr1, expr2, ...)','@or(equals(a, 1), equals(a, 2))','',],
+['greater','Expressões de pipeline','Verdadeiro se o 1º valor é maior que o 2º.','greater(value, compareTo)','@greater(activity(\'Lookup1\').output.firstRow.qtd, 0)','greaterOrEquals, less e lessOrEquals completam o conjunto.'],
+['coalesce','Expressões de pipeline','Devolve o primeiro valor que não é nulo.','coalesce(value1, value2, ...)','@coalesce(pipeline().parameters.data_ref, formatDateTime(utcnow(), \'yyyy-MM-dd\'))','Ótimo para valor padrão de parâmetro.'],
+['empty','Expressões de pipeline','Verdadeiro se o texto ou lista está vazio ou nulo.','empty(collection)','@empty(pipeline().parameters.nome)','',],
+['createArray','Expressões de pipeline','Monta uma lista.','createArray(value1, value2, ...)','@createArray(\'norte\', \'sul\', \'leste\')','Serve de Items em um ForEach.'],
+['range','Expressões de pipeline','Lista de números em sequência.','range(startIndex, count)','@range(1, 5)','Gera 1, 2, 3, 4, 5.'],
+['first','Expressões de pipeline','Primeiro item de uma lista ou primeiro caractere.','first(collection)','@first(activity(\'Lookup1\').output.value)','last devolve o último.'],
+['union','Expressões de pipeline','Junta listas sem repetir itens.','union(collection1, collection2)','@union(variables(\'a\'), variables(\'b\'))','',],
+['add','Expressões de pipeline','Soma números.','add(summand1, summand2)','@add(variables(\'contador\'), 1)','Também existem sub, mul, div e mod.'],
+['pipeline().parameters','Expressões de pipeline','Valor de um parâmetro do pipeline.','pipeline().parameters.nome','@pipeline().parameters.data_ref','Defina os parâmetros na aba Parâmetros do pipeline.'],
+['pipeline().RunId','Expressões de pipeline','Identificador único da execução atual.','pipeline().RunId','@pipeline().RunId','Bom para registrar em logs.'],
+['pipeline().TriggerTime','Expressões de pipeline','Quando a execução foi disparada.','pipeline().TriggerTime','@pipeline().TriggerTime','Em UTC.'],
+['variables','Expressões de pipeline','Valor de uma variável do pipeline.','variables(\'nome\')','@variables(\'contador\')','Defina a variável na aba Variáveis e altere com a atividade Set variable.'],
+['activity','Expressões de pipeline','Saída de uma atividade anterior.','activity(\'NomeDaAtividade\').output','@activity(\'Lookup1\').output.firstRow.qtd','Para ver o formato real, rode o pipeline e abra a saída da atividade.'],
+['item','Expressões de pipeline','Item atual dentro de um ForEach.','item()','@item().nome','Se a lista for de objetos, acesse os campos com ponto.'],
+// ---- Conceitos
+['Workspace','Conceitos','Pasta de trabalho que reúne itens (lakehouses, notebooks, pipelines…) e define permissões e capacidade.','Workspace','','Um workspace pertence a uma capacidade.'],
+['OneLake','Conceitos','Armazenamento único e unificado do Fabric, em Delta/Parquet. Funciona como um "OneDrive para dados".','abfss://workspace@onelake.dfs.fabric.microsoft.com/…','','Tudo o que está em um lakehouse ou warehouse mora no OneLake.'],
+['Lakehouse','Conceitos','Item que guarda arquivos (Files) e tabelas Delta (Tables), trabalhado com Spark. Ganha um endpoint SQL só de leitura.','Lakehouse','','É o destino mais comum para dados brutos e tratados.'],
+['Warehouse','Conceitos','Banco relacional com T-SQL completo (leitura e escrita), com dados em Delta no OneLake.','Warehouse','','Boa escolha para quem vem do SQL Server e quer modelar em T-SQL.'],
+['Endpoint SQL','Conceitos','Interface T-SQL somente leitura sobre as tabelas Delta de um Lakehouse.','SQL analytics endpoint','','Tabelas novas podem demorar um pouco para aparecer no endpoint.'],
+['Atalho (shortcut)','Conceitos','Ponteiro para dados que estão em outro lugar (outro lakehouse, ADLS, S3…), sem copiar.','Novo atalho','','Aparece como uma pasta ou tabela normal e é lido como tal.'],
+['Espelhamento (mirroring)','Conceitos','Replica continuamente um banco externo para o OneLake, em Delta.','Mirrored database','','A lista de origens suportadas cresce: confira na documentação.'],
+['Notebook','Conceitos','Código (PySpark, Spark SQL, Scala, R) com células, ligado a um Lakehouse padrão.','Notebook','','É onde você usa a página de PySpark deste site.'],
+['Pipeline de dados','Conceitos','Orquestra atividades: copiar dados, rodar notebooks, condições, repetições.','Data pipeline','','Parâmetros e expressões deixam o fluxo dinâmico.'],
+['Dataflow Gen2','Conceitos','Transformações com Power Query (linguagem M) e destino em Lakehouse, Warehouse e outros.','Dataflow Gen2','','Para a linguagem M, veja a página de Power Query.'],
+['Modelo semântico','Conceitos','Modelo de dados do Power BI (tabelas, relações, medidas DAX) que alimenta relatórios.','Semantic model','','Para as medidas, veja a página de DAX.'],
+['Direct Lake','Conceitos','Modo em que o modelo semântico lê as tabelas Delta do OneLake direto, sem importar uma cópia.','Direct Lake','','Combina desempenho de importação com dados sempre frescos, com limites que dependem do tamanho e da capacidade.'],
+['Eventhouse / banco KQL','Conceitos','Armazém para dados de eventos e séries temporais, consultado com KQL.','Eventhouse','','Usado em cenários de tempo real.'],
+['Eventstream','Conceitos','Captura e roteia fluxos de eventos em tempo real para destinos do Fabric.','Eventstream','','',],
+['Environment','Conceitos','Define bibliotecas e configurações do Spark reutilizáveis entre notebooks.','Environment','','Use para instalar pacotes de forma permanente, em vez de %pip em todo notebook.'],
+['Capacidade','Conceitos','Poder de cálculo comprado (SKU F) e compartilhado pelos workspaces atribuídos a ela.','F2 … F2048','','Veja a tabela na aba "Caminho OneLake e capacidade".'],
+['Arquitetura medalhão','Conceitos','Organização em camadas: bronze (bruto), silver (limpo), gold (pronto para consumo).','bronze → silver → gold','','Cada camada pode ser um lakehouse ou um conjunto de tabelas.'],
+['Pipelines de implantação','Conceitos','Promovem conteúdo entre ambientes (desenvolvimento, teste, produção).','Deployment pipelines','','',],
+['Integração com Git','Conceitos','Versiona itens do workspace em um repositório (Azure DevOps ou GitHub).','Git integration','','',],
+];
+const CATS=['notebookutils','Expressões de pipeline','Conceitos'];
+const norm=s=>s.normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase();
+
+/* ============ Utilidades ============ */
+const $=s=>document.querySelector(s);
+const el=(t,a={},...k)=>{const e=document.createElement(t);for(const[x,v]of Object.entries(a)){if(x==='class')e.className=v;else if(x.startsWith('on'))e.addEventListener(x.slice(2),v);else if(v===true)e.setAttribute(x,'');else if(v!==false&&v!=null)e.setAttribute(x,v);}for(const c of k.flat())e.append(c&&c.nodeType?c:document.createTextNode(c??''));return e;};
+function copy(text,btn){
+  const done=()=>{const o=btn.textContent;btn.textContent='Copiado!';setTimeout(()=>btn.textContent=o,1200);};
+  if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(text).then(done,fallback);} else fallback();
+  function fallback(){const t=el('textarea',{style:'position:fixed;opacity:0'});t.value=text;document.body.append(t);t.select();try{document.execCommand('copy');done();}catch{btn.textContent='Selecione e copie';}t.remove();}
+}
+const fmtOut=text=>{const b=el('button',{class:'btn',type:'button','aria-label':'Copiar código'},'Copiar');b.addEventListener('click',()=>copy(text,b));return el('div',{class:'row'},el('div',{class:'out'},text),b);};
+const splitList=s=>s.split(',').map(x=>x.trim()).filter(Boolean);
+const unacc=s=>s.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
+const Q=s=>'"'+s.replace(/\\/g,'\\\\').replace(/"/g,'\\"')+'"';
+const QS=s=>"'"+s.replace(/'/g,"''")+"'";
+const SQLT={texto:'STRING',text:'STRING',inteiro:'INT',longo:'BIGINT',numero:'DOUBLE',dinheiro:'DECIMAL(18,2)',data:'DATE',datahora:'TIMESTAMP',logico:'BOOLEAN'};
+const TSQLT={texto:'VARCHAR(200)',text:'VARCHAR(200)',inteiro:'INT',longo:'BIGINT',numero:'FLOAT',dinheiro:'DECIMAL(18,2)',data:'DATE',datahora:'DATETIME2(6)',logico:'BIT'};
+const colsWith=(map)=>s=>splitList(s).map(p=>{const i=p.lastIndexOf(':');const n=(i<0?p:p.slice(0,i)).trim();const t=i<0?'texto':unacc(p.slice(i+1).trim());return n+' '+(map[t]||map.texto);}).join(',\n    ');
+const FILT={
+  q:Q,qs:QS,qsl:s=>splitList(s).map(QS).join(', '),
+  id:s=>s.trim().replace(/[^\p{L}\p{N}_]/gu,'_')||'df',
+  sqlcols:colsWith(SQLT),tsqlcols:colsWith(TSQLT),
+  cols:s=>splitList(s).join(', '),
+  list:s=>'['+splitList(s).map(Q).join(', ')+']',
+  int:s=>/^\d+$/.test(s.trim())?s.trim():'1',
+};
+
+/* ============ Receitas ============
+   campos: [chave, rótulo, padrão, dica]  |  lang: rótulo do tipo de código */
+const R=[
+// ---------- Notebook e OneLake
+{id:'onelake',cat:'Notebook e OneLake',lang:'Python (notebook)',title:'Ler dados do OneLake por caminho',goal:'Ler arquivos ou tabelas de qualquer lakehouse do OneLake, com o caminho abfss.',
+ fields:[['ws','Workspace (nome ou ID)','MeuWorkspace','nomes com espaço podem falhar: prefira o ID'],['item','Lakehouse (nome ou ID)','MeuLakehouse'],['pasta','Pasta ou arquivo','Files/vendas/2025'],['tabela','Tabela','vendas']],
+ main:{label:'Arquivos (Parquet) por caminho completo',tpl:`caminho = "abfss://⟨ws⟩@onelake.dfs.fabric.microsoft.com/⟨item⟩.Lakehouse/⟨pasta⟩"
+
+df = spark.read.format("parquet").load(caminho)`,note:'Com IDs (GUID) no lugar de nomes, o formato é abfss://<idWorkspace>@onelake.dfs.fabric.microsoft.com/<idItem>/Files/… (sem o sufixo .Lakehouse). Use a aba Caminho OneLake para montar.'},
+ alts:[{label:'Tabela Delta de outro lakehouse',tpl:`caminho = "abfss://⟨ws⟩@onelake.dfs.fabric.microsoft.com/⟨item⟩.Lakehouse/Tables/⟨tabela⟩"
+
+df = spark.read.format("delta").load(caminho)`},
+ {label:'No lakehouse padrão do notebook (caminho curto)',tpl:`df = spark.read.format("parquet").load("⟨pasta⟩")
+
+# ou, para tabelas:
+df = spark.read.table(⟨tabela|q⟩)`,note:'Só funciona se um Lakehouse estiver ligado ao notebook como padrão.'},
+ {label:'Com pandas ou open() (só Files do lakehouse padrão)',tpl:`import pandas as pd
+
+pdf = pd.read_csv("/lakehouse/default/⟨pasta⟩.csv")`,note:'O caminho /lakehouse/default/ é uma montagem local do lakehouse padrão. Ajuste a extensão do arquivo.'}]},
+{id:'fs',cat:'Notebook e OneLake',lang:'Python (notebook)',title:'Listar, copiar, mover e apagar arquivos',goal:'Gerenciar arquivos do lakehouse com notebookutils.fs.',
+ fields:[['pasta','Pasta','Files/entrada'],['arq','Arquivo','Files/entrada/vendas.csv'],['dest','Destino','Files/processados/vendas.csv']],
+ main:{label:'Listar o conteúdo de uma pasta',tpl:`for item in notebookutils.fs.ls(⟨pasta|q⟩):
+    print(item.name, item.size, "(pasta)" if item.isDir else "")`},
+ alts:[{label:'Copiar',tpl:`notebookutils.fs.cp(⟨arq|q⟩, ⟨dest|q⟩)`},
+  {label:'Mover (arquivar um arquivo já processado)',tpl:`notebookutils.fs.mv(⟨arq|q⟩, ⟨dest|q⟩, True)`,note:'O terceiro argumento cria a pasta de destino se ela não existir.'},
+  {label:'Apagar uma pasta inteira',tpl:`notebookutils.fs.rm(⟨pasta|q⟩, True)`,note:'Não há lixeira: confira o caminho antes de rodar.'},
+  {label:'Pegar só os arquivos CSV de uma pasta',tpl:`csvs = [f.path for f in notebookutils.fs.ls(⟨pasta|q⟩) if f.name.endswith(".csv")]
+print(csvs)`}]},
+{id:'parametros',cat:'Notebook e OneLake',lang:'Python (notebook)',title:'Parâmetros do notebook',goal:'Receber valores de um pipeline ou de outro notebook.',
+ fields:[['p1','Parâmetro 1','data_ref'],['v1','Valor padrão 1','2025-01-31'],['p2','Parâmetro 2','modo'],['v2','Valor padrão 2','incremental']],
+ main:{label:'Célula de parâmetros',tpl:`# Marque esta célula como "célula de parâmetros" (menu ⋯ da célula → Alternar célula de parâmetro).
+# Os valores abaixo são os padrões; o pipeline ou o notebook.run podem substituí-los.
+⟨p1|id⟩ = ⟨v1|q⟩
+⟨p2|id⟩ = ⟨v2|q⟩`,note:'Na atividade Notebook do pipeline, em Parâmetros base, informe o mesmo nome. Os valores chegam como o tipo escolhido (texto, inteiro, booleano…).'},
+ alts:[{label:'Usar os parâmetros',tpl:`from pyspark.sql import functions as F
+
+df = spark.read.table("vendas").filter(F.col("data") == ⟨p1|id⟩)
+
+if ⟨p2|id⟩ == "incremental":
+    print("Carga incremental de", ⟨p1|id⟩)`}]},
+{id:'chamar',cat:'Notebook e OneLake',lang:'Python (notebook)',title:'Chamar outro notebook',goal:'Executar notebooks em sequência ou em paralelo e receber o resultado.',
+ fields:[['nome','Nome do notebook','Limpeza_Vendas'],['tempo','Tempo limite (segundos)','600'],['param','Nome do parâmetro','data_ref'],['valor','Valor','2025-01-31']],
+ main:{label:'Executar e receber o resultado',tpl:`resultado = notebookutils.notebook.run(
+    ⟨nome|q⟩,
+    ⟨tempo|int⟩,
+    {⟨param|q⟩: ⟨valor|q⟩},
+)
+print(resultado)`,note:'O notebook chamado precisa ter uma célula de parâmetros com esse nome. O valor devolvido é o texto passado em notebookutils.notebook.exit(...) no notebook chamado.'},
+ alts:[{label:'Devolver um resultado (no notebook chamado)',tpl:`import json
+
+notebookutils.notebook.exit(json.dumps({"linhas": df.count(), "status": "ok"}))`,note:'Só aceita texto: serialize objetos com json.dumps. Nada depois do exit é executado.'},
+  {label:'Vários notebooks em paralelo',tpl:`notebookutils.notebook.runMultiple([⟨nome|q⟩, "Limpeza_Clientes", "Limpeza_Produtos"])`,note:'Para controlar a ordem (dependências), passe um DAG. Veja notebookutils.help("notebook").'}]},
+{id:'segredo',cat:'Notebook e OneLake',lang:'Python (notebook)',title:'Ler um segredo do Key Vault',goal:'Usar senha ou token sem escrevê-lo no notebook.',
+ fields:[['cofre','Endereço do Key Vault','https://meu-cofre.vault.azure.net/'],['nome','Nome do segredo','senha-sql']],
+ main:{label:'getSecret',tpl:`senha = notebookutils.credentials.getSecret(⟨cofre|q⟩, ⟨nome|q⟩)`,note:'Quem executa o notebook precisa de permissão de leitura de segredos no cofre. Não imprima a variável: a saída do notebook fica registrada.'},
+ alts:[{label:'Usar na leitura JDBC',tpl:`df = (
+    spark.read
+    .format("jdbc")
+    .option("url", "jdbc:sqlserver://servidor.exemplo.com:1433;databaseName=Vendas")
+    .option("dbtable", "dbo.Vendas")
+    .option("user", "usuario_leitura")
+    .option("password", senha)
+    .load()
+)`}]},
+{id:'contexto',cat:'Notebook e OneLake',lang:'Python (notebook)',title:'Saber onde o notebook está rodando',goal:'Ler nome do notebook, workspace e lakehouse da execução atual.',
+ fields:[],
+ main:{label:'Contexto da execução',tpl:`contexto = notebookutils.runtime.context
+print(contexto)`,note:'As chaves disponíveis variam por versão. Imprima o dicionário e use as que existirem, por exemplo contexto.get("currentWorkspaceName").'},
+ alts:[]},
+{id:'pip',cat:'Notebook e OneLake',lang:'Python (notebook)',title:'Instalar uma biblioteca',goal:'Usar um pacote Python que não vem instalado.',
+ fields:[['pacote','Pacote e versão','openpyxl==3.1.2']],
+ main:{label:'Na sessão atual (%pip)',tpl:`%pip install ⟨pacote⟩`,note:'Vale só para a sessão do notebook e pode reiniciar o interpretador: rode no início, antes do resto. Fixar a versão deixa o resultado repetível.'},
+ alts:[{label:'Permanente: usar um Environment',tpl:`# 1) No workspace, crie um item "Environment".
+# 2) Em Bibliotecas públicas, adicione: ⟨pacote⟩
+# 3) Publique o Environment e selecione-o no notebook (ou como padrão do workspace).`,note:'Melhor para pipelines e equipes: o pacote já vem instalado e a sessão inicia sem esperar o pip.'}]},
+{id:'configure',cat:'Notebook e OneLake',lang:'Python (notebook)',title:'Configurar a sessão Spark',goal:'Definir lakehouse padrão e opções do Spark.',
+ fields:[['ws','ID do workspace','00000000-0000-0000-0000-000000000000'],['lh','Nome do lakehouse','MeuLakehouse'],['lhid','ID do lakehouse','00000000-0000-0000-0000-000000000000'],['part','Partições de shuffle','64']],
+ main:{label:'Opção do Spark na sessão',tpl:`spark.conf.set("spark.sql.shuffle.partitions", ⟨part|q⟩)`,note:'Para tabelas pequenas, menos partições de shuffle evitam milhares de tarefas minúsculas. O padrão costuma ser 200.'},
+ alts:[{label:'Definir o lakehouse padrão (primeira célula)',tpl:`%%configure
+{
+    "defaultLakehouse": {
+        "name": ⟨lh|q⟩,
+        "id": ⟨lhid|q⟩,
+        "workspaceId": ⟨ws|q⟩
+    }
+}`,note:'Precisa ser a primeira célula executada da sessão. Útil quando o notebook roda por pipeline e deve apontar para um lakehouse específico.'}]},
+// ---------- Lakehouse e Delta
+{id:'criar-tabela',cat:'Lakehouse e Delta',lang:'Spark SQL (notebook)',title:'Criar uma tabela Delta',goal:'Criar uma tabela vazia com colunas e tipos definidos.',
+ fields:[['tabela','Nome da tabela','vendas'],['cols','Colunas (nome:tipo)','id:inteiro, cliente:texto, valor:dinheiro, data:data','tipos: texto, inteiro, longo, numero, dinheiro, data, datahora, logico']],
+ main:{label:'CREATE TABLE',tpl:`%%sql
+CREATE TABLE IF NOT EXISTS ⟨tabela⟩ (
+    ⟨cols|sqlcols⟩
+)
+USING DELTA`,note:'IF NOT EXISTS evita erro ao rodar de novo. A tabela aparece em Tables/ do lakehouse.'},
+ alts:[{label:'Em Python',tpl:`spark.sql("""
+    CREATE TABLE IF NOT EXISTS ⟨tabela⟩ (
+        ⟨cols|sqlcols⟩
+    )
+    USING DELTA
+""")`},
+  {label:'Apagar a tabela',tpl:`spark.sql("DROP TABLE IF EXISTS ⟨tabela⟩")`,note:'Apaga a tabela e seus dados. Não há como desfazer.'}]},
+{id:'incremental',cat:'Lakehouse e Delta',lang:'Python (notebook)',title:'Carga incremental por data',goal:'Carregar só o que é mais novo que a última carga.',
+ fields:[['origem','Tabela de origem','bronze_vendas'],['destino','Tabela de destino','silver_vendas'],['col','Coluna de data/hora','atualizado_em']],
+ main:{label:'Marca d\'água (watermark)',tpl:`from pyspark.sql import functions as F
+
+# Maior data já carregada no destino (nula se o destino ainda estiver vazio)
+ultima = spark.read.table(⟨destino|q⟩).agg(F.max(⟨col|q⟩)).collect()[0][0]
+
+novos = spark.read.table(⟨origem|q⟩)
+if ultima is not None:
+    novos = novos.filter(F.col(⟨col|q⟩) > F.lit(ultima))
+
+novos.write.mode("append").format("delta").saveAsTable(⟨destino|q⟩)`,note:'Linhas alteradas (não só novas) vão duplicar com append. Para atualizar também, use MERGE (receita Upsert na página de PySpark). O destino precisa existir.'},
+ alts:[]},
+{id:'atalho',cat:'Lakehouse e Delta',lang:'Python (notebook)',title:'Ler dados de um atalho (shortcut)',goal:'Usar dados que ficam em outro lugar como se estivessem no lakehouse.',
+ fields:[['atalho','Nome do atalho','dados_externos'],['sub','Subpasta','2025']],
+ main:{label:'Atalho em Files',tpl:`df = spark.read.format("parquet").load("Files/⟨atalho⟩/⟨sub⟩")`,note:'Crie o atalho no lakehouse (⋯ em Files ou Tables → Novo atalho) apontando para outro lakehouse, ADLS Gen2, S3 etc. Depois ele se comporta como uma pasta comum.'},
+ alts:[{label:'Atalho em Tables (aparece como tabela)',tpl:`df = spark.read.table(⟨atalho|q⟩)`,note:'Atalhos em Tables só funcionam bem quando apontam para uma tabela Delta.'}]},
+// ---------- Pipelines
+{id:'pl-data',cat:'Pipelines (expressões)',lang:'Expressão de pipeline',title:'Datas dinâmicas',goal:'Usar a data de hoje, de ontem ou do mês, no fuso de Brasília.',
+ fields:[['fmt','Formato','yyyy-MM-dd','yyyy ano, MM mês, dd dia, HH hora, mm minuto'],['dias','Dias para trás','1']],
+ main:{label:'Hoje, no horário de Brasília',tpl:`@formatDateTime(convertTimeZone(utcnow(), 'UTC', 'E. South America Standard Time'), ⟨fmt|qs⟩)`,note:'utcnow() devolve UTC: depois das 21h em Brasília já é o dia seguinte em UTC. Por isso a conversão de fuso.'},
+ alts:[{label:'N dias atrás',tpl:`@formatDateTime(addDays(utcnow(), -⟨dias|int⟩), ⟨fmt|qs⟩)`},
+  {label:'Primeiro dia do mês',tpl:`@formatDateTime(startOfMonth(utcnow()), ⟨fmt|qs⟩)`},
+  {label:'Caminho com a data (pasta por dia)',tpl:`@concat('Files/vendas/', formatDateTime(utcnow(), 'yyyy/MM/dd'), '/vendas.csv')`},
+  {label:'Nome de arquivo com data e hora',tpl:`@concat('vendas_', formatDateTime(utcnow(), 'yyyyMMdd_HHmmss'), '.csv')`}]},
+{id:'pl-param',cat:'Pipelines (expressões)',lang:'Expressão de pipeline',title:'Parâmetros, variáveis e saídas',goal:'Ler valores de parâmetros, variáveis e atividades anteriores.',
+ fields:[['param','Parâmetro','data_ref'],['var','Variável','contador'],['ativ','Atividade anterior','Lookup1'],['campo','Campo da saída','qtd']],
+ main:{label:'Parâmetro do pipeline',tpl:`@pipeline().parameters.⟨param⟩`,note:'Crie o parâmetro na aba Parâmetros do pipeline (nome, tipo e valor padrão).'},
+ alts:[{label:'Variável',tpl:`@variables(⟨var|qs⟩)`},
+  {label:'Primeira linha de uma atividade Lookup',tpl:`@activity(⟨ativ|qs⟩).output.firstRow.⟨campo⟩`,note:'Marque "Somente a primeira linha" na atividade Lookup. Para ver o formato real, rode e abra a saída da atividade.'},
+  {label:'Quantidade de linhas do Lookup',tpl:`@activity(⟨ativ|qs⟩).output.count`,note:'Só existe quando o Lookup devolve todas as linhas (sem marcar "Somente a primeira linha").'},
+  {label:'Valor devolvido por um notebook',tpl:`@activity(⟨ativ|qs⟩).output.result.exitValue`,note:'É o texto passado a notebookutils.notebook.exit(...). Confira o caminho exato na saída da atividade.'},
+  {label:'Valor padrão se o parâmetro estiver vazio',tpl:`@coalesce(pipeline().parameters.⟨param⟩, formatDateTime(utcnow(), 'yyyy-MM-dd'))`}]},
+{id:'pl-cond',cat:'Pipelines (expressões)',lang:'Expressão de pipeline',title:'Condições (If)',goal:'Escolher valores ou caminhos conforme uma regra.',
+ fields:[['param','Parâmetro','modo'],['valor','Valor comparado','completo'],['ativ','Atividade Lookup','Lookup1'],['campo','Campo','qtd']],
+ main:{label:'Valor diferente conforme o parâmetro',tpl:`@if(equals(pipeline().parameters.⟨param⟩, ⟨valor|qs⟩), 'overwrite', 'append')`},
+ alts:[{label:'Condição da atividade If: tem dados?',tpl:`@greater(activity(⟨ativ|qs⟩).output.firstRow.⟨campo⟩, 0)`,note:'Use na atividade If Condition. Ramo True e ramo False recebem as atividades seguintes.'},
+  {label:'Duas condições (E)',tpl:`@and(greater(activity(⟨ativ|qs⟩).output.firstRow.⟨campo⟩, 0), not(empty(pipeline().parameters.⟨param⟩)))`},
+  {label:'Texto contém um trecho',tpl:`@contains(pipeline().parameters.⟨param⟩, ⟨valor|qs⟩)`}]},
+{id:'pl-foreach',cat:'Pipelines (expressões)',lang:'Expressão de pipeline',title:'Repetir para cada item (ForEach)',goal:'Percorrer uma lista de arquivos, tabelas ou valores.',
+ fields:[['ativ','Atividade que gera a lista','Get Metadata1'],['campo','Campo do item','name'],['lista','Valores fixos','norte, sul, leste']],
+ main:{label:'Itens vindos de um Lookup',tpl:`@activity('Lookup1').output.value`,note:'Em Items do ForEach. Dentro do ForEach, @item() é o item da vez.'},
+ alts:[{label:'Itens de um Get Metadata (lista de arquivos)',tpl:`@activity(⟨ativ|qs⟩).output.childItems`,note:'Peça o campo "Lista de itens filho" no Get Metadata.'},
+  {label:'Item atual (dentro do ForEach)',tpl:`@item().⟨campo⟩`},
+  {label:'Lista fixa de valores',tpl:`@createArray(⟨lista|qsl⟩)`},
+  {label:'Números de 1 a 12',tpl:`@range(1, 12)`}]},
+// ---------- Warehouse
+{id:'wh-ctas',cat:'Warehouse (T-SQL)',lang:'T-SQL (Warehouse)',title:'Criar tabela a partir de uma consulta (CTAS)',goal:'Gravar o resultado de uma consulta em uma tabela nova.',
+ fields:[['dest','Tabela de destino','dbo.vendas_resumo'],['orig','Tabela de origem','dbo.vendas']],
+ main:{label:'CREATE TABLE AS SELECT',tpl:`CREATE TABLE ⟨dest⟩
+AS
+SELECT
+    cliente,
+    SUM(valor) AS total,
+    COUNT(*) AS pedidos
+FROM ⟨orig⟩
+GROUP BY cliente;`,note:'É a forma mais rápida de materializar um resultado. A tabela de destino não pode existir: apague antes com DROP TABLE se for recriar.'},
+ alts:[{label:'Recriar a tabela (apagar e criar)',tpl:`DROP TABLE IF EXISTS ⟨dest⟩;
+
+CREATE TABLE ⟨dest⟩
+AS
+SELECT * FROM ⟨orig⟩;`},
+  {label:'Criar tabela vazia com colunas',tpl:`CREATE TABLE dbo.exemplo (
+    id INT,
+    cliente VARCHAR(200),
+    valor DECIMAL(18,2),
+    data DATE
+);`,note:'O Warehouse tem restrições em relação ao SQL Server (por exemplo, no uso de chaves e de IDENTITY). Confira a lista de recursos suportados na documentação.'}]},
+{id:'wh-copy',cat:'Warehouse (T-SQL)',lang:'T-SQL (Warehouse)',title:'Carregar arquivos com COPY INTO',goal:'Carregar CSV ou Parquet de um armazenamento para uma tabela do Warehouse.',
+ fields:[['tabela','Tabela de destino','dbo.vendas'],['url','Endereço dos arquivos','https://conta.blob.core.windows.net/container/vendas/*.csv']],
+ main:{label:'CSV com cabeçalho',tpl:`COPY INTO ⟨tabela⟩
+FROM ⟨url|qs⟩
+WITH (
+    FILE_TYPE = 'CSV',
+    FIRSTROW = 2,
+    FIELDTERMINATOR = ';'
+);`,note:'FIRSTROW = 2 pula o cabeçalho. A origem exige permissão de acesso (por exemplo, credencial ou acesso público de leitura).'},
+ alts:[{label:'Parquet',tpl:`COPY INTO ⟨tabela⟩
+FROM ⟨url|qs⟩
+WITH (FILE_TYPE = 'PARQUET');`},
+  {label:'Pipeline de cópia (sem código)',tpl:`-- Alternativa sem T-SQL: no pipeline, use a atividade "Copy data",
+-- com a origem (arquivos) e o destino (tabela do Warehouse).`,note:'Para lotes recorrentes, a atividade Copy data do pipeline costuma ser a opção mais simples de manter.'}]},
+{id:'wh-cross',cat:'Warehouse (T-SQL)',lang:'T-SQL (Warehouse)',title:'Consultar o Lakehouse a partir do Warehouse',goal:'Juntar tabelas do Warehouse com tabelas de um Lakehouse do mesmo workspace.',
+ fields:[['lh','Nome do Lakehouse','MeuLakehouse'],['tl','Tabela no Lakehouse','vendas'],['tw','Tabela no Warehouse','dbo.clientes']],
+ main:{label:'Consulta entre itens (nome com três partes)',tpl:`SELECT v.*, c.nome AS nome_cliente
+FROM ⟨lh⟩.dbo.⟨tl⟩ AS v
+JOIN ⟨tw⟩ AS c
+    ON c.id = v.cliente_id;`,note:'Funciona entre itens do mesmo workspace: banco.esquema.tabela. O lakehouse é só de leitura por esse caminho.'},
+ alts:[{label:'Gravar o resultado no Warehouse',tpl:`CREATE TABLE dbo.vendas_enriquecidas
+AS
+SELECT v.*, c.nome AS nome_cliente
+FROM ⟨lh⟩.dbo.⟨tl⟩ AS v
+JOIN ⟨tw⟩ AS c
+    ON c.id = v.cliente_id;`}]},
+{id:'wh-endpoint',cat:'Warehouse (T-SQL)',lang:'T-SQL (endpoint SQL)',title:'Consultar o Lakehouse com T-SQL',goal:'Usar o endpoint SQL do Lakehouse para consultas de leitura.',
+ fields:[['tabela','Tabela','dbo.vendas']],
+ main:{label:'Primeiras linhas',tpl:`SELECT TOP 100 *
+FROM ⟨tabela⟩;`,note:'O endpoint SQL do Lakehouse é somente leitura. Para gravar, use um notebook (Spark) ou um Warehouse. Tabelas recém-criadas podem levar um tempo para aparecer.'},
+ alts:[{label:'Contar linhas por mês',tpl:`SELECT
+    FORMAT(data, 'yyyy-MM') AS mes,
+    COUNT(*) AS linhas
+FROM ⟨tabela⟩
+GROUP BY FORMAT(data, 'yyyy-MM')
+ORDER BY mes;`}]},
+// ---------- Modelo semântico
+{id:'sempy',cat:'Modelo semântico',lang:'Python (notebook)',title:'Ler um modelo semântico (semantic link)',goal:'Usar tabelas e medidas do Power BI dentro de um notebook.',
+ fields:[['modelo','Nome do modelo semântico','Vendas'],['tabela','Tabela','Fato Vendas']],
+ main:{label:'Ler uma tabela do modelo',tpl:`import sempy.fabric as fabric
+
+pdf = fabric.read_table(⟨modelo|q⟩, ⟨tabela|q⟩)
+display(pdf.head())`,note:'Devolve um DataFrame do pandas. Para Spark: df = spark.createDataFrame(pdf). Os nomes das funções do semantic link evoluem entre versões: confira a documentação do seu ambiente.'},
+ alts:[{label:'Rodar uma consulta DAX',tpl:`import sempy.fabric as fabric
+
+dax = """
+EVALUATE
+SUMMARIZECOLUMNS(
+    'Calendário'[Ano],
+    "Total", SUM('Fato Vendas'[Valor])
+)
+"""
+resultado = fabric.evaluate_dax(⟨modelo|q⟩, dax)
+display(resultado)`,note:'Para escrever DAX, veja a página de Fórmulas DAX deste site.'},
+  {label:'Gravar o resultado em uma tabela do lakehouse',tpl:`df = spark.createDataFrame(pdf)
+df.write.mode("overwrite").format("delta").saveAsTable("vendas_do_modelo")`}]},
+];
+
+/* ============ Estado e renderização ============ */
+let curR=R[0].id,rFilter='';const vals={};
+function setHash(h){try{history.replaceState(null,'','#'+h);}catch{}}
+function fill(tpl,r){
+  const v=vals[r.id]||{};
+  return tpl.replace(/⟨(\w+)((?:\|\w+)*)⟩/g,(m,k,fs)=>{
+    const fd=r.fields.find(x=>x[0]===k);if(!fd)return m;
+    let x=String(v[k]??fd[2]).trim()||String(fd[2]);
+    if(fs)for(const f of fs.slice(1).split('|'))if(FILT[f])x=FILT[f](x);
+    return x;
+  });
+}
+function renderRList(){
+  const box=$('#rlist');box.replaceChildren();const q=norm(rFilter);
+  const items=R.filter(r=>!q||norm(r.title+' '+r.goal+' '+r.cat).includes(q));
+  [...new Set(items.map(r=>r.cat))].forEach(c=>{
+    box.append(el('div',{class:'grp'},c));
+    items.filter(r=>r.cat===c).forEach(r=>box.append(el('button',{class:'rbtn',type:'button','aria-pressed':String(r.id===curR),onclick:()=>{curR=r.id;renderRList();renderRPanel();setHash('receitas/'+r.id);if(window.innerWidth<=820)$('#rpanel').scrollIntoView({behavior:'smooth',block:'start'});}},r.title)));
+  });
+  if(!items.length)box.append(el('p',{class:'hint',style:'padding:14px'},'Nenhuma receita encontrada. Veja o Catálogo.'));
+}
+function renderRPanel(){
+  const r=R.find(x=>x.id===curR);const p=$('#rpanel');p.replaceChildren();
+  const v=vals[r.id]=vals[r.id]||{};const outBox=el('div');
+  const draw=()=>{outBox.replaceChildren();
+    const mk=(lab,tpl,note)=>el('div',{class:'variant'},el('h3',{},lab),fmtOut(fill(tpl,r)),note?el('p',{class:'note'},note):null);
+    outBox.append(mk(r.main.label,r.main.tpl,r.main.note));r.alts.forEach(a=>outBox.append(mk(a.label,a.tpl,a.note)));};
+  const how=/pipeline/i.test(r.lang)?'Cole no campo de conteúdo dinâmico do pipeline (Adicionar conteúdo dinâmico).':/T-SQL/.test(r.lang)?'Execute no editor SQL do Warehouse (ou no endpoint SQL, quando for só leitura).':'Cole em uma célula do notebook.';
+  const tag=el('span',{class:'badge2'},r.lang);
+  const kids=[el('h2',{style:'margin:0 0 4px;font-size:19px'},r.title,tag),el('p',{class:'note',style:'margin:0'},r.goal),el('p',{class:'hint',style:'margin:6px 0 0'},how),outBox];
+  if(r.fields.length){
+    kids.push(el('h3',{style:'margin:18px 0 0;font-size:14px'},'Ajuste os nomes para o seu caso'));
+    kids.push(el('div',{class:'fields'},r.fields.map(f=>{
+      const inp=el('input',{type:'text',value:v[f[0]]??f[2],spellcheck:'false','aria-label':f[1]});
+      inp.addEventListener('input',()=>{v[f[0]]=inp.value;draw();});
+      return el('label',{class:'f'},f[1],el('small',{},f[3]||' '),inp);
+    })));
+  }
+  p.append(el('div',{class:'card'},kids));
+  draw();
+}
+let cCat='',cQ='';
+function renderCats(){
+  const box=$('#ccats');box.replaceChildren();
+  [['','Todos'],...CATS.map(c=>[c,c])].forEach(([v,t])=>box.append(el('button',{class:'chip',type:'button','aria-pressed':String(cCat===v),onclick:()=>{cCat=v;renderCats();renderCatalog();}},t)));
+}
+function renderCatalog(){
+  const box=$('#clist');box.replaceChildren();const q=norm(cQ);
+  const items=F.filter(e=>(!cCat||e[1]===cCat)&&(!q||norm(e[0]+' '+e[1]+' '+e[2]).includes(q)));
+  if(!items.length){box.append(el('p',{class:'hint'},'Nada encontrado.'));return;}
+  items.forEach(e=>box.append(el('div',{class:'fn'},
+    el('h3',{},e[0],el('span',{},e[1])),el('p',{},e[2]),
+    e[3]?el('div',{class:'out',style:'margin:6px 0'},e[3]):null,e[4]?fmtOut(e[4]):null,
+    e[5]?el('div',{class:'tip'},'💡 '+e[5]):null)));
+}
+
+/* ============ Caminho OneLake ============ */
+const GUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function renderPath(){
+  const ws=$('#pw').value.trim()||'MeuWorkspace',item=$('#pi').value.trim()||'MeuItem',tipo=$('#pt').value,sec=$('#ps').value;
+  const sub=$('#pp').value.trim().replace(/^\/+|\/+$/g,''),fmt=$('#pf').value;
+  const itemSeg=GUID.test(item)?item:item+'.'+tipo;
+  const rel=sec+(sub?'/'+sub:'');
+  const abfss=`abfss://${ws}@onelake.dfs.fabric.microsoft.com/${itemSeg}/${rel}`;
+  const https=`https://onelake.dfs.fabric.microsoft.com/${ws}/${itemSeg}/${rel}`;
+  const out=$('#pout');out.replaceChildren();
+  const add=(t,txt,note)=>out.append(el('div',{class:'variant'},el('h3',{},t),fmtOut(txt),note?el('p',{class:'note'},note):null));
+  if(/\s|[^\p{L}\p{N}\s_.\-]/u.test(ws+item)&&!GUID.test(ws))out.append(el('div',{class:'warn'},'O nome tem espaço ou caractere especial. Nesses casos o caminho por nome pode falhar: prefira os IDs (GUID) do workspace e do item, que aparecem na URL do item no Fabric.'));
+  add('Caminho abfss (Spark)',abfss,GUID.test(item)?'Com ID do item, o sufixo .'+tipo+' não entra.':'');
+  const code=sec==='Tables'?`df = spark.read.format("delta").load("${abfss}")`:fmt==='csv'?`df = (\n    spark.read\n    .option("header", True)\n    .csv("${abfss}")\n)`:`df = spark.read.format("${fmt==='delta'?'delta':fmt}").load("${abfss}")`;
+  add('Código Spark',code);
+  add('Caminho relativo (lakehouse padrão do notebook)',rel,tipo==='Lakehouse'?'Vale quando este lakehouse é o padrão do notebook.':'O caminho relativo é para o lakehouse padrão do notebook.');
+  if(tipo==='Lakehouse'&&sec==='Files')add('Caminho local (pandas, open)','/lakehouse/default/'+rel,'Montagem local do lakehouse padrão; só para Files.');
+  add('Endereço HTTPS (APIs e ferramentas externas)',https);
+}
+['#pw','#pi','#pp'].forEach(s=>$(s).addEventListener('input',renderPath));
+['#pt','#ps','#pf'].forEach(s=>$(s).addEventListener('change',renderPath));
+
+/* ============ Capacidades ============ */
+const SKUS=[2,4,8,16,32,64,128,256,512,1024,2048];
+let curSku=64;
+function renderSku(){
+  const t=$('#skut');t.replaceChildren();
+  t.append(el('thead',{},el('tr',{},el('th',{},'SKU'),el('th',{},'CU'),el('th',{},'Spark VCores'),el('th',{},'Power BI: quem só visualiza'))));
+  const tb=el('tbody');
+  SKUS.forEach(n=>tb.append(el('tr',{class:n===curSku?'sel':''},
+    el('td',{},el('button',{class:'sbtn',type:'button',onclick:()=>{curSku=n;renderSku();}},'F'+n)),
+    el('td',{},String(n)),el('td',{},String(n*2)),el('td',{},n>=64?'sem licença Pro':'precisa de Pro'))));
+  t.append(tb);
+  const vc=curSku*2;
+  $('#sout').textContent=`F${curSku}: ${curSku} CU e ${vc} Spark VCores (1 CU = 2 VCores). `+(curSku>=64?'Quem apenas visualiza relatórios compartilhados não precisa de licença Pro.':'Quem visualiza relatórios compartilhados precisa de licença Power BI Pro (ou PPU).')+' Uma avaliação gratuita (trial) tem poder equivalente a uma F64. O Spark pode usar mais VCores que o mínimo por um tempo (burst), e as regras de limites mudam: confira a documentação atual.';
+}
+
+/* ============ Abas ============ */
+const TABS=['receitas','catalogo','ferramentas'];
+function setTab(id){
+  TABS.forEach(t=>{$('#p-'+t).classList.toggle('hide',t!==id);$('#tab-'+t).setAttribute('aria-selected',String(t===id));});
+  setHash(id==='receitas'?'receitas/'+curR:id);
+}
+document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>setTab(b.dataset.tab)));
+$('#rq').addEventListener('input',e=>{rFilter=e.target.value;renderRList();});
+$('#cq').addEventListener('input',e=>{cQ=e.target.value;renderCatalog();});
+renderRList();renderRPanel();renderCats();renderCatalog();renderPath();renderSku();
+{const [t,rid]=location.hash.slice(1).split('/');if(rid&&R.some(r=>r.id===rid)){curR=rid;renderRList();renderRPanel();}if(TABS.includes(t))setTab(t);}
+</script>
+<script>(function(){var b=document.getElementById('themeBtn');if(!b)return;var r=document.documentElement;function lab(){var l=r.dataset.theme==='light';b.textContent=l?'☾ Modo escuro':'☀ Modo claro';b.setAttribute('aria-label',l?'Mudar para o modo escuro':'Mudar para o modo claro');var m=document.querySelector('meta[name=theme-color]');if(m)m.content=l?'#f7f6fa':'#030305'}b.addEventListener('click',function(){var n=r.dataset.theme==='light'?'dark':'light';r.dataset.theme=n;try{localStorage.setItem('ferramentas-tema',n)}catch(e){}lab()});lab()})();</script>
+</body>
+</html>

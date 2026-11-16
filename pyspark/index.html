@@ -1,0 +1,1307 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<script>try{var t=localStorage.getItem('ferramentas-tema');document.documentElement.dataset.theme=(t==='light'?'light':'dark')}catch(e){document.documentElement.dataset.theme='dark'}</script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#030305">
+<!-- Nenhuma requisição de rede é permitida: tudo roda no navegador. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'none'">
+<title>PySpark · Ferramentas</title>
+<meta name="description" content="Receitas de PySpark para Microsoft Fabric, Databricks e Spark, catálogo de funções e um formatador que organiza o código e explica cada passo. Tudo no navegador, sem enviar nada a servidor.">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../assets/tema.css?v=3">
+<style>
+.args{margin:6px 0 0;padding:0;list-style:none;display:grid;gap:3px}
+.args li{font-size:13px;color:var(--muted);overflow-wrap:anywhere}
+.args code{color:var(--code)}
+.args b{font-weight:500;color:var(--accent-soft)}
+.badge2{display:inline-block;margin-left:8px;padding:1px 7px;border:1px solid var(--line2);font:500 10.5px var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);vertical-align:middle}
+.aqui{margin:4px 0;color:var(--accent-soft);font-size:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="topbar"><a class="logo" href="../">Ferramentas<i>.</i></a><nav style="display:flex;gap:26px;flex-wrap:wrap"><a href="../pdf/">PDF</a><a href="../excel/">Excel</a><a href="../dax/">DAX</a><a href="../sql/">SQL</a><a href="../powerquery/">Power Query</a><a href="../pyspark/">PySpark</a><a href="../fabric/">Fabric</a><a href="../curriculo/">Currículo</a><a href="https://eduardonunes.dev">eduardonunes.dev ↗</a><button class="theme-btn" id="themeBtn" type="button">☀ Modo claro</button></nav></header>
+<div class="kicker"><span class="count">06 / 08</span><span class="bar"></span><span class="label">Dados em escala</span></div>
+<h1>Py<em>Spark</em></h1>
+<p class="sub">Receitas de código prontas para preencher, catálogo de funções e um formatador que organiza o código e explica cada passo. Serve para notebooks do Microsoft Fabric, Databricks e Spark. Tudo roda no seu navegador: nada do que você digita é enviado a lugar nenhum.</p>
+
+<details class="guide card">
+  <summary>Conceitos essenciais (leia uma vez, ajuda em tudo)</summary>
+  <dl>
+    <dt>Onde rodar</dt><dd>Em um notebook de PySpark: no <b>Microsoft Fabric</b> (notebook ligado a um Lakehouse), no Databricks, no Synapse ou em um Spark local. Nos notebooks a variável <code>spark</code> já existe. Esta página só gera e explica o código: ela <b>não executa</b> nada.</dd>
+    <dt>Imports de sempre</dt><dd><code>from pyspark.sql import functions as F</code> dá acesso a <code>F.col</code>, <code>F.sum</code>, <code>F.when</code> e às demais funções. <code>from pyspark.sql.window import Window</code> serve para janelas e <code>from pyspark.sql import types as T</code> para tipos. Evite <code>from pyspark.sql.functions import *</code>: ele esconde <code>sum</code>, <code>min</code>, <code>max</code> e <code>round</code> do Python.</dd>
+    <dt>DataFrames não mudam</dt><dd>Cada transformação (<code>filter</code>, <code>withColumn</code>, <code>join</code>…) devolve um DataFrame <b>novo</b>. Guarde o resultado em uma variável: <code>df = df.filter(...)</code>. Chamar <code>df.filter(...)</code> sozinho não altera <code>df</code>.</dd>
+    <dt>Execução preguiçosa</dt><dd>As transformações só montam um plano. O trabalho acontece nas <b>ações</b>: <code>show</code>, <code>count</code>, <code>collect</code> e <code>write</code>. Por isso um erro numa linha pode aparecer só na ação seguinte.</dd>
+    <dt>Colunas: texto ou <code>F.col</code></dt><dd>Muitos métodos aceitam o nome entre aspas (<code>select("valor")</code>). Para calcular ou comparar, use <code>F.col("valor") &gt; 100</code> ou <code>df["valor"]</code>. Constantes entram com <code>F.lit(0)</code>.</dd>
+    <dt>Condições: <code>&amp;</code> <code>|</code> <code>~</code></dt><dd>Em colunas, use <code>&amp;</code> (e), <code>|</code> (ou) e <code>~</code> (não), nunca <code>and</code>, <code>or</code> e <code>not</code>. Cada condição vai entre parênteses: <code>(F.col("a") &gt; 1) &amp; (F.col("b") == "x")</code>. Para vazios use <code>isNull()</code>, nunca <code>== None</code>.</dd>
+    <dt>Formatos de data</dt><dd>Os padrões seguem o Java: <code>yyyy</code> ano, <code>MM</code> mês, <code>dd</code> dia, <code>HH</code> hora, <code>mm</code> minuto, <code>ss</code> segundo. <code>MM</code> maiúsculo é mês; <code>mm</code> minúsculo é minuto. Datas brasileiras: <code>"dd/MM/yyyy"</code>.</dd>
+    <dt>Segredos</dt><dd>Nunca escreva senha ou token no notebook. Busque de um cofre (no Fabric, <code>notebookutils.credentials.getSecret</code>; no Databricks, <code>dbutils.secrets.get</code>).</dd>
+    <dt>Cuidado com <code>collect</code> e <code>toPandas</code></dt><dd>Eles trazem <b>todas</b> as linhas para a memória de uma única máquina. Em tabelas grandes derrubam o notebook. Filtre, agregue ou use <code>limit</code> antes.</dd>
+  </dl>
+</details>
+
+<div class="ctl">
+  <div class="seg" role="tablist" aria-label="Seções">
+    <button role="tab" id="tab-receitas" aria-selected="true" data-tab="receitas">Receitas</button>
+    <button role="tab" id="tab-catalogo" aria-selected="false" data-tab="catalogo">Catálogo</button>
+    <button role="tab" id="tab-explicar" aria-selected="false" data-tab="explicar">Formatar e explicar</button>
+  </div>
+</div>
+
+<section id="p-receitas">
+  <div class="layout">
+    <div>
+      <input type="search" id="rq" placeholder="Buscar receita…" aria-label="Buscar receita">
+      <div class="rlist" id="rlist" style="margin-top:10px"></div>
+    </div>
+    <div id="rpanel"></div>
+  </div>
+</section>
+
+<section id="p-catalogo" class="hide">
+  <input type="search" id="cq" placeholder="Buscar função (ex.: groupBy)…" aria-label="Buscar função">
+  <div class="chips" id="ccats"></div>
+  <div class="card" id="clist"></div>
+</section>
+
+<section id="p-explicar" class="hide">
+  <div class="card">
+    <label class="f">Cole um trecho de código PySpark
+      <textarea id="xin" spellcheck="false" placeholder='df = spark.read.csv("Files/vendas.csv", header=True).filter(F.col("valor") > 0).groupBy("cliente").agg(F.sum("valor").alias("total"))'></textarea>
+    </label>
+    <div class="row" style="margin-top:10px;justify-content:flex-start;flex-wrap:wrap">
+      <button class="btn primary" id="xgo">Formatar e explicar</button>
+      <button class="btn" id="xex">Usar exemplo</button>
+      <span class="hint">O código é analisado aqui mesmo, no navegador. Nada é executado.</span>
+    </div>
+  </div>
+  <div id="xout"></div>
+</section>
+
+<footer>O código gerado segue a documentação do PySpark (Spark 3.x), mas esta página não executa nada: teste no seu notebook antes de usar em produção. Algumas funções dependem da versão do Spark ou do ambiente. Não afiliado à Apache, à Microsoft nem à Databricks.</footer>
+</div>
+
+<script>
+'use strict';
+/* ============ Catálogo ============
+   [nome, categoria, descrição, sintaxe, exemplo, dica]  (parâmetros opcionais entre [colchetes] na sintaxe)
+   Prefixos: read./write./na. (leitura, escrita, tratamento de nulos), df. (DataFrame), Column. (coluna), F. (pyspark.sql.functions), Window., T. (tipos), spark. */
+const F=[
+// ---- Leitura e escrita
+['read.csv','Leitura e escrita','Lê um ou vários arquivos CSV e devolve um DataFrame.','spark.read.csv(path, [schema], [sep], [header], [inferSchema], [encoding])','df = spark.read.csv("Files/vendas.csv", header=True, sep=";")','Sem schema nem inferSchema todas as colunas vêm como texto. Aceita pasta e curinga: "Files/pasta/*.csv".'],
+['read.parquet','Leitura e escrita','Lê arquivos Parquet (formato colunar, já traz o schema).','spark.read.parquet(*paths)','df = spark.read.parquet("Files/dados/")','É bem mais rápido que CSV e guarda os tipos.'],
+['read.json','Leitura e escrita','Lê arquivos JSON (um objeto por linha, por padrão).','spark.read.json(path, [schema], [multiLine])','df = spark.read.option("multiLine", True).json("Files/dados.json")','Para um JSON "bonito" (um objeto em várias linhas) ligue multiLine.'],
+['read.table','Leitura e escrita','Lê uma tabela registrada no catálogo (no Fabric, as tabelas do Lakehouse).','spark.read.table(tableName)','df = spark.read.table("vendas")','É o mesmo que spark.table("vendas").'],
+['read.format','Leitura e escrita','Escolhe o formato da leitura: csv, parquet, json, delta, jdbc…','spark.read.format(source)','df = spark.read.format("delta").load("Tables/vendas")','Termina com .load(caminho).'],
+['read.load','Leitura e escrita','Executa a leitura no formato escolhido por format().','spark.read.format(source).load(path)','df = spark.read.format("csv").option("header", True).load("Files/a.csv")','',],
+['read.option','Leitura e escrita','Define uma opção da leitura (header, sep, encoding, multiLine, inferSchema…).','spark.read.option(key, value)','spark.read.option("header", True).option("sep", ";").csv("Files/a.csv")','Use options(**dict) para várias de uma vez.'],
+['read.options','Leitura e escrita','Define várias opções da leitura de uma vez.','spark.read.options(**opts)','spark.read.options(header=True, sep=";").csv("Files/a.csv")','',],
+['read.schema','Leitura e escrita','Informa o schema (tipos) na leitura, evitando adivinhar os tipos.','spark.read.schema(schema)','spark.read.schema("id INT, nome STRING, valor DOUBLE").csv("Files/a.csv", header=True)','Aceita texto DDL ou StructType. É mais rápido e seguro que inferSchema.'],
+['read.jdbc','Leitura e escrita','Lê uma tabela de um banco por JDBC (SQL Server, PostgreSQL…).','spark.read.jdbc(url, table, [properties])','df = spark.read.jdbc(url, "dbo.Vendas", properties={"user": usuario, "password": senha})','A senha vem de um cofre de segredos, nunca escrita no código.'],
+['spark.sql','Leitura e escrita','Executa uma consulta SQL e devolve um DataFrame.','spark.sql(sqlQuery)','df = spark.sql("SELECT cliente, SUM(valor) AS total FROM vendas GROUP BY cliente")','Enxerga tabelas do catálogo e views temporárias criadas com createOrReplaceTempView.'],
+['spark.table','Leitura e escrita','Devolve uma tabela do catálogo como DataFrame.','spark.table(tableName)','df = spark.table("vendas")','',],
+['spark.range','Leitura e escrita','Cria um DataFrame de números em sequência (coluna id).','spark.range([start], end, [step])','df = spark.range(1, 11)','Ótimo para testar e gerar calendários.'],
+['spark.createDataFrame','Leitura e escrita','Cria um DataFrame a partir de uma lista de tuplas ou de um DataFrame do pandas.','spark.createDataFrame(data, [schema])','df = spark.createDataFrame([(1, "Ana"), (2, "Rui")], ["id", "nome"])','Para listas pequenas e testes.'],
+['write.mode','Leitura e escrita','Define o que fazer se o destino já existir.','df.write.mode("overwrite" | "append" | "ignore" | "errorifexists")','df.write.mode("append").saveAsTable("vendas")','O padrão é errorifexists: falha se o destino já existir. overwrite apaga o que havia.'],
+['write.format','Leitura e escrita','Escolhe o formato da gravação: delta, parquet, csv, json…','df.write.format(source)','df.write.format("delta").saveAsTable("vendas")','No Fabric e no Databricks, delta é o formato natural.'],
+['write.option','Leitura e escrita','Define uma opção da gravação (header, sep, compression…).','df.write.option(key, value)','df.write.option("header", True).csv("Files/saida")','',],
+['write.partitionBy','Leitura e escrita','Separa os arquivos gravados em pastas por valor de colunas.','df.write.partitionBy(*cols)','df.write.partitionBy("ano").parquet("Files/vendas")','Use colunas com poucos valores (ano, mês). Muitos valores geram milhares de arquivos pequenos.'],
+['write.saveAsTable','Leitura e escrita','Grava o DataFrame como uma tabela do catálogo.','df.write.saveAsTable(name, [format], [mode])','df.write.mode("overwrite").format("delta").saveAsTable("vendas_limpa")','No Fabric, a tabela aparece no Lakehouse.'],
+['write.save','Leitura e escrita','Grava no caminho informado, no formato escolhido.','df.write.format(source).save(path)','df.write.format("delta").save("Tables/vendas")','',],
+['write.csv','Leitura e escrita','Grava CSV. O destino é uma pasta com vários arquivos part-….','df.write.csv(path, [mode], [header], [sep])','df.write.csv("Files/saida", header=True, mode="overwrite")','Não existe um arquivo único. coalesce(1) força um só, mas serializa a gravação.'],
+['write.parquet','Leitura e escrita','Grava em Parquet.','df.write.parquet(path, [mode], [partitionBy])','df.write.mode("overwrite").parquet("Files/saida")','',],
+['write.insertInto','Leitura e escrita','Insere em uma tabela que já existe, casando as colunas por posição.','df.write.insertInto(tableName, [overwrite])','df.write.mode("append").insertInto("vendas")','Casa por posição, não por nome. Confira a ordem das colunas.'],
+// ---- DataFrame
+['df.select','DataFrame','Escolhe ou calcula colunas.','df.select(*cols)','df.select("data", "cliente", (F.col("qtd") * F.col("preco")).alias("total"))','"*" seleciona tudo. Colunas calculadas ganham nome com alias.'],
+['df.selectExpr','DataFrame','Como select, mas com expressões escritas em SQL.','df.selectExpr(*expr)','df.selectExpr("cliente", "qtd * preco AS total")','',],
+['df.filter','DataFrame','Mantém só as linhas que atendem à condição. where é um apelido.','df.filter(condition)','df.filter((F.col("valor") > 0) & (F.col("status") == "pago"))','Aceita também um texto SQL: df.filter("valor > 0 AND status = \'pago\'").'],
+['df.where','DataFrame','Apelido de filter.','df.where(condition)','df.where(F.col("valor") > 0)','',],
+['df.withColumn','DataFrame','Cria uma coluna nova ou substitui uma existente.','df.withColumn(colName, col)','df.withColumn("total", F.col("qtd") * F.col("preco"))','Vários withColumn seguidos deixam o plano pesado: com 4 ou mais, prefira select ou withColumns.'],
+['df.withColumns','DataFrame','Cria ou substitui várias colunas de uma vez (Spark 3.3+).','df.withColumns(colsMap)','df.withColumns({"total": F.col("qtd") * F.col("preco"), "ano": F.year("data")})','Recebe um dicionário nome → coluna.'],
+['df.withColumnRenamed','DataFrame','Renomeia uma coluna.','df.withColumnRenamed(existing, new)','df.withColumnRenamed("valor", "receita")','Se a coluna não existir, nada acontece e não há erro.'],
+['df.toDF','DataFrame','Renomeia todas as colunas de uma vez, pela ordem.','df.toDF(*cols)','df.toDF("id", "nome", "valor")','',],
+['df.drop','DataFrame','Remove colunas.','df.drop(*cols)','df.drop("obs", "temp")','Não dá erro se a coluna não existir.'],
+['df.distinct','DataFrame','Remove linhas totalmente repetidas.','df.distinct()','df.select("cliente").distinct()','',],
+['df.dropDuplicates','DataFrame','Remove duplicados considerando só as colunas informadas.','df.dropDuplicates([subset])','df.dropDuplicates(["id"])','Qual linha sobrevive é imprevisível. Para manter a mais recente, use row_number com janela.'],
+['df.orderBy','DataFrame','Ordena as linhas. sort é um apelido.','df.orderBy(*cols, [ascending])','df.orderBy(F.col("valor").desc(), "cliente")','Ordenar tudo é caro; só ordene no fim ou antes de limit.'],
+['df.sort','DataFrame','Apelido de orderBy.','df.sort(*cols)','df.sort(F.col("valor").desc())','',],
+['df.limit','DataFrame','Devolve só as primeiras N linhas.','df.limit(num)','df.orderBy(F.col("valor").desc()).limit(10)','',],
+['df.groupBy','DataFrame','Agrupa as linhas para calcular com agg, count, sum…','df.groupBy(*cols)','df.groupBy("cliente").agg(F.sum("valor").alias("total"))','Sem colunas, agrega a tabela inteira.'],
+['df.agg','DataFrame','Calcula agregações (soma, média, contagem…) por grupo ou na tabela toda.','df.agg(*exprs) | df.groupBy(...).agg(*exprs)','df.groupBy("cliente").agg(F.sum("valor").alias("total"), F.count("*").alias("qtd"))','Sempre dê alias às agregações, senão o nome fica "sum(valor)".'],
+['df.pivot','DataFrame','Vira os valores de uma coluna em colunas (depois de groupBy).','df.groupBy(...).pivot(pivot_col, [values])','df.groupBy("cliente").pivot("mes").agg(F.sum("valor"))','Passe a lista de valores em values para evitar uma passada extra.'],
+['df.join','DataFrame','Combina dois DataFrames por uma condição ou por colunas em comum.','df.join(other, [on], [how])','vendas.join(clientes, on="cliente_id", how="left")','how: inner, left, right, outer, left_semi, left_anti, cross. Sem on vira produto cartesiano.'],
+['df.crossJoin','DataFrame','Produto cartesiano: todas as linhas contra todas.','df.crossJoin(other)','calendario.crossJoin(lojas)','O resultado tem linhas A × linhas B. Cuidado com o tamanho.'],
+['df.union','DataFrame','Empilha dois DataFrames casando as colunas por posição.','df.union(other)','a.union(b)','Se a ordem das colunas diferir, os dados ficam trocados sem erro. Prefira unionByName.'],
+['df.unionByName','DataFrame','Empilha dois DataFrames casando as colunas pelo nome.','df.unionByName(other, [allowMissingColumns])','a.unionByName(b, allowMissingColumns=True)','Com allowMissingColumns=True, colunas que faltam viram null.'],
+['df.intersect','DataFrame','Linhas presentes nos dois DataFrames (sem repetição).','df.intersect(other)','a.intersect(b)','',],
+['df.subtract','DataFrame','Linhas de um DataFrame que não existem no outro.','df.subtract(other)','a.subtract(b)','exceptAll mantém as repetições.'],
+['df.exceptAll','DataFrame','Como subtract, mas respeitando linhas repetidas.','df.exceptAll(other)','a.exceptAll(b)','',],
+['df.alias','DataFrame','Dá um apelido ao DataFrame, útil em joins com colunas de mesmo nome.','df.alias(alias)','a = vendas.alias("a")','Depois use F.col("a.cliente").'],
+['df.transform','DataFrame','Aplica uma função de DataFrame para DataFrame, mantendo o encadeamento.','df.transform(func)','df.transform(limpar_nomes).transform(adicionar_ano)','Permite organizar o pipeline em funções pequenas e testáveis.'],
+['df.unpivot','DataFrame','Transforma colunas em linhas (Spark 3.4+).','df.unpivot(ids, values, variableColumnName, valueColumnName)','df.unpivot("id", ["jan", "fev", "mar"], "mes", "valor")','Em versões antigas, use selectExpr com stack().'],
+['df.sample','DataFrame','Devolve uma amostra aleatória.','df.sample([withReplacement], fraction, [seed])','df.sample(fraction=0.1, seed=42)','A fração é aproximada, não exata.'],
+['df.repartition','DataFrame','Redistribui os dados em N partições (ou por colunas).','df.repartition(numPartitions, *cols)','df.repartition(200, "cliente")','Provoca shuffle (movimentação de dados). Use quando souber o motivo.'],
+['df.coalesce','DataFrame','Reduz o número de partições sem shuffle completo.','df.coalesce(numPartitions)','df.coalesce(1)','coalesce(1) na gravação funnela tudo em uma tarefa. Evite em tabelas grandes.'],
+['df.cache','DataFrame','Guarda o DataFrame em memória após a primeira ação.','df.cache()','df = df.filter(...).cache()','Só vale a pena se o DataFrame for usado várias vezes. Libere com unpersist().'],
+['df.persist','DataFrame','Como cache, com controle do nível de armazenamento.','df.persist([storageLevel])','df.persist()','',],
+['df.unpersist','DataFrame','Libera da memória um DataFrame que estava em cache.','df.unpersist()','df.unpersist()','',],
+['df.createOrReplaceTempView','DataFrame','Registra o DataFrame como uma view temporária para usar em SQL.','df.createOrReplaceTempView(name)','df.createOrReplaceTempView("vendas_v")','Existe só durante a sessão.'],
+['df.hint','DataFrame','Dá uma dica ao otimizador, como broadcast.','df.hint(name, *params)','vendas.join(clientes.hint("broadcast"), "cliente_id")','',],
+['df.show','DataFrame','Imprime as primeiras linhas no texto de saída.','df.show([n], [truncate], [vertical])','df.show(20, truncate=False)','Por padrão corta textos longos em 20 caracteres.'],
+['df.display','DataFrame','Mostra o DataFrame como tabela interativa (notebooks do Fabric e Databricks).','display(df)','display(df.limit(100))','Não existe no Spark puro.'],
+['df.count','DataFrame','Conta as linhas. É uma ação: percorre os dados.','df.count()','df.count()','Para saber se está vazio, use df.isEmpty() (Spark 3.3+) ou df.limit(1).count().'],
+['df.isEmpty','DataFrame','Diz se o DataFrame não tem nenhuma linha (Spark 3.3+).','df.isEmpty()','if df.isEmpty(): ...','É mais barato que df.count() == 0.'],
+['df.collect','DataFrame','Traz todas as linhas para o driver como uma lista de Row.','df.collect()','linhas = df.limit(100).collect()','Perigoso em tabelas grandes. Limite antes.'],
+['df.take','DataFrame','Traz as N primeiras linhas como lista.','df.take(num)','df.take(5)','',],
+['df.head','DataFrame','Primeira linha (ou as N primeiras).','df.head([n])','df.head()','',],
+['df.first','DataFrame','Devolve a primeira linha.','df.first()','df.first()["valor"]','',],
+['df.toPandas','DataFrame','Converte para um DataFrame do pandas, na memória do driver.','df.toPandas()','pdf = df.limit(1000).toPandas()','Só com poucos dados. Tabelas grandes estouram a memória.'],
+['df.printSchema','DataFrame','Mostra colunas e tipos em árvore.','df.printSchema()','df.printSchema()','',],
+['df.describe','DataFrame','Estatísticas básicas: contagem, média, desvio, mínimo e máximo.','df.describe(*cols)','df.describe("valor").show()','',],
+['df.summary','DataFrame','Como describe, mais quartis.','df.summary(*statistics)','df.summary("count", "min", "50%", "max").show()','',],
+['df.cube','DataFrame','Agrupa em todas as combinações de colunas, com subtotais.','df.cube(*cols)','df.cube("ano", "regiao").agg(F.sum("valor"))','',],
+['df.rollup','DataFrame','Agrupa com subtotais hierárquicos.','df.rollup(*cols)','df.rollup("ano", "mes").agg(F.sum("valor"))','',],
+['na.fill','DataFrame','Troca valores nulos por um valor fixo.','df.na.fill(value, [subset])','df.na.fill(0, subset=["valor"])','O tipo do valor decide as colunas afetadas (número só em colunas numéricas). Também existe df.fillna.'],
+['na.drop','DataFrame','Remove linhas com nulos.','df.na.drop([how], [thresh], [subset])','df.na.drop(subset=["cliente"])','how="any" (padrão) remove se houver algum nulo; "all" só se todos forem nulos.'],
+['na.replace','DataFrame','Troca valores específicos por outros.','df.na.replace(to_replace, value, [subset])','df.na.replace(["N/D", "-"], None, subset=["cidade"])','',],
+// ---- Colunas
+['Column.alias','Colunas','Dá nome ao resultado de uma expressão.','col.alias(name)','F.sum("valor").alias("total")','',],
+['Column.cast','Colunas','Converte o tipo da coluna.','col.cast(dataType)','F.col("valor").cast("double")','Texto que não converte vira null, sem erro (modo padrão). Tipos: string, int, bigint, double, decimal(18,2), date, timestamp, boolean.'],
+['Column.isNull','Colunas','Verdadeiro quando o valor é nulo.','col.isNull()','df.filter(F.col("cliente").isNull())','Nunca use == None.'],
+['Column.isNotNull','Colunas','Verdadeiro quando o valor não é nulo.','col.isNotNull()','df.filter(F.col("cliente").isNotNull())','',],
+['Column.isin','Colunas','Verdadeiro quando o valor está na lista.','col.isin(*values)','F.col("status").isin("pago", "pendente")','Para "não está na lista" use ~F.col(...).isin(...).'],
+['Column.between','Colunas','Verdadeiro quando o valor está entre dois limites (inclusive).','col.between(lower, upper)','F.col("data").between("2025-01-01", "2025-12-31")','',],
+['Column.like','Colunas','Comparação de texto com curingas SQL (% e _).','col.like(pattern)','F.col("nome").like("Ana%")','Diferencia maiúsculas de minúsculas.'],
+['Column.rlike','Colunas','Comparação de texto com expressão regular.','col.rlike(regex)','F.col("email").rlike("@empresa[.]com$")','',],
+['Column.contains','Colunas','Verdadeiro quando o texto contém o pedaço.','col.contains(other)','F.col("nome").contains("Silva")','Diferencia maiúsculas. Use F.lower antes para ignorar.'],
+['Column.startswith','Colunas','Verdadeiro quando o texto começa com o pedaço.','col.startswith(other)','F.col("codigo").startswith("BR")','',],
+['Column.endswith','Colunas','Verdadeiro quando o texto termina com o pedaço.','col.endswith(other)','F.col("arquivo").endswith(".csv")','',],
+['Column.substr','Colunas','Pedaço do texto: posição inicial (a partir de 1) e tamanho.','col.substr(startPos, length)','F.col("cpf").substr(1, 3)','A primeira posição é 1, não 0.'],
+['Column.asc','Colunas','Ordem crescente na ordenação.','col.asc()','df.orderBy(F.col("nome").asc())','',],
+['Column.desc','Colunas','Ordem decrescente na ordenação.','col.desc()','df.orderBy(F.col("valor").desc())','desc_nulls_last coloca os vazios no fim.'],
+['Column.desc_nulls_last','Colunas','Ordem decrescente, com os nulos por último.','col.desc_nulls_last()','F.col("valor").desc_nulls_last()','',],
+['Column.otherwise','Colunas','Valor padrão de um F.when, para o que não bateu em nenhuma condição.','F.when(...).otherwise(value)','F.when(F.col("valor") > 100, "Alta").otherwise("Baixa")','Sem otherwise, o que não bateu vira null.'],
+['Column.over','Colunas','Aplica uma função de janela sobre a especificação informada.','func.over(windowSpec)','F.sum("valor").over(Window.partitionBy("cliente"))','',],
+['Column.getItem','Colunas','Pega um item de um array (por posição) ou de um mapa (por chave).','col.getItem(key)','F.split("nome", " ").getItem(0)','A posição começa em 0.'],
+['Column.eqNullSafe','Colunas','Igualdade que trata null = null como verdadeiro.','col.eqNullSafe(other)','a["id"].eqNullSafe(b["id"])','Útil em joins quando as chaves podem ser nulas.'],
+// ---- Funções de uso geral
+['F.col','Colunas','Referência a uma coluna pelo nome.','F.col(name)','F.col("valor") * 2','Equivale a df["valor"], sem depender da variável do DataFrame.'],
+['F.lit','Colunas','Valor constante, como coluna.','F.lit(value)','df.withColumn("origem", F.lit("sistema_a"))','Para null tipado: F.lit(None).cast("string").'],
+['F.expr','Colunas','Executa uma expressão escrita em SQL.','F.expr(str)','F.expr("CASE WHEN valor > 100 THEN \'Alta\' ELSE \'Baixa\' END")','Útil para trazer sintaxe de SQL (CASE, INTERVAL) para o código.'],
+['F.when','Lógica e nulos','Condição SE: se verdadeira, devolve o valor. Encadeie vários when e termine com otherwise.','F.when(condition, value)','F.when(F.col("valor") >= 1000, "Alta").when(F.col("valor") >= 100, "Média").otherwise("Baixa")','Vale o primeiro when verdadeiro. Cada condição entre parênteses se usar & ou |.'],
+['F.coalesce','Lógica e nulos','Devolve o primeiro valor que não é nulo.','F.coalesce(*cols)','F.coalesce(F.col("celular"), F.col("telefone"), F.lit("sem contato"))','É o mesmo coalesce do SQL (não confundir com df.coalesce).'],
+['F.nullif','Lógica e nulos','Devolve null quando os dois valores são iguais (Spark 3.5+).','F.nullif(col1, col2)','F.nullif(F.col("divisor"), F.lit(0))','Em versões antigas, F.when(col == 0, None).otherwise(col).'],
+['F.isnan','Lógica e nulos','Verdadeiro quando o número é NaN (não é número).','F.isnan(col)','df.filter(F.isnan("valor"))','NaN é diferente de null.'],
+['F.greatest','Número','Maior valor entre várias colunas, na mesma linha.','F.greatest(*cols)','F.greatest("nota1", "nota2", "nota3")','Ignora nulos. Para o maior valor de uma coluna inteira, use F.max.'],
+['F.least','Número','Menor valor entre várias colunas, na mesma linha.','F.least(*cols)','F.least("preco_a", "preco_b")','',],
+// ---- Texto
+['F.upper','Texto','Passa o texto para maiúsculas.','F.upper(col)','F.upper("nome")','',],
+['F.lower','Texto','Passa o texto para minúsculas.','F.lower(col)','F.lower("email")','',],
+['F.initcap','Texto','Primeira letra de cada palavra em maiúscula.','F.initcap(col)','F.initcap("nome")','',],
+['F.trim','Texto','Tira espaços do começo e do fim.','F.trim(col)','F.trim("nome")','Também existem ltrim e rtrim.'],
+['F.ltrim','Texto','Tira espaços do começo.','F.ltrim(col)','F.ltrim("codigo")','',],
+['F.rtrim','Texto','Tira espaços do fim.','F.rtrim(col)','F.rtrim("codigo")','',],
+['F.length','Texto','Quantidade de caracteres.','F.length(col)','F.length("cpf")','',],
+['F.substring','Texto','Pedaço do texto: posição inicial (a partir de 1) e tamanho.','F.substring(str, pos, len)','F.substring("cpf", 1, 3)','',],
+['F.concat','Texto','Junta colunas de texto, uma depois da outra.','F.concat(*cols)','F.concat(F.col("nome"), F.lit(" "), F.col("sobrenome"))','Se qualquer parte for null, o resultado todo é null. Use concat_ws para ignorar nulos.'],
+['F.concat_ws','Texto','Junta colunas de texto com um separador, ignorando nulos.','F.concat_ws(sep, *cols)','F.concat_ws(" - ", "cidade", "uf")','',],
+['F.split','Texto','Divide o texto em um array, a cada ocorrência do separador (que é uma expressão regular).','F.split(str, pattern, [limit])','F.split("nome", " ")','Para separar por . ou | escreva [.] ou [|]; pontos soltos casam qualquer caractere.'],
+['F.regexp_replace','Texto','Troca partes do texto que casam com uma expressão regular.','F.regexp_replace(str, pattern, replacement)','F.regexp_replace("cpf", "[^0-9]", "")','Aqui "[^0-9]" apaga tudo que não é dígito.'],
+['F.regexp_extract','Texto','Extrai um grupo de uma expressão regular.','F.regexp_extract(str, pattern, idx)','F.regexp_extract("arquivo", "([0-9]{4})", 1)','idx 0 é o trecho inteiro; 1 é o primeiro grupo entre parênteses. Sem correspondência, devolve texto vazio.'],
+['F.lpad','Texto','Completa à esquerda até o tamanho informado.','F.lpad(col, len, pad)','F.lpad("codigo", 6, "0")','Útil para zeros à esquerda: "42" → "000042".'],
+['F.rpad','Texto','Completa à direita até o tamanho informado.','F.rpad(col, len, pad)','F.rpad("codigo", 6, " ")','',],
+['F.translate','Texto','Troca caracteres um a um.','F.translate(srcCol, matching, replace)','F.translate("nome", "áàãâéêíóôõúç", "aaaaeeiooouc")','Os dois textos precisam ter o mesmo tamanho. Serve para tirar acentos.'],
+['F.instr','Texto','Posição (a partir de 1) da primeira ocorrência do pedaço. 0 se não achar.','F.instr(str, substr)','F.instr("email", "@")','',],
+['F.format_string','Texto','Monta texto no estilo printf.','F.format_string(format, *cols)','F.format_string("%05d", "id")','',],
+// ---- Número
+['F.round','Número','Arredonda para N casas (0,5 sobe).','F.round(col, [scale])','F.round("valor", 2)','bround arredonda metade para o par (estilo bancário).'],
+['F.floor','Número','Arredonda para baixo.','F.floor(col)','F.floor("valor")','',],
+['F.ceil','Número','Arredonda para cima.','F.ceil(col)','F.ceil("valor")','',],
+['F.abs','Número','Valor absoluto (sem sinal).','F.abs(col)','F.abs("diferenca")','',],
+['F.sqrt','Número','Raiz quadrada.','F.sqrt(col)','F.sqrt("area")','',],
+['F.pow','Número','Potência.','F.pow(col, exponent)','F.pow("base", 2)','',],
+['F.rand','Número','Número aleatório entre 0 e 1.','F.rand([seed])','df.withColumn("sorteio", F.rand(42))','Informe seed para resultado repetível.'],
+// ---- Agregação
+['F.sum','Agregação','Soma. Ignora nulos.','F.sum(col)','df.agg(F.sum("valor"))','Não confunda com o sum do Python, que não funciona em colunas.'],
+['F.avg','Agregação','Média. Ignora nulos. mean é um apelido.','F.avg(col)','F.avg("valor")','',],
+['F.mean','Agregação','Apelido de avg.','F.mean(col)','F.mean("valor")','',],
+['F.count','Agregação','Conta as linhas com valor não nulo. F.count("*") conta todas as linhas.','F.count(col)','F.count("*").alias("pedidos")','Com uma coluna, os nulos não entram na conta.'],
+['F.countDistinct','Agregação','Conta valores diferentes (exatos).','F.countDistinct(col, *cols)','F.countDistinct("cliente")','Em tabelas enormes, approx_count_distinct é bem mais rápido.'],
+['F.approx_count_distinct','Agregação','Contagem de distintos aproximada, mais rápida.','F.approx_count_distinct(col, [rsd])','F.approx_count_distinct("cliente")','Erro padrão de uns 5% por padrão.'],
+['F.min','Agregação','Menor valor.','F.min(col)','F.min("data")','',],
+['F.max','Agregação','Maior valor.','F.max(col)','F.max("data")','',],
+['F.first','Agregação','Primeiro valor do grupo.','F.first(col, [ignorenulls])','F.first("status", ignorenulls=True)','Sem ordenação definida, "primeiro" é imprevisível.'],
+['F.last','Agregação','Último valor do grupo.','F.last(col, [ignorenulls])','F.last("status", ignorenulls=True)','',],
+['F.collect_list','Agregação','Junta os valores do grupo em um array, com repetições.','F.collect_list(col)','F.collect_list("produto")','Cuidado com grupos enormes: o array fica na memória.'],
+['F.collect_set','Agregação','Junta os valores do grupo em um array, sem repetições.','F.collect_set(col)','F.collect_set("produto")','',],
+['F.stddev','Agregação','Desvio padrão.','F.stddev(col)','F.stddev("valor")','',],
+['F.percentile_approx','Agregação','Percentil aproximado (0,5 é a mediana).','F.percentile_approx(col, percentage, [accuracy])','F.percentile_approx("valor", 0.5)','Passe uma lista de percentuais para obter um array.'],
+['F.corr','Agregação','Correlação entre duas colunas.','F.corr(col1, col2)','df.agg(F.corr("preco", "qtd"))','',],
+// ---- Data e hora
+['F.to_date','Data e hora','Converte texto em data, segundo o formato informado.','F.to_date(col, [format])','F.to_date("data_texto", "dd/MM/yyyy")','Texto fora do formato vira null. Lembre: MM é mês, mm é minuto.'],
+['F.to_timestamp','Data e hora','Converte texto em data e hora.','F.to_timestamp(col, [format])','F.to_timestamp("data_texto", "dd/MM/yyyy HH:mm:ss")','',],
+['F.current_date','Data e hora','Data de hoje.','F.current_date()','df.filter(F.col("vencimento") < F.current_date())','',],
+['F.current_timestamp','Data e hora','Data e hora de agora.','F.current_timestamp()','df.withColumn("carregado_em", F.current_timestamp())','Bom para registrar o horário da carga.'],
+['F.date_format','Data e hora','Formata data ou hora como texto.','F.date_format(date, format)','F.date_format("data", "yyyy-MM")','O resultado é texto, não data.'],
+['F.year','Data e hora','Ano da data.','F.year(col)','F.year("data")','',],
+['F.month','Data e hora','Mês da data (1 a 12).','F.month(col)','F.month("data")','',],
+['F.dayofmonth','Data e hora','Dia do mês (1 a 31).','F.dayofmonth(col)','F.dayofmonth("data")','',],
+['F.dayofweek','Data e hora','Dia da semana: 1 é domingo, 7 é sábado.','F.dayofweek(col)','F.dayofweek("data")','',],
+['F.quarter','Data e hora','Trimestre (1 a 4).','F.quarter(col)','F.quarter("data")','',],
+['F.weekofyear','Data e hora','Número da semana no ano.','F.weekofyear(col)','F.weekofyear("data")','',],
+['F.date_add','Data e hora','Soma dias a uma data.','F.date_add(start, days)','F.date_add("data", 30)','Para subtrair use date_sub ou um número negativo.'],
+['F.date_sub','Data e hora','Subtrai dias de uma data.','F.date_sub(start, days)','F.date_sub("data", 7)','',],
+['F.datediff','Data e hora','Diferença em dias: fim menos início.','F.datediff(end, start)','F.datediff("data_fim", "data_inicio")','A ordem é (fim, início).'],
+['F.months_between','Data e hora','Diferença em meses (com fração).','F.months_between(date1, date2)','F.months_between("fim", "inicio")','',],
+['F.add_months','Data e hora','Soma meses a uma data.','F.add_months(start, months)','F.add_months("data", 1)','',],
+['F.last_day','Data e hora','Último dia do mês da data.','F.last_day(date)','F.last_day("data")','',],
+['F.trunc','Data e hora','Corta a data no início do ano ou do mês.','F.trunc(date, format)','F.trunc("data", "month")','format: "year", "month"…'],
+['F.date_trunc','Data e hora','Corta data e hora na unidade informada (hora, dia, mês…).','F.date_trunc(format, timestamp)','F.date_trunc("month", "data_hora")','Devolve timestamp.'],
+['F.unix_timestamp','Data e hora','Converte data em segundos desde 1970.','F.unix_timestamp([timestamp], [format])','F.unix_timestamp("data_hora")','',],
+['F.from_unixtime','Data e hora','Converte segundos desde 1970 em texto de data e hora.','F.from_unixtime(timestamp, [format])','F.from_unixtime("epoch")','',],
+// ---- Janela
+['Window.partitionBy','Janela','Define os grupos da janela: o cálculo reinicia a cada grupo.','Window.partitionBy(*cols)','w = Window.partitionBy("cliente").orderBy("data")','Sem partitionBy, todas as linhas vão para uma só partição (lento).'],
+['Window.orderBy','Janela','Define a ordem das linhas dentro da janela.','Window.orderBy(*cols)','Window.partitionBy("cliente").orderBy(F.col("data").desc())','',],
+['Window.rowsBetween','Janela','Limita a janela por posição de linhas.','w.rowsBetween(start, end)','w.rowsBetween(Window.unboundedPreceding, Window.currentRow)','De unboundedPreceding até currentRow dá o acumulado. rowsBetween(-2, 0) dá a média móvel de 3.'],
+['Window.rangeBetween','Janela','Limita a janela por valor da coluna de ordenação.','w.rangeBetween(start, end)','w.rangeBetween(-7, 0)','Usa o valor da coluna, não a posição da linha.'],
+['F.row_number','Janela','Numera as linhas 1, 2, 3… dentro da janela, sem empates.','F.row_number().over(w)','df.withColumn("rn", F.row_number().over(Window.partitionBy("cliente").orderBy(F.col("data").desc())))','Para pegar o mais recente por grupo: filtre rn == 1.'],
+['F.rank','Janela','Posição com empates e saltos (1, 1, 3).','F.rank().over(w)','F.rank().over(Window.orderBy(F.col("valor").desc()))','',],
+['F.dense_rank','Janela','Posição com empates, sem saltos (1, 1, 2).','F.dense_rank().over(w)','F.dense_rank().over(Window.orderBy(F.col("valor").desc()))','',],
+['F.ntile','Janela','Divide as linhas em N faixas de tamanho parecido.','F.ntile(n).over(w)','F.ntile(4).over(Window.orderBy("valor"))','Com 4, gera quartis.'],
+['F.lag','Janela','Valor da linha anterior, dentro da janela.','F.lag(col, [offset], [default]).over(w)','F.lag("valor", 1).over(Window.partitionBy("cliente").orderBy("data"))','A primeira linha de cada grupo recebe null (ou o default).'],
+['F.lead','Janela','Valor da próxima linha, dentro da janela.','F.lead(col, [offset], [default]).over(w)','F.lead("valor", 1).over(Window.partitionBy("cliente").orderBy("data"))','',],
+// ---- Array e mapa
+['F.explode','Array e mapa','Transforma cada item de um array em uma linha.','F.explode(col)','df.select("id", F.explode("itens").alias("item"))','Linhas com array vazio ou nulo somem. Use explode_outer para mantê-las.'],
+['F.explode_outer','Array e mapa','Como explode, mas mantém as linhas com array vazio ou nulo.','F.explode_outer(col)','df.select("id", F.explode_outer("itens"))','',],
+['F.posexplode','Array e mapa','Como explode, devolvendo também a posição do item.','F.posexplode(col)','df.select("id", F.posexplode("itens"))','Gera as colunas pos e col.'],
+['F.array','Array e mapa','Monta um array a partir de colunas.','F.array(*cols)','F.array("tel1", "tel2")','',],
+['F.array_contains','Array e mapa','Verdadeiro quando o array contém o valor.','F.array_contains(col, value)','F.array_contains("tags", "vip")','',],
+['F.size','Array e mapa','Quantidade de itens do array ou mapa.','F.size(col)','F.size("itens")','Devolve -1 quando o valor é null (modo padrão).'],
+['F.array_distinct','Array e mapa','Remove itens repetidos do array.','F.array_distinct(col)','F.array_distinct("tags")','',],
+['F.sort_array','Array e mapa','Ordena o array.','F.sort_array(col, [asc])','F.sort_array("tags")','',],
+['F.element_at','Array e mapa','Item do array (a partir de 1) ou valor do mapa pela chave.','F.element_at(col, extraction)','F.element_at("itens", 1)','Posição negativa conta do fim: -1 é o último.'],
+['F.flatten','Array e mapa','Achata um array de arrays em um array só.','F.flatten(col)','F.flatten("listas")','',],
+['F.struct','Array e mapa','Agrupa colunas em uma coluna do tipo struct.','F.struct(*cols)','F.struct("rua", "cidade").alias("endereco")','Acesse depois com F.col("endereco.cidade").'],
+['F.from_json','Array e mapa','Converte uma coluna de texto JSON em struct.','F.from_json(col, schema)','F.from_json("payload", "id INT, nome STRING")','Informe o schema; JSON mal formado vira null.'],
+['F.to_json','Array e mapa','Converte struct, array ou mapa em texto JSON.','F.to_json(col)','F.to_json(F.struct("id", "nome"))','',],
+['F.create_map','Array e mapa','Monta um mapa chave → valor.','F.create_map(*cols)','F.create_map(F.lit("a"), F.col("x"))','',],
+// ---- Utilitários
+['F.broadcast','Utilitários','Avisa que o DataFrame é pequeno e deve ser copiado para todos os nós no join.','F.broadcast(df)','vendas.join(F.broadcast(clientes), "cliente_id")','Evita o shuffle da tabela grande. Use só em tabelas pequenas (cabem na memória).'],
+['F.monotonically_increasing_id','Utilitários','Gera um número único e crescente por linha.','F.monotonically_increasing_id()','df.withColumn("id", F.monotonically_increasing_id())','Os números são únicos, mas não sequenciais.'],
+['F.input_file_name','Utilitários','Nome do arquivo de onde veio cada linha.','F.input_file_name()','df.withColumn("arquivo", F.input_file_name())','Ótimo para rastrear a origem em leituras de pasta.'],
+['F.md5','Utilitários','Hash MD5 do valor, em texto.','F.md5(col)','F.md5(F.concat_ws("|", "a", "b"))','Serve para chaves compostas e comparação de linhas.'],
+['F.sha2','Utilitários','Hash SHA-2 (224, 256, 384 ou 512 bits).','F.sha2(col, numBits)','F.sha2("cpf", 256)','',],
+['F.hash','Utilitários','Hash numérico rápido de várias colunas.','F.hash(*cols)','F.hash("a", "b")','',],
+['F.udf','Utilitários','Transforma uma função Python em função de coluna (UDF).','F.udf(f, returnType)','limpar = F.udf(lambda s: s.strip() if s else s, "string")','UDFs são lentas e o Spark não consegue otimizá-las. Prefira funções nativas; para muita lógica, pandas_udf.'],
+// ---- Tipos
+['T.StructType','Tipos','Define o schema (lista de campos) de um DataFrame.','T.StructType([T.StructField(name, dataType, [nullable])])','schema = T.StructType([T.StructField("id", T.IntegerType()), T.StructField("nome", T.StringType())])','Também dá para usar texto DDL: "id INT, nome STRING".'],
+['T.StructField','Tipos','Um campo do schema: nome, tipo e se aceita nulo.','T.StructField(name, dataType, [nullable])','T.StructField("valor", T.DoubleType(), True)','',],
+['T.StringType','Tipos','Tipo texto ("string").','T.StringType()','T.StructField("nome", T.StringType())','',],
+['T.IntegerType','Tipos','Inteiro de 32 bits ("int").','T.IntegerType()','T.StructField("qtd", T.IntegerType())','Para números grandes use LongType ("bigint").'],
+['T.LongType','Tipos','Inteiro de 64 bits ("bigint").','T.LongType()','T.StructField("id", T.LongType())','',],
+['T.DoubleType','Tipos','Decimal de ponto flutuante ("double").','T.DoubleType()','T.StructField("valor", T.DoubleType())','Para dinheiro, prefira DecimalType (sem erros de arredondamento).'],
+['T.DecimalType','Tipos','Decimal exato: precisão total e casas após a vírgula.','T.DecimalType(precision, scale)','T.DecimalType(18, 2)','Texto: "decimal(18,2)".'],
+['T.DateType','Tipos','Data, sem hora ("date").','T.DateType()','T.StructField("data", T.DateType())','',],
+['T.TimestampType','Tipos','Data e hora ("timestamp").','T.TimestampType()','T.StructField("criado_em", T.TimestampType())','',],
+['T.BooleanType','Tipos','Verdadeiro ou falso ("boolean").','T.BooleanType()','T.StructField("ativo", T.BooleanType())','',],
+['T.ArrayType','Tipos','Lista de itens de um mesmo tipo.','T.ArrayType(elementType)','T.ArrayType(T.StringType())','',],
+];
+const CATS=['Leitura e escrita','DataFrame','Colunas','Lógica e nulos','Texto','Número','Agregação','Data e hora','Janela','Array e mapa','Utilitários','Tipos'];
+const IDX={}; F.forEach(e=>IDX[e[0]]=e);
+const norm=s=>s.normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase();
+
+/* ============ Estado e utilidades ============ */
+const $=s=>document.querySelector(s);
+const el=(t,a={},...k)=>{const e=document.createElement(t);for(const[x,v]of Object.entries(a)){if(x==='class')e.className=v;else if(x.startsWith('on'))e.addEventListener(x.slice(2),v);else if(v===true)e.setAttribute(x,'');else if(v!==false&&v!=null)e.setAttribute(x,v);}for(const c of k.flat())e.append(c&&c.nodeType?c:document.createTextNode(c??''));return e;};
+function copy(text,btn){
+  const done=()=>{const o=btn.textContent;btn.textContent='Copiado!';setTimeout(()=>btn.textContent=o,1200);};
+  if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(text).then(done,fallback);} else fallback();
+  function fallback(){const t=el('textarea',{style:'position:fixed;opacity:0'});t.value=text;document.body.append(t);t.select();try{document.execCommand('copy');done();}catch{btn.textContent='Selecione e copie';}t.remove();}
+}
+const fmtOut=text=>{const b=el('button',{class:'btn',type:'button','aria-label':'Copiar código'},'Copiar');b.addEventListener('click',()=>copy(text,b));return el('div',{class:'row'},el('div',{class:'out'},text),b);};
+
+/* ============ Filtros dos marcadores ⟨campo|filtro⟩ ============ */
+const splitList=s=>s.split(',').map(x=>x.trim()).filter(Boolean);
+const unacc=s=>s.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
+const Q=s=>'"'+s.replace(/\\/g,'\\\\').replace(/"/g,'\\"')+'"';
+const NUM=/^-?\d+(\.\d+)?$/;
+const lit=s=>{s=s.trim();if(NUM.test(s)||/^(True|False|None)$/.test(s))return s;return Q(s);};
+const TYS={texto:'string',text:'string',string:'string',numero:'double',decimal:'double',double:'double',inteiro:'int',int:'int',longo:'bigint',bigint:'bigint',dinheiro:'decimal(18,2)',moeda:'decimal(18,2)',data:'date',date:'date',datahora:'timestamp',timestamp:'timestamp',logico:'boolean',booleano:'boolean',boolean:'boolean'};
+const tyOf=t=>TYS[unacc(t.trim())]||'string';
+const AGG=(fn,c)=>{
+  fn=unacc(fn);const col=Q(c||'*');
+  if(/^(soma|sum)$/.test(fn))return `F.sum(${col})`;
+  if(/^(media|avg|average|mean)$/.test(fn))return `F.avg(${col})`;
+  if(/^(min|minimo)$/.test(fn))return `F.min(${col})`;
+  if(/^(max|maximo)$/.test(fn))return `F.max(${col})`;
+  if(/^(contar|count)$/.test(fn))return `F.count(${col})`;
+  if(/^(distintos|contardistintos|distinct|countdistinct)$/.test(fn))return `F.countDistinct(${col})`;
+  if(fn==='mediana')return `F.percentile_approx(${col}, 0.5)`;
+  if(/^(primeiro|first)$/.test(fn))return `F.first(${col})`;
+  if(/^(ultimo|last)$/.test(fn))return `F.last(${col})`;
+  if(/^(lista|collect_list)$/.test(fn))return `F.collect_list(${col})`;
+  if(/^(desvio|stddev)$/.test(fn))return `F.stddev(${col})`;
+  return `F.lit(None)`;
+};
+const FILT={
+  q:Q,v:lit,
+  list:s=>'['+splitList(s).map(Q).join(', ')+']',
+  cols:s=>splitList(s).map(Q).join(', '),
+  vals:s=>splitList(s).map(lit).join(', '),
+  ddl:s=>Q(splitList(s).map(p=>{const i=p.lastIndexOf(':');const n=i<0?p:p.slice(0,i);const t=i<0?'string':p.slice(i+1);return n.trim()+' '+tyOf(t).toUpperCase();}).join(', ')),
+  casts:s=>splitList(s).map(p=>{const i=p.lastIndexOf(':');const n=(i<0?p:p.slice(0,i)).trim();const t=i<0?'string':p.slice(i+1);return `.withColumn(${Q(n)}, F.col(${Q(n)}).cast(${Q(tyOf(t))}))`;}).join('\n    '),
+  ren:s=>splitList(s).map(p=>{const[a,...b]=p.split('=');return `.withColumnRenamed(${Q(a.trim())}, ${Q(b.join('=').trim())})`;}).join('\n    '),
+  sort:s=>splitList(s).map(p=>{const i=p.lastIndexOf(':');const n=(i<0?p:p.slice(0,i)).trim();const d=i<0?'asc':unacc(p.slice(i+1).trim());return `F.col(${Q(n)}).${/^(d|desc|decrescente)$/.test(d)?'desc':'asc'}()`;}).join(', '),
+  aggs:s=>splitList(s).map(p=>{
+    const m=/^(.+?)\s*=\s*([\p{L}_]+)\s*(?:\((.*)\))?$/u.exec(p);if(!m)return 'F.lit(None)';
+    return AGG(m[2],(m[3]||'').trim())+'.alias('+Q(m[1].trim())+')';
+  }).join(',\n        '),
+  aggfn:s=>{const x=AGG(s,'@');return x.replace(/\(.*$/,'').replace(/^F\./,'');},
+  how:s=>({esquerda:'left',direita:'right',interna:'inner',completa:'outer',cruzada:'cross','somente esquerda':'left_anti',left:'left',right:'right',inner:'inner',outer:'outer'}[unacc(s)]||'left'),
+  cmp:s=>['==','!=','>','<','>=','<='].includes(s.trim())?s.trim():'==',
+  arith:s=>['+','-','*','/'].includes(s.trim())?s.trim():'*',
+  mode:s=>['overwrite','append','ignore','errorifexists'].includes(s.trim())?s.trim():'overwrite',
+  int:s=>/^\d+$/.test(s.trim())?s.trim():'1',
+  id:s=>s.trim().replace(/[^\p{L}\p{N}_]/gu,'_')||'df',
+  dir:s=>/^(d|desc|decrescente)$/.test(unacc(s.trim()))?'.desc()':'.asc()',
+  tdir:s=>/^(d|desc|decrescente)$/.test(unacc(s.trim()))?'desc':'asc',
+};
+
+/* ============ Receitas ============
+   campos: [chave, rótulo, padrão, dica]  |  kind: 'full' (script completo) ou 'step' (trecho para colar) */
+const DFF=['df','Nome do DataFrame','df','variável que guarda a tabela'];
+const IMP='from pyspark.sql import functions as F\n';
+const R=[
+// ---------- Ler e gravar
+{id:'csv',cat:'Ler e gravar',kind:'step',title:'Ler um arquivo CSV',goal:'Ler um .csv usando a primeira linha como cabeçalho.',
+ fields:[DFF,['caminho','Caminho do arquivo','Files/vendas.csv','No Fabric, Files/ é a pasta de arquivos do Lakehouse; também aceita abfss://…'],['sep','Separador',';','vírgula, ponto e vírgula, \\t para tabulação'],['schema','Tipos das colunas','id:inteiro, cliente:texto, valor:decimal, data:data','nome:tipo (texto, inteiro, longo, numero, dinheiro, data, datahora, logico)']],
+ main:{label:'CSV com cabeçalho (todas as colunas como texto)',tpl:`⟨df|id⟩ = (
+    spark.read
+    .option("header", True)
+    .option("sep", ⟨sep|q⟩)
+    .option("encoding", "UTF-8")
+    .csv(⟨caminho|q⟩)
+)`,note:'Sem tipos, tudo vem como texto. Use a versão com tipos abaixo ou a receita Converter tipos.'},
+ alts:[{label:'Com tipos definidos (recomendado)',tpl:`⟨df|id⟩ = (
+    spark.read
+    .option("header", True)
+    .option("sep", ⟨sep|q⟩)
+    .schema(⟨schema|ddl⟩)
+    .csv(⟨caminho|q⟩)
+)`,note:'Informar o schema evita uma leitura extra e erros de adivinhação. Linhas que não encaixam no tipo viram null.'},
+ {label:'Deixar o Spark adivinhar os tipos',tpl:`⟨df|id⟩ = (
+    spark.read
+    .option("header", True)
+    .option("sep", ⟨sep|q⟩)
+    .option("inferSchema", True)
+    .csv(⟨caminho|q⟩)
+)`,note:'inferSchema lê o arquivo duas vezes e pode errar (um CEP vira número e perde o zero à esquerda). Para arquivos grandes, prefira schema.'},
+ {label:'Acentos errados? Use Latin-1',tpl:`⟨df|id⟩ = (
+    spark.read
+    .option("header", True)
+    .option("sep", ⟨sep|q⟩)
+    .option("encoding", "ISO-8859-1")
+    .csv(⟨caminho|q⟩)
+)`,note:'Arquivos exportados de sistemas antigos do Windows costumam estar em ISO-8859-1 (Latin-1).'},
+ {label:'Números no formato brasileiro (1.234,56)',tpl:`⟨df|id⟩ = ⟨df|id⟩.withColumn(
+    "valor",
+    F.regexp_replace(F.regexp_replace("valor", "[.]", ""), ",", ".").cast("double")
+)`,note:'Tira o ponto de milhar e troca a vírgula decimal por ponto. Leia a coluna como texto antes.'}]},
+{id:'tabela',cat:'Ler e gravar',kind:'step',title:'Ler uma tabela, Delta ou Parquet',goal:'Ler uma tabela do Lakehouse/catálogo, ou arquivos Delta e Parquet por caminho.',
+ fields:[DFF,['tabela','Nome da tabela','vendas'],['caminho','Caminho','Tables/vendas','No Fabric, Tables/ guarda as tabelas Delta do Lakehouse']],
+ main:{label:'Tabela do catálogo (Lakehouse)',tpl:`⟨df|id⟩ = spark.read.table(⟨tabela|q⟩)`,note:'No Fabric, o notebook precisa estar ligado a um Lakehouse. Com vários, use lakehouse.schema.tabela.'},
+ alts:[{label:'Delta por caminho',tpl:`⟨df|id⟩ = spark.read.format("delta").load(⟨caminho|q⟩)`},
+  {label:'Parquet por caminho',tpl:`⟨df|id⟩ = spark.read.parquet(⟨caminho|q⟩)`},
+  {label:'Delta em uma versão antiga (viagem no tempo)',tpl:`⟨df|id⟩ = (
+    spark.read.format("delta")
+    .option("versionAsOf", 3)
+    .load(⟨caminho|q⟩)
+)`,note:'Veja as versões disponíveis com a receita Manutenção de tabelas Delta (DESCRIBE HISTORY).'}]},
+{id:'json',cat:'Ler e gravar',kind:'step',title:'Ler um arquivo JSON',goal:'Ler JSON em linhas (um objeto por linha) ou em arquivo único com várias linhas.',
+ fields:[DFF,['caminho','Caminho do arquivo','Files/dados.json']],
+ main:{label:'JSON em linhas (JSON Lines)',tpl:`⟨df|id⟩ = spark.read.json(⟨caminho|q⟩)`,note:'Cada linha do arquivo é um objeto JSON completo.'},
+ alts:[{label:'JSON com um objeto em várias linhas ou lista',tpl:`⟨df|id⟩ = (
+    spark.read
+    .option("multiLine", True)
+    .json(⟨caminho|q⟩)
+)`},
+  {label:'Abrir campos aninhados (struct)',tpl:`⟨df|id⟩ = ⟨df|id⟩.select(
+    "id",
+    F.col("cliente.nome").alias("cliente_nome"),
+    F.col("cliente.cidade").alias("cliente_cidade"),
+)`,note:'Campos dentro de objetos são acessados com ponto.'}]},
+{id:'jdbc',cat:'Ler e gravar',kind:'full',title:'Ler de um banco de dados (JDBC)',goal:'Ler uma tabela ou consulta de SQL Server, PostgreSQL etc., sem deixar senha no código.',
+ fields:[DFF,['url','URL JDBC','jdbc:sqlserver://servidor.exemplo.com:1433;databaseName=Vendas'],['tabela','Tabela','dbo.Vendas'],['usuario','Usuário','usuario_leitura'],['cofre','Endereço do Key Vault','https://meu-cofre.vault.azure.net/'],['segredo','Nome do segredo','senha-sql']],
+ main:{label:'Tabela inteira',tpl:`# A senha vem de um cofre de segredos, nunca escrita no notebook.
+# Fabric: notebookutils.credentials.getSecret  |  Databricks: dbutils.secrets.get
+senha = notebookutils.credentials.getSecret(⟨cofre|q⟩, ⟨segredo|q⟩)
+
+⟨df|id⟩ = (
+    spark.read
+    .format("jdbc")
+    .option("url", ⟨url|q⟩)
+    .option("dbtable", ⟨tabela|q⟩)
+    .option("user", ⟨usuario|q⟩)
+    .option("password", senha)
+    .option("driver", "com.microsoft.sqlserver.jdbc.SQLServerDriver")
+    .load()
+)`,note:'O driver acima é do SQL Server. Para PostgreSQL use org.postgresql.Driver e uma URL jdbc:postgresql://… O driver precisa estar disponível no ambiente.'},
+ alts:[{label:'Consulta no lugar da tabela (filtra no banco)',tpl:`senha = notebookutils.credentials.getSecret(⟨cofre|q⟩, ⟨segredo|q⟩)
+
+⟨df|id⟩ = (
+    spark.read
+    .format("jdbc")
+    .option("url", ⟨url|q⟩)
+    .option("query", "SELECT * FROM " + ⟨tabela|q⟩ + " WHERE Data >= '2025-01-01'")
+    .option("user", ⟨usuario|q⟩)
+    .option("password", senha)
+    .load()
+)`,note:'Filtrar no banco traz menos dados. As opções dbtable e query não podem ser usadas juntas.'},
+ {label:'Leitura em paralelo (tabelas grandes)',tpl:`senha = notebookutils.credentials.getSecret(⟨cofre|q⟩, ⟨segredo|q⟩)
+
+⟨df|id⟩ = (
+    spark.read
+    .format("jdbc")
+    .option("url", ⟨url|q⟩)
+    .option("dbtable", ⟨tabela|q⟩)
+    .option("user", ⟨usuario|q⟩)
+    .option("password", senha)
+    .option("partitionColumn", "Id")
+    .option("lowerBound", 1)
+    .option("upperBound", 1000000)
+    .option("numPartitions", 8)
+    .load()
+)`,note:'Divide a leitura em 8 fatias pela coluna numérica Id. Ajuste os limites ao intervalo real dos valores.'}]},
+{id:'salvar',cat:'Ler e gravar',kind:'step',title:'Gravar o resultado',goal:'Salvar um DataFrame como tabela Delta, Parquet ou CSV.',
+ fields:[DFF,['tabela','Nome da tabela','vendas_limpa'],['modo','Modo de gravação','overwrite','overwrite (substitui), append (acrescenta), ignore, errorifexists'],['caminho','Caminho de saída','Files/saida/vendas'],['particao','Particionar por','ano']],
+ main:{label:'Tabela Delta no Lakehouse',tpl:`(
+    ⟨df|id⟩.write
+    .mode(⟨modo|mode|q⟩)
+    .format("delta")
+    .saveAsTable(⟨tabela|q⟩)
+)`,note:'overwrite substitui todo o conteúdo da tabela. Para só acrescentar linhas, use append.'},
+ alts:[{label:'Tabela Delta particionada',tpl:`(
+    ⟨df|id⟩.write
+    .mode(⟨modo|mode|q⟩)
+    .format("delta")
+    .partitionBy(⟨particao|cols⟩)
+    .saveAsTable(⟨tabela|q⟩)
+)`,note:'Particione por colunas com poucos valores (ano, mês). Muitas partições geram arquivos pequenos e lentidão.'},
+  {label:'Parquet em uma pasta',tpl:`⟨df|id⟩.write.mode(⟨modo|mode|q⟩).parquet(⟨caminho|q⟩)`},
+  {label:'CSV com cabeçalho',tpl:`(
+    ⟨df|id⟩.write
+    .mode(⟨modo|mode|q⟩)
+    .option("header", True)
+    .option("sep", ";")
+    .csv(⟨caminho|q⟩)
+)`,note:'O Spark grava uma pasta com vários arquivos part-…csv, um por partição. Para um arquivo só, junte antes com coalesce(1), aceitando que a gravação fica mais lenta.'}]},
+{id:'sql',cat:'Ler e gravar',kind:'step',title:'Rodar SQL sobre um DataFrame',goal:'Registrar o DataFrame como view e consultar com SQL.',
+ fields:[DFF,['view','Nome da view','vendas_v'],['consulta','Consulta SQL','SELECT cliente, SUM(valor) AS total FROM vendas_v GROUP BY cliente ORDER BY total DESC']],
+ main:{label:'View temporária + spark.sql',tpl:`⟨df|id⟩.createOrReplaceTempView(⟨view|q⟩)
+
+resultado = spark.sql("""
+    ⟨consulta⟩
+""")`,note:'A view existe só na sessão do notebook. O resultado é um DataFrame, então dá para continuar encadeando.'},
+ alts:[{label:'Magic de célula (célula inteira em SQL)',tpl:`%%sql
+⟨consulta⟩`,note:'Funciona nos notebooks do Fabric e do Databricks, na primeira linha da célula. A saída é uma tabela, não um DataFrame.'}]},
+// ---------- Colunas
+{id:'selecionar',cat:'Colunas',kind:'step',title:'Selecionar e renomear colunas',goal:'Ficar só com as colunas necessárias, na ordem desejada, e renomear.',
+ fields:[DFF,['colunas','Colunas para manter','data, cliente, valor'],['ren','Renomear (antigo=novo)','valor=receita, cliente=nome_cliente'],['sair','Colunas para remover','obs, temp']],
+ main:{label:'Selecionar colunas',tpl:`⟨df|id⟩ = ⟨df|id⟩.select(⟨colunas|cols⟩)`,note:'Selecionar só o que precisa cedo reduz o volume de dados nos passos seguintes.'},
+ alts:[{label:'Renomear colunas',tpl:`⟨df|id⟩ = (
+    ⟨df|id⟩
+    ⟨ren|ren⟩
+)`},
+  {label:'Remover colunas',tpl:`⟨df|id⟩ = ⟨df|id⟩.drop(⟨sair|cols⟩)`,note:'Não dá erro se a coluna não existir.'},
+  {label:'Padronizar todos os nomes (minúsculas, sem espaços)',tpl:`⟨df|id⟩ = ⟨df|id⟩.toDF(*[c.strip().lower().replace(" ", "_") for c in ⟨df|id⟩.columns])`,note:'Útil antes de gravar em Delta, que não aceita espaços e alguns símbolos nos nomes de colunas.'}]},
+{id:'nova-coluna',cat:'Colunas',kind:'step',title:'Criar uma coluna calculada',goal:'Adicionar uma coluna com cálculo entre colunas.',
+ fields:[DFF,['nova','Nome da nova coluna','total'],['a','Coluna A','qtd'],['op','Operação','*','+  -  *  /'],['b','Coluna B','preco'],['fixo','Valor fixo','Brasil']],
+ main:{label:'Cálculo entre duas colunas',tpl:`⟨df|id⟩ = ⟨df|id⟩.withColumn(⟨nova|q⟩, F.col(⟨a|q⟩) ⟨op|arith⟩ F.col(⟨b|q⟩))`},
+ alts:[{label:'Valor fixo em todas as linhas',tpl:`⟨df|id⟩ = ⟨df|id⟩.withColumn(⟨nova|q⟩, F.lit(⟨fixo|v⟩))`},
+  {label:'Divisão sem risco de zero',tpl:`⟨df|id⟩ = ⟨df|id⟩.withColumn(
+    ⟨nova|q⟩,
+    F.when(F.col(⟨b|q⟩) != 0, F.col(⟨a|q⟩) / F.col(⟨b|q⟩))
+)`,note:'Quando o divisor é 0, o resultado fica null. O Spark, no modo padrão, também devolve null em divisão por zero, mas deixar a regra explícita evita surpresas se o modo ANSI for ligado.'},
+  {label:'Com expressão SQL',tpl:`⟨df|id⟩ = ⟨df|id⟩.withColumn(⟨nova|q⟩, F.expr("⟨a⟩ ⟨op|arith⟩ ⟨b⟩"))`,note:'F.expr aceita qualquer expressão SQL, como CASE WHEN e funções de data.'}]},
+{id:'tipos',cat:'Colunas',kind:'step',title:'Converter tipos de colunas',goal:'Trocar o tipo de colunas (texto → número, data…).',
+ fields:[DFF,['tipos','Colunas e tipos','valor:decimal, qtd:inteiro, ativo:logico','nome:tipo (texto, inteiro, longo, numero, dinheiro, data, datahora, logico)']],
+ main:{label:'Converter com cast',tpl:`⟨df|id⟩ = (
+    ⟨df|id⟩
+    ⟨tipos|casts⟩
+)`,note:'Valores que não convertem viram null, sem erro. Conte os nulos depois para conferir.'},
+ alts:[{label:'Data a partir de texto brasileiro (31/12/2025)',tpl:`⟨df|id⟩ = ⟨df|id⟩.withColumn("data", F.to_date("data", "dd/MM/yyyy"))`,note:'O cast direto não entende dd/MM/yyyy: use to_date com o formato.'}]},
+{id:'se',cat:'Colunas',kind:'step',title:'Condição SE / SENÃO (when)',goal:'Criar uma coluna que depende de faixas ou regras.',
+ fields:[DFF,['nova','Nova coluna','faixa'],['col','Coluna testada','valor'],['lim1','Limite 1','1000'],['rot1','Resultado 1','Alta'],['lim2','Limite 2','100'],['rot2','Resultado 2','Média'],['pad','Senão','Baixa']],
+ main:{label:'Duas faixas e um padrão',tpl:`⟨df|id⟩ = ⟨df|id⟩.withColumn(
+    ⟨nova|q⟩,
+    F.when(F.col(⟨col|q⟩) >= ⟨lim1|v⟩, ⟨rot1|q⟩)
+     .when(F.col(⟨col|q⟩) >= ⟨lim2|v⟩, ⟨rot2|q⟩)
+     .otherwise(⟨pad|q⟩)
+)`,note:'Vale o primeiro when verdadeiro, então escreva do maior limite para o menor. Sem otherwise, o que não bateu vira null.'},
+ alts:[{label:'Duas condições juntas (E)',tpl:`⟨df|id⟩ = ⟨df|id⟩.withColumn(
+    ⟨nova|q⟩,
+    F.when((F.col(⟨col|q⟩) >= ⟨lim1|v⟩) & (F.col("status") == "pago"), ⟨rot1|q⟩)
+     .otherwise(⟨pad|q⟩)
+)`,note:'Cada condição entre parênteses. Use & para E, | para OU, ~ para NÃO.'},
+  {label:'Sim ou não (booleano)',tpl:`⟨df|id⟩ = ⟨df|id⟩.withColumn(⟨nova|q⟩, F.col(⟨col|q⟩) >= ⟨lim1|v⟩)`}]},
+{id:'nulos',cat:'Colunas',kind:'step',title:'Tratar valores nulos',goal:'Preencher, trocar ou descartar valores vazios.',
+ fields:[DFF,['colunas','Colunas','valor, desconto'],['padrao','Valor padrão','0'],['a','Coluna principal','celular'],['b','Coluna reserva','telefone']],
+ main:{label:'Preencher nulos com um valor',tpl:`⟨df|id⟩ = ⟨df|id⟩.na.fill(⟨padrao|v⟩, subset=⟨colunas|list⟩)`,note:'Um número só preenche colunas numéricas; texto só em colunas de texto.'},
+ alts:[{label:'Descartar linhas com nulo',tpl:`⟨df|id⟩ = ⟨df|id⟩.na.drop(subset=⟨colunas|list⟩)`},
+  {label:'Usar a primeira coluna que tiver valor',tpl:`⟨df|id⟩ = ⟨df|id⟩.withColumn("contato", F.coalesce(F.col(⟨a|q⟩), F.col(⟨b|q⟩), F.lit("sem contato")))`},
+  {label:'Texto vazio também conta como nulo',tpl:`⟨df|id⟩ = ⟨df|id⟩.withColumn(
+    ⟨a|q⟩,
+    F.when(F.trim(F.col(⟨a|q⟩)) == "", None).otherwise(F.col(⟨a|q⟩))
+)`,note:'Colunas de CSV costumam trazer "" em vez de null.'}]},
+{id:'texto',cat:'Colunas',kind:'step',title:'Limpar e padronizar texto',goal:'Tirar espaços, ajustar maiúsculas e remover caracteres.',
+ fields:[DFF,['col','Coluna','nome'],['regex','Padrão a apagar','[^0-9]','expressão regular; [^0-9] = tudo que não é dígito']],
+ main:{label:'Tirar espaços e padronizar caixa',tpl:`⟨df|id⟩ = ⟨df|id⟩.withColumn(⟨col|q⟩, F.initcap(F.trim(F.col(⟨col|q⟩))))`,note:'Troque initcap por upper ou lower conforme precisar.'},
+ alts:[{label:'Apagar caracteres (ex.: manter só dígitos)',tpl:`⟨df|id⟩ = ⟨df|id⟩.withColumn(⟨col|q⟩, F.regexp_replace(F.col(⟨col|q⟩), ⟨regex|q⟩, ""))`},
+  {label:'Reduzir espaços repetidos a um',tpl:`⟨df|id⟩ = ⟨df|id⟩.withColumn(⟨col|q⟩, F.regexp_replace(F.trim(F.col(⟨col|q⟩)), "[ ]+", " "))`},
+  {label:'Tirar acentos',tpl:`⟨df|id⟩ = ⟨df|id⟩.withColumn(
+    ⟨col|q⟩,
+    F.translate(F.col(⟨col|q⟩), "áàãâäéèêëíìîïóòõôöúùûüçÁÀÃÂÄÉÈÊËÍÌÎÏÓÒÕÔÖÚÙÛÜÇ", "aaaaaeeeeiiiiooooouuuucAAAAAEEEEIIIIOOOOOUUUUC")
+)`,note:'Os dois textos precisam ter o mesmo tamanho, caractere a caractere.'}]},
+{id:'dividir',cat:'Colunas',kind:'step',title:'Dividir texto em colunas',goal:'Separar um texto em partes (nome e sobrenome, código-ano…).',
+ fields:[DFF,['col','Coluna','nome_completo'],['sep','Separador',' ','é uma expressão regular: para . escreva [.] e para | escreva [|]'],['n0','Nome da parte 1','primeiro_nome'],['n1','Nome da parte 2','sobrenome']],
+ main:{label:'Duas partes',tpl:`partes = F.split(F.col(⟨col|q⟩), ⟨sep|q⟩, 2)
+
+⟨df|id⟩ = (
+    ⟨df|id⟩
+    .withColumn(⟨n0|q⟩, partes.getItem(0))
+    .withColumn(⟨n1|q⟩, partes.getItem(1))
+)`,note:'O 3º argumento (2) limita a duas partes: tudo depois do primeiro separador fica na segunda. A posição do getItem começa em 0.'}, alts:[]},
+{id:'concatenar',cat:'Colunas',kind:'step',title:'Juntar colunas de texto',goal:'Montar um texto a partir de várias colunas.',
+ fields:[DFF,['nova','Nova coluna','endereco'],['colunas','Colunas','rua, numero, cidade'],['sep','Separador',', ']],
+ main:{label:'Com separador (ignora nulos)',tpl:`⟨df|id⟩ = ⟨df|id⟩.withColumn(⟨nova|q⟩, F.concat_ws(⟨sep|q⟩, ⟨colunas|cols⟩))`,note:'concat_ws pula as partes nulas. Já F.concat devolve null se qualquer parte for null.'},
+ alts:[{label:'Chave composta (hash)',tpl:`⟨df|id⟩ = ⟨df|id⟩.withColumn(⟨nova|q⟩, F.md5(F.concat_ws("|", ⟨colunas|cols⟩)))`,note:'Boa para criar uma chave única a partir de várias colunas.'}]},
+// ---------- Linhas
+{id:'filtrar',cat:'Linhas',kind:'step',title:'Filtrar linhas',goal:'Ficar só com as linhas que atendem a uma condição.',
+ fields:[DFF,['col','Coluna','valor'],['op','Operador','>','==  !=  >  <  >=  <='],['val','Valor','100'],['col2','2ª coluna','status'],['op2','2º operador','==','==  !=  >  <  >=  <='],['val2','2º valor','pago']],
+ main:{label:'Uma condição',tpl:`⟨df|id⟩ = ⟨df|id⟩.filter(F.col(⟨col|q⟩) ⟨op|cmp⟩ ⟨val|v⟩)`},
+ alts:[{label:'Duas condições, as duas verdadeiras (E)',tpl:`⟨df|id⟩ = ⟨df|id⟩.filter(
+    (F.col(⟨col|q⟩) ⟨op|cmp⟩ ⟨val|v⟩) & (F.col(⟨col2|q⟩) ⟨op2|cmp⟩ ⟨val2|v⟩)
+)`,note:'Cada condição entre parênteses, senão o Python avalia & antes da comparação e dá erro.'},
+  {label:'Pelo menos uma verdadeira (OU)',tpl:`⟨df|id⟩ = ⟨df|id⟩.filter(
+    (F.col(⟨col|q⟩) ⟨op|cmp⟩ ⟨val|v⟩) | (F.col(⟨col2|q⟩) ⟨op2|cmp⟩ ⟨val2|v⟩)
+)`},
+  {label:'Como texto SQL',tpl:`⟨df|id⟩ = ⟨df|id⟩.filter("⟨col⟩ ⟨op|cmp⟩ ⟨val⟩")`,note:'Atalho para condições simples. Texto precisa de aspas simples dentro do SQL.'}]},
+{id:'filtrar-lista',cat:'Linhas',kind:'step',title:'Filtrar por lista, texto, intervalo ou nulo',goal:'Filtros comuns: está na lista, contém texto, entre datas, vazio.',
+ fields:[DFF,['col','Coluna','status'],['lista','Lista de valores','pago, pendente'],['txt','Texto procurado','Silva'],['ini','De','2025-01-01'],['fim','Até','2025-12-31']],
+ main:{label:'Está na lista (isin)',tpl:`⟨df|id⟩ = ⟨df|id⟩.filter(F.col(⟨col|q⟩).isin(⟨lista|cols⟩))`},
+ alts:[{label:'Não está na lista',tpl:`⟨df|id⟩ = ⟨df|id⟩.filter(~F.col(⟨col|q⟩).isin(⟨lista|cols⟩))`},
+  {label:'Contém um texto (ignorando maiúsculas)',tpl:`⟨df|id⟩ = ⟨df|id⟩.filter(F.lower(F.col(⟨col|q⟩)).contains(⟨txt|q⟩.lower()))`},
+  {label:'Entre duas datas (inclusive)',tpl:`⟨df|id⟩ = ⟨df|id⟩.filter(F.col(⟨col|q⟩).between(⟨ini|q⟩, ⟨fim|q⟩))`,note:'A coluna deve ser do tipo data. Com datas em texto, o resultado pode surpreender.'},
+  {label:'Vazios (nulos)',tpl:`⟨df|id⟩ = ⟨df|id⟩.filter(F.col(⟨col|q⟩).isNull())`,note:'Para o contrário use isNotNull(). Nunca compare com None.'}]},
+{id:'duplicados',cat:'Linhas',kind:'step',title:'Remover duplicados',goal:'Eliminar linhas repetidas, por chave.',
+ fields:[DFF,['chaves','Colunas da chave','id'],['ordem','Coluna de ordem (mais recente)','data_atualizacao']],
+ main:{label:'Por chave (mantém uma qualquer)',tpl:`⟨df|id⟩ = ⟨df|id⟩.dropDuplicates(⟨chaves|list⟩)`,note:'Qual linha sobrevive é imprevisível. Para manter a mais recente, use a versão abaixo.'},
+ alts:[{label:'Manter a linha mais recente de cada chave',tpl:`from pyspark.sql.window import Window
+
+janela = Window.partitionBy(⟨chaves|cols⟩).orderBy(F.col(⟨ordem|q⟩).desc())
+
+⟨df|id⟩ = (
+    ⟨df|id⟩
+    .withColumn("rn", F.row_number().over(janela))
+    .filter(F.col("rn") == 1)
+    .drop("rn")
+)`},
+  {label:'Linhas totalmente iguais',tpl:`⟨df|id⟩ = ⟨df|id⟩.distinct()`}]},
+{id:'ordenar',cat:'Linhas',kind:'step',title:'Ordenar linhas',goal:'Ordenar por uma ou mais colunas.',
+ fields:[DFF,['ordem','Colunas e direção','valor:desc, cliente','coluna:desc ou coluna:asc; asc é o padrão']],
+ main:{label:'Ordenar',tpl:`⟨df|id⟩ = ⟨df|id⟩.orderBy(⟨ordem|sort⟩)`,note:'Ordenar tudo é caro. Faça no fim do processo ou junto com limit.'},
+ alts:[{label:'Vazios no fim',tpl:`⟨df|id⟩ = ⟨df|id⟩.orderBy(F.col("valor").desc_nulls_last())`}]},
+{id:'top',cat:'Linhas',kind:'step',title:'Top N por grupo',goal:'Pegar as N primeiras linhas de cada grupo (ex.: 3 maiores vendas por cliente).',
+ fields:[DFF,['grupo','Grupo','cliente'],['col','Coluna de ordem','valor'],['dir','Direção','desc','desc ou asc'],['n','N','3']],
+ main:{label:'Top N com row_number',tpl:`from pyspark.sql.window import Window
+
+janela = Window.partitionBy(⟨grupo|cols⟩).orderBy(F.col(⟨col|q⟩)⟨dir|dir⟩)
+
+⟨df|id⟩ = (
+    ⟨df|id⟩
+    .withColumn("posicao", F.row_number().over(janela))
+    .filter(F.col("posicao") <= ⟨n|int⟩)
+)`,note:'row_number não empata. Para incluir empates, troque por F.rank().'}, alts:[]},
+{id:'amostra',cat:'Linhas',kind:'step',title:'Amostra e limite',goal:'Pegar poucas linhas para testar.',
+ fields:[DFF,['n','Quantidade','100']],
+ main:{label:'Primeiras N linhas',tpl:`⟨df|id⟩.limit(⟨n|int⟩).show()`,note:'Sem ordenação, "primeiras" é arbitrário.'},
+ alts:[{label:'Amostra aleatória de 10%',tpl:`amostra = ⟨df|id⟩.sample(fraction=0.1, seed=42)`,note:'A fração é aproximada. A seed deixa o resultado repetível.'}]},
+// ---------- Agrupar
+{id:'agrupar',cat:'Agrupar',kind:'step',title:'Agrupar e calcular (groupBy)',goal:'Somar, contar e tirar média por grupo.',
+ fields:[DFF,['grupos','Agrupar por','cliente, mes'],['aggs','Cálculos (nome=função(coluna))','total=soma(valor), pedidos=contar(*), ticket=media(valor)','funções: soma, media, min, max, contar, distintos, mediana, primeiro, ultimo, lista, desvio']],
+ main:{label:'Agrupamento com agregações',tpl:`⟨df|id⟩ = (
+    ⟨df|id⟩
+    .groupBy(⟨grupos|cols⟩)
+    .agg(
+        ⟨aggs|aggs⟩
+    )
+)`,note:'Sempre dê nome (alias) às agregações, senão a coluna fica com nomes como sum(valor).'},
+ alts:[{label:'Total geral (sem grupos)',tpl:`totais = ⟨df|id⟩.agg(
+    ⟨aggs|aggs⟩
+)`},
+  {label:'Só grupos acima de um valor (HAVING)',tpl:`⟨df|id⟩ = (
+    ⟨df|id⟩
+    .groupBy(⟨grupos|cols⟩)
+    .agg(
+        ⟨aggs|aggs⟩
+    )
+    .filter(F.col("total") > 1000)
+)`,note:'O filtro depois do agg age sobre os resultados calculados, como o HAVING do SQL.'}]},
+{id:'pivot',cat:'Agrupar',kind:'step',title:'Tabela dinâmica (pivot)',goal:'Transformar os valores de uma coluna em colunas.',
+ fields:[DFF,['linhas','Linhas','cliente'],['pivo','Coluna que vira colunas','mes'],['valor','Coluna de valores','valor'],['fn','Função','soma','soma, media, min, max, contar'],['vals','Valores esperados','jan, fev, mar']],
+ main:{label:'Pivot',tpl:`⟨df|id⟩ = (
+    ⟨df|id⟩
+    .groupBy(⟨linhas|cols⟩)
+    .pivot(⟨pivo|q⟩)
+    .agg(F.⟨fn|aggfn⟩(⟨valor|q⟩))
+)`,note:'Sem lista de valores, o Spark faz uma passada extra só para descobri-los.'},
+ alts:[{label:'Com a lista de valores (mais rápido)',tpl:`⟨df|id⟩ = (
+    ⟨df|id⟩
+    .groupBy(⟨linhas|cols⟩)
+    .pivot(⟨pivo|q⟩, ⟨vals|list⟩)
+    .agg(F.⟨fn|aggfn⟩(⟨valor|q⟩))
+)`},
+  {label:'Despivotar: colunas viram linhas (Spark 3.4+)',tpl:`⟨df|id⟩ = ⟨df|id⟩.unpivot(⟨linhas|list⟩, ⟨vals|list⟩, "mes", "valor")`,note:'Em versões antigas, use selectExpr com stack().'}]},
+{id:'qualidade',cat:'Agrupar',kind:'step',title:'Conferir qualidade: nulos, distintos e duplicados',goal:'Perfil rápido de uma tabela.',
+ fields:[DFF,['chaves','Colunas da chave','id']],
+ main:{label:'Quantidade de nulos por coluna',tpl:`⟨df|id⟩.select([
+    F.count(F.when(F.col(c).isNull(), c)).alias(c)
+    for c in ⟨df|id⟩.columns
+]).show()`,note:'Mostra uma linha com a contagem de vazios de cada coluna.'},
+ alts:[{label:'Valores distintos por coluna',tpl:`⟨df|id⟩.select([
+    F.countDistinct(c).alias(c)
+    for c in ⟨df|id⟩.columns
+]).show()`},
+  {label:'Chaves duplicadas',tpl:`(
+    ⟨df|id⟩
+    .groupBy(⟨chaves|cols⟩)
+    .count()
+    .filter(F.col("count") > 1)
+    .show()
+)`,note:'Se não aparecer nenhuma linha, a chave é única.'},
+  {label:'Estatísticas básicas',tpl:`⟨df|id⟩.describe().show()`}]},
+// ---------- Combinar
+{id:'join',cat:'Combinar',kind:'step',title:'Juntar duas tabelas (join)',goal:'Trazer colunas de uma tabela para outra, por uma chave.',
+ fields:[['esq','DataFrame da esquerda','vendas'],['dir','DataFrame da direita','clientes'],['chaves','Chave (mesmo nome nos dois)','cliente_id'],['tipo','Tipo','esquerda','esquerda, interna, direita, completa'],['ce','Chave na esquerda','cliente_id'],['cd','Chave na direita','id']],
+ main:{label:'Chave com o mesmo nome',tpl:`resultado = ⟨esq|id⟩.join(⟨dir|id⟩, on=⟨chaves|list⟩, how=⟨tipo|how|q⟩)`,note:'Com o mesmo nome nos dois lados a coluna da chave não duplica. esquerda mantém todas as linhas da esquerda.'},
+ alts:[{label:'Chaves com nomes diferentes',tpl:`resultado = ⟨esq|id⟩.join(
+    ⟨dir|id⟩,
+    on=⟨esq|id⟩[⟨ce|q⟩] == ⟨dir|id⟩[⟨cd|q⟩],
+    how=⟨tipo|how|q⟩,
+)`,note:'As duas colunas de chave permanecem no resultado: descarte uma com drop.'},
+ {label:'Tabela pequena à direita (broadcast)',tpl:`resultado = ⟨esq|id⟩.join(F.broadcast(⟨dir|id⟩), on=⟨chaves|list⟩, how=⟨tipo|how|q⟩)`,note:'Copia a tabela pequena para todos os nós e evita o shuffle da grande. Só vale se ela couber na memória.'},
+ {label:'Colunas com o mesmo nome nos dois lados',tpl:`a = ⟨esq|id⟩.alias("a")
+b = ⟨dir|id⟩.alias("b")
+
+resultado = (
+    a.join(b, F.col("a.⟨ce⟩") == F.col("b.⟨cd⟩"), ⟨tipo|how|q⟩)
+    .select("a.*", F.col("b.nome").alias("nome_cliente"))
+)`,note:'Os apelidos evitam o erro de coluna ambígua.'}]},
+{id:'anti',cat:'Combinar',kind:'step',title:'Linhas sem correspondência (anti join)',goal:'Achar registros que existem em uma tabela e não na outra.',
+ fields:[['esq','DataFrame da esquerda','vendas'],['dir','DataFrame da direita','clientes'],['chaves','Chave','cliente_id']],
+ main:{label:'Na esquerda e NÃO na direita',tpl:`orfaos = ⟨esq|id⟩.join(⟨dir|id⟩, on=⟨chaves|list⟩, how="left_anti")`,note:'Só traz as colunas da esquerda. Útil para achar vendas de clientes que não existem no cadastro.'},
+ alts:[{label:'Na esquerda E na direita (semi join)',tpl:`com_cadastro = ⟨esq|id⟩.join(⟨dir|id⟩, on=⟨chaves|list⟩, how="left_semi")`,note:'Filtra a esquerda sem trazer colunas da direita e sem duplicar linhas.'}]},
+{id:'union',cat:'Combinar',kind:'step',title:'Empilhar tabelas (union)',goal:'Juntar linhas de DataFrames com as mesmas colunas.',
+ fields:[['a','DataFrame A','vendas_2024'],['b','DataFrame B','vendas_2025']],
+ main:{label:'Empilhar pelo nome das colunas',tpl:`todas = ⟨a|id⟩.unionByName(⟨b|id⟩, allowMissingColumns=True)`,note:'Casa as colunas pelo nome, e colunas que faltam viram null. Evite union, que casa por posição.'},
+ alts:[{label:'Empilhar vários de uma vez',tpl:`from functools import reduce
+from pyspark.sql import DataFrame
+
+todas = reduce(DataFrame.unionByName, [⟨a|id⟩, ⟨b|id⟩])`},
+  {label:'Marcar a origem de cada parte',tpl:`todas = ⟨a|id⟩.withColumn("origem", F.lit(⟨a|q⟩)).unionByName(⟨b|id⟩.withColumn("origem", F.lit(⟨b|q⟩)))`}]},
+// ---------- Datas
+{id:'data',cat:'Datas',kind:'step',title:'Converter texto em data',goal:'Transformar texto em data ou data e hora.',
+ fields:[DFF,['col','Coluna de texto','data_texto'],['fmt','Formato do texto','dd/MM/yyyy','yyyy ano, MM mês, dd dia, HH hora, mm minuto, ss segundo'],['nova','Nova coluna','data']],
+ main:{label:'Texto → data',tpl:`⟨df|id⟩ = ⟨df|id⟩.withColumn(⟨nova|q⟩, F.to_date(F.col(⟨col|q⟩), ⟨fmt|q⟩))`,note:'Texto fora do formato vira null. MM é mês; mm é minuto.'},
+ alts:[{label:'Texto → data e hora',tpl:`⟨df|id⟩ = ⟨df|id⟩.withColumn(⟨nova|q⟩, F.to_timestamp(F.col(⟨col|q⟩), "dd/MM/yyyy HH:mm:ss"))`},
+  {label:'Data → texto formatado',tpl:`⟨df|id⟩ = ⟨df|id⟩.withColumn("data_br", F.date_format(F.col(⟨nova|q⟩), "dd/MM/yyyy"))`,note:'O resultado é texto. Mantenha a coluna original como data para calcular.'},
+  {label:'Spark reclama do formato? (erro de versão)',tpl:`spark.conf.set("spark.sql.legacy.timeParserPolicy", "LEGACY")`,note:'O Spark 3 é rigoroso com formatos. Se aparecer SparkUpgradeException, conserte o formato; esta opção volta ao comportamento antigo e só deve ser usada em último caso.'}]},
+{id:'partes-data',cat:'Datas',kind:'step',title:'Ano, mês, trimestre e dia da semana',goal:'Extrair partes de uma data.',
+ fields:[DFF,['col','Coluna de data','data']],
+ main:{label:'Partes da data',tpl:`⟨df|id⟩ = (
+    ⟨df|id⟩
+    .withColumn("ano", F.year(⟨col|q⟩))
+    .withColumn("mes", F.month(⟨col|q⟩))
+    .withColumn("trimestre", F.quarter(⟨col|q⟩))
+    .withColumn("dia_semana", F.dayofweek(⟨col|q⟩))
+    .withColumn("ano_mes", F.date_format(⟨col|q⟩, "yyyy-MM"))
+)`,note:'dayofweek: 1 é domingo e 7 é sábado.'},
+ alts:[{label:'Primeiro e último dia do mês',tpl:`⟨df|id⟩ = (
+    ⟨df|id⟩
+    .withColumn("inicio_mes", F.trunc(⟨col|q⟩, "month"))
+    .withColumn("fim_mes", F.last_day(⟨col|q⟩))
+)`}]},
+{id:'diferenca',cat:'Datas',kind:'step',title:'Diferença e soma de datas',goal:'Calcular dias entre datas e somar dias ou meses.',
+ fields:[DFF,['ini','Data inicial','data_pedido'],['fim','Data final','data_entrega'],['n','Quantidade','30']],
+ main:{label:'Dias entre duas datas',tpl:`⟨df|id⟩ = ⟨df|id⟩.withColumn("dias", F.datediff(F.col(⟨fim|q⟩), F.col(⟨ini|q⟩)))`,note:'A ordem é (fim, início). Se inverter, o resultado vem negativo.'},
+ alts:[{label:'Somar dias',tpl:`⟨df|id⟩ = ⟨df|id⟩.withColumn("vencimento", F.date_add(F.col(⟨ini|q⟩), ⟨n|int⟩))`},
+  {label:'Somar meses',tpl:`⟨df|id⟩ = ⟨df|id⟩.withColumn("renovacao", F.add_months(F.col(⟨ini|q⟩), ⟨n|int⟩))`},
+  {label:'Idade em anos',tpl:`⟨df|id⟩ = ⟨df|id⟩.withColumn("idade", F.floor(F.months_between(F.current_date(), F.col("nascimento")) / 12))`}]},
+// ---------- Janelas
+{id:'acumulado',cat:'Janelas',kind:'step',title:'Total acumulado',goal:'Soma que cresce linha a linha, reiniciando por grupo.',
+ fields:[DFF,['grupo','Grupo','cliente'],['ordem','Ordenar por','data'],['valor','Coluna somada','valor']],
+ main:{label:'Acumulado por grupo',tpl:`from pyspark.sql.window import Window
+
+janela = (
+    Window.partitionBy(⟨grupo|cols⟩)
+    .orderBy(⟨ordem|cols⟩)
+    .rowsBetween(Window.unboundedPreceding, Window.currentRow)
+)
+
+⟨df|id⟩ = ⟨df|id⟩.withColumn("acumulado", F.sum(⟨valor|q⟩).over(janela))`,note:'Sem rowsBetween, o padrão com orderBy já é acumulado, mas empates na ordem entram juntos. Declarar o intervalo deixa claro.'},
+ alts:[{label:'Média móvel de 3 linhas',tpl:`from pyspark.sql.window import Window
+
+janela = Window.partitionBy(⟨grupo|cols⟩).orderBy(⟨ordem|cols⟩).rowsBetween(-2, 0)
+
+⟨df|id⟩ = ⟨df|id⟩.withColumn("media_movel", F.avg(⟨valor|q⟩).over(janela))`}]},
+{id:'anterior',cat:'Janelas',kind:'step',title:'Valor anterior e variação',goal:'Comparar cada linha com a anterior do mesmo grupo.',
+ fields:[DFF,['grupo','Grupo','cliente'],['ordem','Ordenar por','mes'],['valor','Coluna','valor']],
+ main:{label:'Anterior, diferença e variação %',tpl:`from pyspark.sql.window import Window
+
+janela = Window.partitionBy(⟨grupo|cols⟩).orderBy(⟨ordem|cols⟩)
+
+⟨df|id⟩ = (
+    ⟨df|id⟩
+    .withColumn("anterior", F.lag(⟨valor|q⟩, 1).over(janela))
+    .withColumn("diferenca", F.col(⟨valor|q⟩) - F.col("anterior"))
+    .withColumn("variacao_pct", (F.col(⟨valor|q⟩) / F.col("anterior") - 1) * 100)
+)`,note:'A primeira linha de cada grupo não tem anterior: fica null.'}, alts:[]},
+{id:'ranking',cat:'Janelas',kind:'step',title:'Ranking',goal:'Posição de cada linha dentro do grupo.',
+ fields:[DFF,['grupo','Grupo','regiao'],['col','Ordenar por','valor'],['dir','Direção','desc','desc ou asc']],
+ main:{label:'Ranking com empates (dense_rank)',tpl:`from pyspark.sql.window import Window
+
+janela = Window.partitionBy(⟨grupo|cols⟩).orderBy(F.col(⟨col|q⟩)⟨dir|dir⟩)
+
+⟨df|id⟩ = ⟨df|id⟩.withColumn("ranking", F.dense_rank().over(janela))`,note:'dense_rank: 1, 1, 2. rank: 1, 1, 3. row_number: 1, 2, 3 (sem empate).'},
+ alts:[{label:'Quartis (ntile)',tpl:`from pyspark.sql.window import Window
+
+⟨df|id⟩ = ⟨df|id⟩.withColumn("quartil", F.ntile(4).over(Window.orderBy(⟨col|q⟩)))`}]},
+// ---------- Avançado
+{id:'explode',cat:'Avançado',kind:'step',title:'Transformar lista em linhas (explode)',goal:'Uma linha por item de uma lista ou por pedaço de texto.',
+ fields:[DFF,['col','Coluna','tags'],['sep','Separador do texto',',']],
+ main:{label:'Coluna que já é array',tpl:`⟨df|id⟩ = ⟨df|id⟩.withColumn(⟨col|q⟩, F.explode_outer(F.col(⟨col|q⟩)))`,note:'explode_outer mantém as linhas com lista vazia ou nula; explode as descarta.'},
+ alts:[{label:'Texto com separador ("a, b, c")',tpl:`⟨df|id⟩ = (
+    ⟨df|id⟩
+    .withColumn(⟨col|q⟩, F.explode(F.split(F.col(⟨col|q⟩), ⟨sep|q⟩)))
+    .withColumn(⟨col|q⟩, F.trim(F.col(⟨col|q⟩)))
+)`}]},
+{id:'udf',cat:'Avançado',kind:'step',title:'Função própria (UDF)',goal:'Aplicar uma função Python a uma coluna, quando não existe função nativa.',
+ fields:[DFF,['col','Coluna','cpf'],['nova','Nova coluna','cpf_limpo']],
+ main:{label:'UDF simples',tpl:`def limpar(valor):
+    return "".join(c for c in valor if c.isdigit()) if valor else valor
+
+limpar_udf = F.udf(limpar, "string")
+
+⟨df|id⟩ = ⟨df|id⟩.withColumn(⟨nova|q⟩, limpar_udf(F.col(⟨col|q⟩)))`,note:'UDFs são lentas e o Spark não consegue otimizá-las. Antes de usar, procure uma função nativa: o exemplo acima é só F.regexp_replace(col, "[^0-9]", "").'},
+ alts:[{label:'Alternativa nativa (recomendada)',tpl:`⟨df|id⟩ = ⟨df|id⟩.withColumn(⟨nova|q⟩, F.regexp_replace(F.col(⟨col|q⟩), "[^0-9]", ""))`},
+  {label:'pandas_udf (mais rápida que UDF comum)',tpl:`import pandas as pd
+
+@F.pandas_udf("string")
+def limpar(s: pd.Series) -> pd.Series:
+    return s.str.replace(r"[^0-9]", "", regex=True)
+
+⟨df|id⟩ = ⟨df|id⟩.withColumn(⟨nova|q⟩, limpar(F.col(⟨col|q⟩)))`,note:'Processa em blocos (vetorizado) com pandas. Requer pyarrow no ambiente.'}]},
+{id:'merge',cat:'Avançado',kind:'full',title:'Upsert em tabela Delta (MERGE)',goal:'Atualizar linhas existentes e inserir as novas, em uma única operação.',
+ fields:[['destino','Tabela de destino','vendas'],['origem','DataFrame com as novidades','novas_vendas'],['chave','Coluna da chave','id'],['data','Coluna de data de atualização','atualizado_em']],
+ main:{label:'Atualiza se existe, insere se não existe',tpl:`from delta.tables import DeltaTable
+
+destino = DeltaTable.forName(spark, ⟨destino|q⟩)
+
+(
+    destino.alias("d")
+    .merge(⟨origem|id⟩.alias("o"), "d.⟨chave⟩ = o.⟨chave⟩")
+    .whenMatchedUpdateAll()
+    .whenNotMatchedInsertAll()
+    .execute()
+)`,note:'A chave deve ser única na origem: duas linhas da origem para a mesma chave fazem o MERGE falhar. Deduplique antes (receita Remover duplicados).'},
+ alts:[{label:'Só atualiza se a origem for mais nova',tpl:`from delta.tables import DeltaTable
+
+destino = DeltaTable.forName(spark, ⟨destino|q⟩)
+
+(
+    destino.alias("d")
+    .merge(⟨origem|id⟩.alias("o"), "d.⟨chave⟩ = o.⟨chave⟩")
+    .whenMatchedUpdateAll(condition="o.⟨data⟩ > d.⟨data⟩")
+    .whenNotMatchedInsertAll()
+    .execute()
+)`},
+  {label:'Em SQL',tpl:`⟨origem|id⟩.createOrReplaceTempView("origem_v")
+
+spark.sql("""
+    MERGE INTO ⟨destino⟩ AS d
+    USING origem_v AS o
+    ON d.⟨chave⟩ = o.⟨chave⟩
+    WHEN MATCHED THEN UPDATE SET *
+    WHEN NOT MATCHED THEN INSERT *
+""")`}]},
+{id:'delta',cat:'Avançado',kind:'step',title:'Manutenção de tabelas Delta',goal:'Histórico, otimização e limpeza de arquivos antigos.',
+ fields:[['tabela','Tabela','vendas'],['horas','Retenção (horas)','168']],
+ main:{label:'Ver o histórico de versões',tpl:`spark.sql("DESCRIBE HISTORY ⟨tabela⟩").show(truncate=False)`,note:'Mostra versão, data, operação e usuário de cada alteração.'},
+ alts:[{label:'Compactar arquivos pequenos (OPTIMIZE)',tpl:`spark.sql("OPTIMIZE ⟨tabela⟩")`,note:'Junta muitos arquivos pequenos em poucos grandes, o que acelera as leituras.'},
+  {label:'Apagar arquivos antigos (VACUUM)',tpl:`spark.sql("VACUUM ⟨tabela⟩ RETAIN ⟨horas|int⟩ HOURS")`,note:'Apaga o que não é mais usado e ultrapassa a retenção. Depois disso, não dá mais para voltar a versões antigas. O padrão é 168 horas (7 dias): não reduza sem motivo.'},
+  {label:'Voltar a uma versão anterior',tpl:`spark.sql("RESTORE TABLE ⟨tabela⟩ TO VERSION AS OF 3")`,note:'Troque o 3 pela versão vista no histórico.'},
+  {label:'Contar linhas e tamanho',tpl:`spark.sql("DESCRIBE DETAIL ⟨tabela⟩").select("numFiles", "sizeInBytes").show()`}]},
+];
+
+let curR=R[0].id,rFilter='';const vals={};
+function setHash(h){try{history.replaceState(null,'','#'+h);}catch{}}
+function fill(tpl,r){
+  const v=vals[r.id]||{};
+  return tpl.replace(/⟨(\w+)((?:\|\w+)*)⟩/g,(m,k,fs)=>{
+    const fd=r.fields.find(x=>x[0]===k);if(!fd)return m;
+    let x=String(v[k]??fd[2]).trim()||String(fd[2]);
+    if(fs)for(const f of fs.slice(1).split('|'))if(FILT[f])x=FILT[f](x);
+    return x;
+  });
+}
+function renderRList(){
+  const box=$('#rlist');box.replaceChildren();const q=norm(rFilter);
+  const items=R.filter(r=>!q||norm(r.title+' '+r.goal+' '+r.cat).includes(q));
+  [...new Set(items.map(r=>r.cat))].forEach(c=>{
+    box.append(el('div',{class:'grp'},c));
+    items.filter(r=>r.cat===c).forEach(r=>box.append(el('button',{class:'rbtn',type:'button','aria-pressed':String(r.id===curR),onclick:()=>{curR=r.id;renderRList();renderRPanel();setHash('receitas/'+r.id);if(window.innerWidth<=820)$('#rpanel').scrollIntoView({behavior:'smooth',block:'start'});}},r.title)));
+  });
+  if(!items.length)box.append(el('p',{class:'hint',style:'padding:14px'},'Nenhuma receita encontrada. Veja o Catálogo.'));
+}
+function renderRPanel(){
+  const r=R.find(x=>x.id===curR);const p=$('#rpanel');p.replaceChildren();
+  const v=vals[r.id]=vals[r.id]||{};const outBox=el('div');
+  const draw=()=>{outBox.replaceChildren();
+    const mk=(lab,tpl,note)=>el('div',{class:'variant'},el('h3',{},lab),fmtOut(fill(tpl,r)),note?el('p',{class:'note'},note):null);
+    outBox.append(mk(r.main.label,r.main.tpl,r.main.note));r.alts.forEach(a=>outBox.append(mk(a.label,a.tpl,a.note)));};
+  const fields=el('div',{class:'fields'},r.fields.map(f=>{
+    const inp=el('input',{type:'text',value:v[f[0]]??f[2],spellcheck:'false','aria-label':f[1]});
+    inp.addEventListener('input',()=>{v[f[0]]=inp.value;draw();});
+    return el('label',{class:'f'},f[1],el('small',{},f[3]||' '),inp);
+  }));
+  const tag=el('span',{class:'badge2'},r.kind==='full'?'script completo':'trecho para colar');
+  const how=r.kind==='full'?'Cole em uma célula do notebook.':'Cole em uma célula do notebook, depois do código que cria o DataFrame. Supõe que o notebook já tem from pyspark.sql import functions as F.';
+  p.append(el('div',{class:'card'},el('h2',{style:'margin:0 0 4px;font-size:19px'},r.title,tag),el('p',{class:'note',style:'margin:0'},r.goal),el('p',{class:'hint',style:'margin:6px 0 0'},how),outBox,el('h3',{style:'margin:18px 0 0;font-size:14px'},'Ajuste os nomes para o seu código'),fields));
+  draw();
+}
+
+/* ============ Catálogo ============ */
+let cCat='',cQ='';
+function renderCats(){
+  const box=$('#ccats');box.replaceChildren();
+  [['','Todas'],...CATS.map(c=>[c,c])].forEach(([v,t])=>box.append(el('button',{class:'chip',type:'button','aria-pressed':String(cCat===v),onclick:()=>{cCat=v;renderCats();renderCatalog();}},t)));
+}
+function renderCatalog(){
+  const box=$('#clist');box.replaceChildren();const q=norm(cQ);
+  const items=F.filter(e=>(!cCat||e[1]===cCat)&&(!q||norm(e[0]+' '+e[1]+' '+e[2]).includes(q)));
+  if(!items.length){box.append(el('p',{class:'hint'},'Nenhuma função encontrada.'));return;}
+  items.forEach(e=>box.append(el('div',{class:'fn'},
+    el('h3',{},e[0],el('span',{},e[1])),el('p',{},e[2]),
+    el('div',{class:'out',style:'margin:6px 0'},e[3]),fmtOut(e[4]),
+    e[5]?el('div',{class:'tip'},'💡 '+e[5]):null)));
+}
+
+/* ============ Formatar e explicar ============ */
+const W=88;
+const FALIAS=['F','functions','sf'];
+const lineOf=(src,p)=>src.slice(0,p).split('\n').length;
+const isOp=(t,s)=>t&&t.k==='op'&&t.s===s;
+const OPEN='([{',CLOSE=')]}';
+function lexPy(src){
+  const toks=[];let i=0;const n=src.length;
+  const OP2=['==','!=','<=','>=','**','//','+=','-=','*=','/=','->','<<','>>',':=','|=','&='];
+  const strRe=/(?:[rRbBfFuU]{1,2})?(?:"""|'''|"|')/y;
+  const idRe=/[\p{L}_][\p{L}\p{N}_]*/uy,numRe=/(?:\d[\d_]*(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?/y;
+  while(i<n){
+    const c=src[i];
+    if(c==='\\'&&(src[i+1]==='\n'||(src[i+1]==='\r'&&src[i+2]==='\n'))){const j=src[i+1]==='\r'?i+3:i+2;toks.push({k:'ws',s:src.slice(i,j),p:i,cont:true});i=j;continue;}
+    if(/\s/.test(c)){let j=i;while(j<n&&/\s/.test(src[j]))j++;toks.push({k:'ws',s:src.slice(i,j),p:i});i=j;continue;}
+    if(c==='#'){let j=i;while(j<n&&src[j]!=='\n')j++;toks.push({k:'com',s:src.slice(i,j),p:i});i=j;continue;}
+    let m=null;
+    if(/[\p{L}"']/u.test(c)){strRe.lastIndex=i;m=strRe.exec(src);}
+    if(m){
+      const quote=m[0].replace(/^[A-Za-z]+/,'');const pre=m[0].slice(0,m[0].length-quote.length);const raw=/[rR]/.test(pre);
+      let j=i+m[0].length,closed=false;const triple=quote.length===3;
+      while(j<n){
+        if(src[j]==='\\'&&!(raw&&false)){j+=2;continue;}
+        if(src.startsWith(quote,j)){j+=quote.length;closed=true;break;}
+        if(!triple&&src[j]==='\n')break;
+        j++;
+      }
+      if(j>n)j=n;
+      toks.push({k:'str',s:src.slice(i,j),p:i,bad:!closed});i=j;continue;
+    }
+    if(/\d/.test(c)||(c==='.'&&/\d/.test(src[i+1]||''))){numRe.lastIndex=i;const mm=numRe.exec(src);if(mm){toks.push({k:'num',s:mm[0],p:i});i+=mm[0].length;continue;}}
+    idRe.lastIndex=i;const mi=idRe.exec(src);
+    if(mi){toks.push({k:'id',s:mi[0],p:i});i+=mi[0].length;continue;}
+    const two=src.slice(i,i+2);
+    if(OP2.includes(two)){toks.push({k:'op',s:two,p:i});i+=2;continue;}
+    toks.push({k:'op',s:c,p:i});i++;
+  }
+  return toks;
+}
+function logicalLines(toks){
+  const lines=[];let cur=[];let depth=0;
+  for(const t of toks){
+    if(t.k==='ws'&&/\n/.test(t.s)&&!t.cont&&depth<=0){
+      if(cur.length)lines.push(cur);cur=[];
+      const idx=t.s.lastIndexOf('\n');const ind=t.s.slice(idx+1);
+      if(ind)cur.push({k:'ws',s:ind,p:t.p+idx+1,indent:true});
+      continue;
+    }
+    if(t.k==='op'){if(OPEN.includes(t.s))depth++;else if(CLOSE.includes(t.s))depth--;}
+    cur.push(t);
+  }
+  if(cur.length)lines.push(cur);
+  return lines;
+}
+function matchClose(s,i){let d=0;for(let j=i;j<s.length;j++){const t=s[j];if(t.k!=='op')continue;if(OPEN.includes(t.s))d++;else if(CLOSE.includes(t.s)){d--;if(d===0)return j;}}return -1;}
+function joinToks(ts){
+  const o=[];
+  for(const t of ts){
+    if(t.k==='com')continue;
+    if(t.k==='ws'){const l=o[o.length-1];if(l&&l.k!=='ws'&&!(l.k==='op'&&OPEN.includes(l.s)))o.push({k:'ws',s:' '});continue;}
+    if(t.k==='op'&&CLOSE.includes(t.s)){
+      while(o.length&&o[o.length-1].k==='ws')o.pop();
+      if(o.length&&isOp(o[o.length-1],',')){o.pop();while(o.length&&o[o.length-1].k==='ws')o.pop();}
+    }else if(isOp(t,',')){while(o.length&&o[o.length-1].k==='ws')o.pop();}
+    o.push(t);
+  }
+  while(o.length&&o[o.length-1].k==='ws')o.pop();
+  return o.map(t=>t.s).join('');
+}
+function splitArgs(ts){
+  const out=[];let cur=[],d=0;
+  for(const t of ts){
+    if(t.k==='op'){if(OPEN.includes(t.s))d++;else if(CLOSE.includes(t.s))d--;else if(t.s===','&&d===0){out.push(cur);cur=[];continue;}}
+    cur.push(t);
+  }
+  if(cur.some(t=>t.k!=='ws'&&t.k!=='com'))out.push(cur);
+  return out;
+}
+const KW0=['import','from','def','class','for','while','if','elif','else','try','except','finally','with','lambda','assert','del','global','nonlocal','pass','raise','yield','break','continue','async','await'];
+function parseChain(line){
+  let s=line.filter(t=>t.k!=='ws'&&t.k!=='com');
+  const hasCom=line.some(t=>t.k==='com');
+  if(!s.length)return null;
+  if(s[0].k==='id'&&KW0.includes(s[0].s))return null;
+  if(isOp(s[0],'@'))return null;
+  let prefix='',target='';
+  let d=0,eq=-1;
+  for(let j=0;j<s.length;j++){const t=s[j];if(t.k!=='op')continue;if(OPEN.includes(t.s))d++;else if(CLOSE.includes(t.s))d--;else if(t.s==='='&&d===0){eq=j;break;}}
+  if(eq>=0){target=joinToks(line.slice(0,line.indexOf(s[eq])));s=s.slice(eq+1);}
+  else if(s[0].k==='id'&&s[0].s==='return'){prefix='return ';s=s.slice(1);}
+  while(s.length&&isOp(s[0],'(')&&matchClose(s,0)===s.length-1)s=s.slice(1,-1);
+  if(!s.length||s[0].k!=='id')return null;
+  const items=[];let j=0;
+  while(j<s.length){
+    if(s[j].k!=='id')return null;
+    const it={name:s[j].s,call:false,args:[]};j++;
+    if(isOp(s[j],'(')){const e=matchClose(s,j);if(e<0)return null;it.call=true;it.args=line.filter(t=>t.p>s[j].p&&t.p<s[e].p);j=e+1;}
+    items.push(it);
+    if(j>=s.length)break;
+    if(isOp(s[j],'.')&&s[j+1]&&s[j+1].k==='id'){j++;continue;}
+    return null;
+  }
+  const full=line.filter(t=>t.p>=s[0].p&&t.p<=s[s.length-1].p);
+  return {prefix,target,items,full,hasCom};
+}
+function formatChain(ch,pad){
+  const first=ch.items.findIndex(i=>i.call);
+  const calls=ch.items.filter(i=>i.call).length;
+  if(first<=0||calls<2)return null;
+  const r0=ch.items[0].name;
+  if(FALIAS.includes(r0)||['Window','T','types'].includes(r0))return null;
+  const head=(ch.prefix||'')+(ch.target?ch.target+' = ':'');
+  const one=head+joinToks(ch.full);
+  if(calls<3&&pad.length+one.length<=W)return null;
+  const root=ch.items.slice(0,first).map(i=>i.name).join('.');
+  const lines=[];let pend='';
+  const q=pad+'    ';
+  for(const it of ch.items.slice(first)){
+    if(!it.call){pend+='.'+it.name;continue;}
+    const args=splitArgs(it.args).map(joinToks);
+    const oneLine=pend+'.'+it.name+'('+args.join(', ')+')';
+    if(q.length+oneLine.length<=W||!args.length)lines.push(q+oneLine);
+    else lines.push(q+pend+'.'+it.name+'(\n'+args.map(a=>q+'    '+a+',').join('\n')+'\n'+q+')');
+    pend='';
+  }
+  if(pend)lines.push(q+pend);
+  return head+'(\n'+q+root+'\n'+lines.join('\n')+'\n'+pad+')';
+}
+/* busca no catálogo: receiver = nomes antes do método; depois = o receptor termina em uma chamada */
+function lookup(prev,name,after){
+  const f=prev[0];
+  if(prev.length&&FALIAS.includes(f)){return prev.length===1?IDX['F.'+name]:(IDX['Column.'+name]||IDX['F.'+name]);}
+  if(f==='Window')return IDX['Window.'+name];
+  if(f==='T'||f==='types')return IDX['T.'+name];
+  if(prev.includes('read')||prev.includes('readStream'))return IDX['read.'+name];
+  if(prev.includes('write')||prev.includes('writeStream'))return IDX['write.'+name];
+  if(prev.includes('na'))return IDX['na.'+name];
+  if(f==='spark'&&prev.length===1)return IDX['spark.'+name];
+  const order=after?['Column.','df.','F.','Window.','spark.']:['df.','Column.','F.','Window.','spark.'];
+  for(const o of order)if(IDX[o+name])return IDX[o+name];
+  return null;
+}
+function recvOf(S,i){
+  const prev=[];let j=i-1,after=false;
+  if(!isOp(S[j],'.'))return{prev,after,bare:true};
+  j--;
+  for(;;){
+    const t=S[j];
+    if(t&&t.k==='id'){prev.unshift(t.s);if(isOp(S[j-1],'.')){j-=2;continue;}break;}
+    if(t&&t.k==='op'&&(t.s===')'||t.s===']')){
+      after=true;let d=0;
+      for(;j>=0;j--){const o=S[j];if(o.k!=='op')continue;if(CLOSE.includes(o.s))d++;else if(OPEN.includes(o.s)){d--;if(d===0)break;}}
+      j--;
+      if(S[j]&&S[j].k==='id'){prev.unshift(S[j].s);if(isOp(S[j-1],'.')){j-=2;continue;}}
+      break;
+    }
+    break;
+  }
+  return{prev,after,bare:false};
+}
+const U=a=>{a=(a||'').trim();const m=/^[rRbBfFuU]{0,2}(["'])((?:\\.|(?!\1)[^\\])*)\1$/.exec(a);return m?m[2]:a;};
+const Ls=a=>a.map(U).map(x=>'«'+x+'»').join(', ');
+const AQUI={
+ 'df.filter':a=>a[0]&&`Mantém só as linhas em que ${U(a[0])} é verdadeiro.`,
+ 'df.where':a=>a[0]&&`Mantém só as linhas em que ${U(a[0])} é verdadeiro.`,
+ 'df.select':a=>a.length?`Escolhe ou calcula as colunas: ${Ls(a)}.`:null,
+ 'df.selectExpr':a=>a.length?`Escolhe ou calcula, em SQL: ${Ls(a)}.`:null,
+ 'df.withColumn':a=>a.length>1?`Cria (ou substitui) a coluna «${U(a[0])}» com: ${a[1]}.`:null,
+ 'df.withColumnRenamed':a=>a.length>1?`Renomeia «${U(a[0])}» para «${U(a[1])}».`:null,
+ 'df.drop':a=>a.length?`Remove as colunas ${Ls(a)}.`:null,
+ 'df.dropDuplicates':a=>a.length?`Remove duplicados considerando só: ${a[0]}.`:'Remove linhas totalmente repetidas.',
+ 'df.orderBy':a=>a.length?`Ordena por: ${a.join(', ')}.`:null,
+ 'df.sort':a=>a.length?`Ordena por: ${a.join(', ')}.`:null,
+ 'df.limit':a=>a[0]&&`Fica com no máximo ${a[0]} linhas.`,
+ 'df.groupBy':a=>a.length?`Agrupa as linhas por: ${Ls(a)}.`:'Sem colunas: o cálculo seguinte considera a tabela inteira.',
+ 'df.agg':a=>a.length?`Calcula por grupo: ${a.join('; ')}.`:null,
+ 'df.union':a=>a[0]&&`Empilha as linhas de ${a[0]} (colunas casadas por posição).`,
+ 'df.unionByName':a=>a[0]&&`Empilha as linhas de ${a[0]} (colunas casadas pelo nome).`,
+ 'df.join':a=>{
+   const kw={};const pos=[];a.forEach(x=>{const m=/^(\w+)\s*=(?!=)\s*([\s\S]*)$/.exec(x);if(m)kw[m[1]]=m[2];else pos.push(x);});
+   const other=pos[0]||kw.other,on=pos[1]||kw.on,how=pos[2]||kw.how;
+   if(!other)return null;
+   return `Combina com ${other}${on?`, casando por ${on}`:' (sem condição: produto cartesiano!)'}${how?`, tipo ${U(how)}`:' (tipo inner, o padrão)'}.`;},
+ 'df.show':a=>'Imprime as linhas na saída. Isso executa o plano (é uma ação).',
+ 'df.count':a=>'Conta as linhas (ação: percorre os dados).',
+ 'Column.alias':a=>a[0]&&`Dá o nome «${U(a[0])}» ao resultado.`,
+ 'Column.cast':a=>a[0]&&`Converte para ${U(a[0])}.`,
+ 'Column.isin':a=>a.length?`Verdadeiro quando o valor é um de: ${a.join(', ')}.`:null,
+ 'Column.otherwise':a=>a[0]&&`Senão, devolve ${a[0]}.`,
+ 'Column.over':a=>a[0]&&`Calcula sobre a janela ${a[0]}.`,
+ 'F.col':a=>a[0]&&`Coluna «${U(a[0])}».`,
+ 'F.lit':a=>a[0]&&`Valor fixo ${a[0]}.`,
+ 'F.when':a=>a.length>1?`Se ${a[0]}, devolve ${a[1]}.`:null,
+ 'F.to_date':a=>a[0]&&`Converte «${U(a[0])}» em data${a[1]?`, no formato ${U(a[1])}`:''}.`,
+ 'F.sum':a=>a[0]&&`Soma de ${U(a[0])}.`,
+ 'F.count':a=>a[0]&&`Contagem de ${U(a[0])}.`,
+ 'F.avg':a=>a[0]&&`Média de ${U(a[0])}.`,
+ 'read.csv':a=>a[0]&&`Lê o CSV em ${a[0]}.`,
+ 'read.parquet':a=>a[0]&&`Lê o Parquet em ${a[0]}.`,
+ 'read.json':a=>a[0]&&`Lê o JSON em ${a[0]}.`,
+ 'read.table':a=>a[0]&&`Lê a tabela ${a[0]}.`,
+ 'read.load':a=>a[0]&&`Carrega de ${a[0]}.`,
+ 'read.format':a=>a[0]&&`Formato: ${U(a[0])}.`,
+ 'read.option':a=>a.length>1?`Opção ${U(a[0])} = ${a[1]}.`:null,
+ 'read.schema':a=>a[0]&&`Usa o schema ${a[0]} (sem adivinhar tipos).`,
+ 'write.mode':a=>a[0]&&`Se o destino existir: ${U(a[0])}.`,
+ 'write.format':a=>a[0]&&`Formato: ${U(a[0])}.`,
+ 'write.saveAsTable':a=>a[0]&&`Grava como a tabela ${a[0]}.`,
+ 'write.partitionBy':a=>a.length?`Separa em pastas por: ${Ls(a)}.`:null,
+ 'spark.sql':a=>a[0]&&`Executa a consulta SQL ${a[0].length>60?a[0].slice(0,57)+'…':a[0]}.`,
+};
+const BUILTIN=new Set(['sum','min','max','round','abs']);
+const FNNAMES=new Set(F.filter(e=>e[0].startsWith('F.')).map(e=>e[0].slice(2)));
+const COLCALLS=new Set(['filter','where','when','withColumn','join','otherwise','select','agg']);
+function importedNames(src){
+  const set=new Set();let star=false;
+  const re=/from\s+pyspark\.sql\.functions\s+import\s+(\([^)]*\)|[^\n]+)/g;let m;
+  while(m=re.exec(src)){if(/\*/.test(m[1]))star=true;(m[1].match(/[\p{L}_][\p{L}\p{N}_]*/gu)||[]).forEach(w=>set.add(w));}
+  return{set,star};
+}
+function analyze(src){
+  const toks=lexPy(src);const errors=[];const hints=[];
+  const hasCom=toks.some(t=>t.k==='com');
+  toks.forEach(t=>{if(t.bad)errors.push(`Texto entre aspas não foi fechado (linha ${lineOf(src,t.p)}).`);});
+  const S=toks.filter(t=>t.k!=='ws'&&t.k!=='com');
+  // parênteses
+  const st=[];const PAIR={')':'(',']':'[','}':'{'};
+  for(const t of S){
+    if(t.k!=='op')continue;
+    if(OPEN.includes(t.s))st.push(t);
+    else if(CLOSE.includes(t.s)){const o=st.pop();if(!o){errors.push(`"${t.s}" sem abertura (linha ${lineOf(src,t.p)}).`);break;}if(o.s!==PAIR[t.s]){errors.push(`"${o.s}" da linha ${lineOf(src,o.p)} foi fechado com "${t.s}" na linha ${lineOf(src,t.p)}.`);break;}}
+  }
+  if(st.length&&!errors.length)errors.push(`"${st[st.length-1].s}" da linha ${lineOf(src,st[st.length-1].p)} não foi fechado.`);
+
+  const lines=logicalLines(toks);const chains=[];
+  lines.forEach(line=>{
+    const sig=line.filter(t=>t.k!=='ws'&&t.k!=='com');if(!sig.length)return;
+    const ch=parseChain(line);if(!ch)return;
+    const ind=line[0].k==='ws'&&line[0].indent?line[0].s:'';
+    const last=sig[sig.length-1];
+    chains.push({ch,ind,p0:sig[0].p,p1:last.p+last.s.length,line:lineOf(src,sig[0].p)});
+  });
+
+  // ---- sugestões
+  const add=(msg)=>{if(!hints.includes(msg))hints.push(msg);};
+  const imp=importedNames(src);
+  const usesF=S.some((t,i)=>t.k==='id'&&FALIAS.includes(t.s)&&isOp(S[i+1],'.')&&!isOp(S[i-1],'.'));
+  const hasFImport=/import\s+functions\s+as\s+F\b/.test(src)||/^\s*F\s*=/m.test(src)||imp.set.size>0&&/from\s+pyspark\.sql\s+import[^\n]*\bfunctions\b/.test(src);
+  if(usesF&&S.some((t,i)=>t.s==='F'&&isOp(S[i+1],'.'))&&!/import\s+functions\s+as\s+F\b/.test(src)&&!/^\s*F\s*=/m.test(src))add('O código usa "F." mas não importa as funções. Acrescente no início: from pyspark.sql import functions as F');
+  void hasFImport;
+  if(S.some((t,i)=>t.s==='Window'&&isOp(S[i+1],'.'))&&!/import[^\n]*\bWindow\b/.test(src))add('O código usa "Window." mas não importa. Acrescente: from pyspark.sql.window import Window');
+  if(S.some((t,i)=>t.s==='T'&&isOp(S[i+1],'.')&&!isOp(S[i-1],'.'))&&!/import\s+types\s+as\s+T\b/.test(src)&&!/^\s*T\s*=/m.test(src))add('O código usa "T." mas não importa os tipos. Acrescente: from pyspark.sql import types as T');
+  if(imp.star)add('from pyspark.sql.functions import * sobrescreve sum, min, max, round, abs e filter do Python. Prefira from pyspark.sql import functions as F e use F.sum, F.col…');
+
+  // pilha de chamadas
+  const stack=[];
+  for(let i=0;i<S.length;i++){
+    const t=S[i];
+    if(t.k==='op'){
+      if(OPEN.includes(t.s)){const pv=S[i-1];stack.push({nm:t.s==='('&&pv&&pv.k==='id'?pv.s:'',amp:false,cmp:false,p:t.p});}
+      else if(CLOSE.includes(t.s)){const o=stack.pop();if(o&&o.amp&&o.cmp)add(`Linha ${lineOf(src,o.p)}: há & ou | junto de comparações sem parênteses. Em PySpark, coloque cada condição entre parênteses: (F.col("a") > 1) & (F.col("b") == 2).`);}
+      else if(stack.length){
+        const top=stack[stack.length-1];
+        if(t.s==='&'||t.s==='|')top.amp=true;
+        else if(['==','!=','<','>','<=','>='].includes(t.s))top.cmp=true;
+        else if(t.s===','){top.amp=false;top.cmp=false;}
+      }
+      if((t.s==='=='||t.s==='!=')&&S[i+1]&&S[i+1].k==='id'&&S[i+1].s==='None')add(`Linha ${lineOf(src,t.p)}: comparar coluna com None não funciona em PySpark. Use .isNull() ou .isNotNull().`);
+    }else if(t.k==='id'){
+      if((t.s==='and'||t.s==='or'||t.s==='not')&&stack.some(x=>COLCALLS.has(x.nm)))add(`Linha ${lineOf(src,t.p)}: "${t.s}" não funciona em colunas. Use ${t.s==='and'?'&':t.s==='or'?'|':'~'} com cada condição entre parênteses.`);
+      const nx=S[i+1];
+      if(isOp(nx,'(')&&!isOp(S[i-1],'.')&&FNNAMES.has(t.s)){
+        const defined=new RegExp('\\bdef\\s+'+t.s+'\\b|(^|\\n)\\s*'+t.s+'\\s*=(?!=)').test(src);
+        const inCall=stack.some(x=>['agg','select','withColumn','orderBy','sort','filter','where','groupBy'].includes(x.nm));
+        if(!defined&&!imp.star&&!imp.set.has(t.s)){
+          if(BUILTIN.has(t.s)){if(inCall)add(`Linha ${lineOf(src,t.p)}: "${t.s}(...)" aqui é a função do Python, que não calcula em colunas. Use F.${t.s}(...).`);}
+          else add(`Linha ${lineOf(src,t.p)}: "${t.s}(...)" não está importado. Use F.${t.s}(...) ou importe a função.`);
+        }
+      }
+      if(/^(pass(word)?|senha|pwd|secret|token|api_?key)$/i.test(t.s)&&isOp(S[i+1],'=')&&S[i+2]&&S[i+2].k==='str')add(`Linha ${lineOf(src,t.p)}: parece haver uma senha ou segredo escrito no código. Busque de um cofre de segredos (Fabric: notebookutils.credentials.getSecret).`);
+    }else if(t.k==='str'){
+      if(/^[rbfu]*["']\s*(password|senha|pwd)\s*["']$/i.test(t.s)&&isOp(S[i+1],',')&&S[i+2]&&S[i+2].k==='str')add(`Linha ${lineOf(src,t.p)}: a senha parece estar escrita no código. Busque de um cofre de segredos, não deixe no notebook.`);
+      if(/(password|pwd)=[^;"'\s]+/i.test(t.s)&&/jdbc|server|host/i.test(t.s))add(`Linha ${lineOf(src,t.p)}: a senha está dentro do texto de conexão. Tire do código e busque de um cofre de segredos.`);
+      if(/inferSchema/.test(t.s)&&!/inferSchema["']\s*,\s*(False|false)/.test(src.slice(t.p,t.p+60)))add('inferSchema lê o arquivo duas vezes e pode adivinhar tipos errados (CEP vira número). Para arquivos grandes ou fixos, informe o schema.');
+    }
+  }
+  // chamadas
+  let nWith=0;
+  for(let i=0;i<S.length;i++){
+    const t=S[i];
+    if(t.k!=='id'||!isOp(S[i+1],'('))continue;
+    const e=matchClose(S,i+1);const args=e>0?splitArgs(S.slice(i+2,e)):[];
+    const prevDot=isOp(S[i-1],'.');
+    const ln=lineOf(src,t.p);
+    if(t.s==='withColumn')nWith++;
+    if(prevDot&&t.s==='collect')add(`Linha ${ln}: collect() traz todas as linhas para a memória do driver. Em tabelas grandes derruba o notebook; filtre, agregue ou use limit antes.`);
+    if(prevDot&&t.s==='toPandas')add(`Linha ${ln}: toPandas() traz todos os dados para a memória do driver. Use só com poucos dados (limit antes).`);
+    if(prevDot&&(t.s==='coalesce'||t.s==='repartition')&&args.length===1&&args[0].length===1&&args[0][0].s==='1')add(`Linha ${ln}: ${t.s}(1) junta tudo em uma única tarefa, o que deixa a gravação lenta e pode estourar memória. Só use em tabelas pequenas.`);
+    if(prevDot&&t.s==='join'&&args.length===1)add(`Linha ${ln}: join sem condição (on) faz produto cartesiano: cada linha contra todas. Informe a chave, ou use crossJoin se for proposital.`);
+    if((t.s==='udf'||t.s==='pandas_udf')||(t.s==='udf'))add(`Linha ${ln}: UDFs são lentas e o Spark não consegue otimizá-las. Veja se existe função nativa no Catálogo; se não, prefira pandas_udf.`);
+    if(prevDot&&t.s==='count'&&isOp(S[e+1],'==')&&S[e+2]&&S[e+2].s==='0')add(`Linha ${ln}: df.count() == 0 percorre a tabela inteira. Use df.isEmpty() (Spark 3.3+) ou df.limit(1).count() == 0.`);
+  }
+  S.forEach((t,i)=>{if(t.k==='id'&&t.s==='rdd'&&isOp(S[i-1],'.'))add(`Linha ${lineOf(src,t.p)}: .rdd sai da API otimizada do DataFrame e costuma ser bem mais lento. Prefira funções de DataFrame.`);});
+  if(nWith>=4)add(`Há ${nWith} chamadas de withColumn. Muitas seguidas deixam o plano pesado: junte em um select ou use withColumns({...}) (Spark 3.3+).`);
+  // withColumn dentro de for
+  {let forInd=-1;lines.forEach(line=>{
+    const sig=line.filter(t=>t.k!=='ws'&&t.k!=='com');if(!sig.length)return;
+    const ind=line[0].k==='ws'&&line[0].indent?line[0].s.length:0;
+    if(forInd>=0&&ind<=forInd)forInd=-1;
+    if(sig[0].k==='id'&&sig[0].s==='for'&&forInd<0)forInd=ind;
+    else if(forInd>=0&&sig.some((t,i)=>t.s==='withColumn'&&isOp(sig[i+1],'(')))add(`Linha ${lineOf(src,sig[0].p)}: withColumn dentro de um for cria um plano enorme. Monte uma lista de colunas e use um único select (ou withColumns).`);
+  });}
+  // gravação sem mode
+  chains.forEach(c=>{
+    const names=c.ch.items.map(i=>i.name);
+    if(names.includes('write')&&c.ch.items.some(i=>i.call&&['save','saveAsTable','csv','parquet','json','orc'].includes(i.name))&&!c.ch.items.some(i=>i.call&&i.name==='mode')&&!c.ch.items.some(i=>i.call&&i.name==='csv'&&/mode\s*=/.test(joinToks(i.args))))add(`Linha ${c.line}: a gravação não define .mode(...). O padrão é errorifexists, que falha se o destino já existir. Use .mode("overwrite") ou .mode("append").`);
+  });
+  return{toks,S,lines,chains,errors,hints,hasCom};
+}
+function formatCode(src,a){
+  let out='',pos=0;
+  for(const c of a.chains){
+    if(c.ch.hasCom)continue;
+    const f=formatChain(c.ch,c.ind);
+    if(f==null)continue;
+    out+=src.slice(pos,c.p0)+f;pos=c.p1;
+  }
+  return out+src.slice(pos);
+}
+function explain(){
+  const out=$('#xout');out.replaceChildren();
+  const src=$('#xin').value.replace(/\r\n/g,'\n');
+  if(!src.trim()){out.append(el('p',{class:'hint'},'Cole o código acima.'));return;}
+  const a=analyze(src);
+  const card=el('div',{class:'card'});
+  card.append(el('p',{},a.chains.length?el('span',{},'Instruções com encadeamento encontradas: ',el('b',{},String(a.chains.length)),'. '):'',
+    a.errors.length?el('span',{class:'err'},'Atenção: '+a.errors.join(' ')):el('span',{class:'ok'},'Estrutura sem erros de parênteses ou de aspas.')));
+  if(!a.errors.length){
+    if(a.hasCom)card.append(el('div',{class:'warn'},'Instruções com comentário (#) não são reformatadas, para não perder os comentários. A explicação continua abaixo.'));
+    const text=formatCode(src,a);
+    if(text!==src)card.append(el('h3',{style:'margin:14px 0 4px;font-size:15px'},'Código organizado'),fmtOut(text));
+    else card.append(el('p',{class:'hint'},a.hasCom?'Nada foi reformatado (trechos com comentários são mantidos como estão).':'O código já está organizado: nada para reformatar.'));
+  }else card.append(el('div',{class:'warn'},'Corrija os erros acima para o código ser organizado.'));
+  out.append(card);
+
+  const exp=a.chains.filter(c=>c.ch.items.some(i=>i.call));
+  if(exp.length){
+    const c2=el('div',{class:'card'});c2.append(el('h3',{style:'margin:0 0 4px;font-size:15px'},'O que cada linha faz'));
+    exp.forEach((c,n)=>{
+      const its=c.ch.items;const fc=its.findIndex(i=>i.call);
+      const head=(c.ch.target?c.ch.target:(c.ch.prefix?c.ch.prefix.trim():'resultado sem variável'));
+      const sec=el('div',{class:'fn'},el('h3',{},(n+1)+'. '+head,el('span',{style:'text-transform:none;letter-spacing:0;font-size:13px'},'linha '+c.line)));
+      sec.append(el('p',{},fc>0?`Parte de «${its.slice(0,fc).map(i=>i.name).join('.')}».`:'Chamada direta.'));
+      its.forEach((it,idx)=>{
+        if(!it.call)return;
+        const prev=its.slice(0,idx).map(i=>i.name);const after=its.slice(0,idx).some(i=>i.call);
+        const e=idx===0?(IDX['df.'+it.name]||IDX['F.'+it.name]):lookup(prev,it.name,after);
+        const args=splitArgs(it.args).map(joinToks);
+        const box=el('div',{style:'margin:10px 0 0;padding-left:12px;border-left:2px solid var(--line2)'});
+        box.append(el('div',{},el('code',{},'.'+it.name+'('+(args.join(', ').length>70?'…':args.join(', '))+')'),e?el('span',{class:'badge2'},e[0]):null));
+        if(e)box.append(el('p',{style:'margin:4px 0'},e[2]));
+        else box.append(el('p',{class:'hint',style:'margin:4px 0'},'Não está no catálogo desta página (pode ser um método válido, mais novo ou seu).'));
+        const aq=e&&AQUI[e[0]]?AQUI[e[0]](args):null;
+        if(aq)box.append(el('p',{class:'aqui'},'Aqui: '+aq));
+        if(args.length>1||(args.length===1&&args[0].length>60))box.append(el('ul',{class:'args'},args.map((x,k)=>{const m=/^(\w+)\s*=(?!=)\s*([\s\S]*)$/.exec(x);return el('li',{},el('b',{},m?m[1]:'argumento '+(k+1)),' → ',el('code',{},m?m[2]:x));})));
+        sec.append(box);
+      });
+      c2.append(sec);
+    });
+    out.append(c2);
+  }else if(!a.errors.length)out.append(el('div',{class:'card'},el('p',{class:'hint'},'Não encontrei instruções com métodos encadeados (como df.filter(...).groupBy(...)) para explicar. As sugestões abaixo continuam valendo.')));
+
+  // funções usadas
+  const used=[],unk=[];
+  a.S.forEach((t,i)=>{
+    if(t.k!=='id'||!isOp(a.S[i+1],'('))return;
+    const r=recvOf(a.S,i);if(r.bare)return;
+    const e=lookup(r.prev,t.s,r.after);
+    if(e){if(!used.includes(e))used.push(e);}
+    else if(FALIAS.includes(r.prev[0])&&r.prev.length===1&&!unk.includes('F.'+t.s))unk.push('F.'+t.s);
+  });
+  const c3=el('div',{class:'card'});c3.append(el('h3',{style:'margin:0 0 4px;font-size:15px'},'Funções usadas'));
+  if(!used.length&&!unk.length)c3.append(el('p',{class:'hint'},'Nenhuma função do catálogo encontrada.'));
+  used.forEach(e=>c3.append(el('div',{class:'fn'},el('h3',{},e[0],el('span',{},e[1])),el('p',{},e[2]),el('div',{class:'out',style:'margin:6px 0'},e[3]),e[5]?el('div',{class:'tip'},'💡 '+e[5]):null)));
+  unk.forEach(u=>c3.append(el('div',{class:'fn'},el('h3',{},u),el('p',{class:'hint'},'Não está no catálogo desta página (pode ser uma função válida, nova ou específica).'))));
+  out.append(c3);
+
+  if(a.hints.length){const c4=el('div',{class:'card'});c4.append(el('h3',{style:'margin:0 0 6px;font-size:15px'},'Sugestões'));a.hints.forEach(h=>c4.append(el('div',{class:'warn'},h)));out.append(c4);}
+}
+
+/* ============ Abas ============ */
+function setTab(id){
+  ['receitas','catalogo','explicar'].forEach(t=>{$('#p-'+t).classList.toggle('hide',t!==id);$('#tab-'+t).setAttribute('aria-selected',String(t===id));});
+  setHash(id==='receitas'?'receitas/'+curR:id);
+}
+document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>setTab(b.dataset.tab)));
+$('#rq').addEventListener('input',e=>{rFilter=e.target.value;renderRList();});
+$('#cq').addEventListener('input',e=>{cQ=e.target.value;renderCatalog();});
+$('#xgo').addEventListener('click',explain);
+{let tmr;$('#xin').addEventListener('input',()=>{clearTimeout(tmr);tmr=setTimeout(explain,400);});}
+$('#xex').addEventListener('click',()=>{$('#xin').value='from pyspark.sql import functions as F\n\nvendas = spark.read.option("header", True).option("inferSchema", True).csv("Files/vendas.csv")\nresumo = vendas.filter((F.col("valor") > 0) & (F.col("status") == "pago")).withColumn("mes", F.date_format("data", "yyyy-MM")).groupBy("mes", "cliente").agg(F.sum("valor").alias("total"), F.count("*").alias("pedidos")).orderBy(F.col("total").desc())\nresumo.write.format("delta").saveAsTable("vendas_resumo")\n';explain();});
+renderRList();renderRPanel();renderCats();renderCatalog();
+{const [t,rid]=location.hash.slice(1).split('/');if(rid&&R.some(r=>r.id===rid)){curR=rid;renderRList();renderRPanel();}if(['receitas','catalogo','explicar'].includes(t))setTab(t);}
+</script>
+<script>(function(){var b=document.getElementById('themeBtn');if(!b)return;var r=document.documentElement;function lab(){var l=r.dataset.theme==='light';b.textContent=l?'☾ Modo escuro':'☀ Modo claro';b.setAttribute('aria-label',l?'Mudar para o modo escuro':'Mudar para o modo claro');var m=document.querySelector('meta[name=theme-color]');if(m)m.content=l?'#f7f6fa':'#030305'}b.addEventListener('click',function(){var n=r.dataset.theme==='light'?'dark':'light';r.dataset.theme=n;try{localStorage.setItem('ferramentas-tema',n)}catch(e){}lab()});lab()})();</script>
+</body>
+</html>

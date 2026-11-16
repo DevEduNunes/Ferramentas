@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<script>try{var t=localStorage.getItem('ferramentas-tema');document.documentElement.dataset.theme=(t==='light'?'light':'dark')}catch(e){document.documentElement.dataset.theme='dark'}</script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#030305">
+<!-- Nenhuma requisição de rede é permitida: tudo roda no navegador. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'none'">
+<title>Currículo ATS · Ferramentas</title>
+<meta name="description" content="Monte um currículo simples e legível por sistemas ATS, confira o texto contra uma vaga e baixe em Word, PDF ou texto. Tudo no navegador, seus dados não saem do computador.">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../assets/tema.css?v=3">
+<style>
+.badge2{display:inline-block;margin-left:8px;padding:1px 7px;border:1px solid var(--line2);font:500 10.5px var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);vertical-align:middle}
+.cvgrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px;align-items:start}
+@media (max-width:980px){.cvgrid{grid-template-columns:minmax(0,1fr)}}
+.sticky{position:sticky;top:12px}
+@media (max-width:980px){.sticky{position:static}}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px}
+@media (max-width:520px){.two{grid-template-columns:1fr}}
+.item{border:1px solid var(--line);padding:14px;margin:10px 0;background:var(--panel2)}
+.item h4{margin:0 0 8px;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent-soft);font-weight:600;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.btn.sm{padding:5px 10px;font-size:11px}
+.chkrow{display:flex;gap:8px;align-items:center;font-size:14px;color:var(--muted)}
+.chkrow input{width:auto}
+/* folha de papel: sempre clara, como sairá no arquivo */
+#cv{background:#fff;color:#111;padding:28px 32px;font-family:Arial,Helvetica,sans-serif;font-size:12.5px;line-height:1.45;border:1px solid var(--line2);max-height:78vh;overflow:auto}
+#cv .nm{font-size:22px;font-weight:700;margin:0}
+#cv .tt{font-weight:700;margin:2px 0 0}
+#cv .ct{margin:4px 0 0;color:#333}
+#cv h2{font-size:13px;font-weight:700;text-transform:uppercase;border-bottom:1px solid #999;margin:16px 0 6px;padding-bottom:2px;letter-spacing:.04em;color:#111}
+#cv .rl{font-weight:700;margin:8px 0 0}
+#cv .mt{color:#333;margin:0 0 2px}
+#cv p{margin:3px 0}
+#cv ul{margin:2px 0 4px 18px;padding:0}
+#cv li{margin:1px 0}
+#cv .vz{color:#777}
+.ok2{color:#2e9e5b}.wn2{color:#c58a00}.bd2{color:#d0453a}
+.chk{display:grid;grid-template-columns:22px 1fr;gap:4px 8px;margin:6px 0;font-size:14px}
+.score{font-family:var(--serif);font-size:44px;line-height:1;color:var(--head)}
+.kw{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.kw span{border:1px solid var(--line2);padding:3px 9px;font-size:13px}
+.kw.hit span{border-color:#2e9e5b;color:var(--text)}
+.kw.miss span{border-color:#c58a00}
+@media print{
+  html,body{background:#fff!important}
+  .wrap>*:not(#p-montar),#p-montar .ctlcol,.topbar,footer{display:none!important}
+  .wrap,#p-montar,.cvgrid{display:block!important;padding:0!important;margin:0!important;max-width:none!important}
+  .sticky{position:static!important}
+  #cv{border:0;max-height:none!important;overflow:visible!important;padding:0!important}
+  #cvbar{display:none!important}
+  @page{margin:16mm}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="topbar"><a class="logo" href="../">Ferramentas<i>.</i></a><nav style="display:flex;gap:26px;flex-wrap:wrap"><a href="../pdf/">PDF</a><a href="../excel/">Excel</a><a href="../dax/">DAX</a><a href="../sql/">SQL</a><a href="../powerquery/">Power Query</a><a href="../pyspark/">PySpark</a><a href="../fabric/">Fabric</a><a href="../curriculo/">Currículo</a><a href="https://eduardonunes.dev">eduardonunes.dev ↗</a><button class="theme-btn" id="themeBtn" type="button">☀ Modo claro</button></nav></header>
+<div class="kicker"><span class="count">08 / 08</span><span class="bar"></span><span class="label">Carreira</span></div>
+<h1>Currículo <em>ATS</em></h1>
+<p class="sub">Monte um currículo de coluna única, com títulos padrão e texto limpo, que os sistemas de recrutamento (ATS) leem sem tropeçar. Compare com uma vaga e baixe em Word, PDF ou texto. Tudo roda no seu navegador: os dados ficam só neste computador.</p>
+
+<div class="ctl">
+  <div class="seg" role="tablist" aria-label="Seções">
+    <button role="tab" id="tab-montar" aria-selected="true" data-tab="montar">Montar</button>
+    <button role="tab" id="tab-vaga" aria-selected="false" data-tab="vaga">Comparar com a vaga</button>
+    <button role="tab" id="tab-guia" aria-selected="false" data-tab="guia">Guia ATS</button>
+  </div>
+</div>
+
+<section id="p-montar">
+  <div class="cvgrid">
+    <div class="ctlcol" id="form"></div>
+    <div class="sticky">
+      <div class="card" style="margin-bottom:12px">
+        <div class="row" id="cvbar" style="justify-content:flex-start;flex-wrap:wrap;gap:8px">
+          <button class="btn primary" id="bdocx" type="button">Baixar Word (.docx)</button>
+          <button class="btn" id="bpdf" type="button">Salvar como PDF</button>
+          <button class="btn" id="btxt" type="button">Baixar texto (.txt)</button>
+        </div>
+        <p class="hint" style="margin:8px 0 0">PDF: abre a janela de impressão. Escolha <b>Salvar como PDF</b> como destino e desligue <b>Cabeçalhos e rodapés</b>. O PDF sai com texto selecionável, que é o que o ATS precisa.</p>
+      </div>
+      <div class="card" id="checks"></div>
+      <div id="cv" aria-label="Prévia do currículo"></div>
+    </div>
+  </div>
+</section>
+
+<section id="p-vaga" class="hide">
+  <div class="card">
+    <div class="two">
+      <label class="f">Texto da vaga (cole a descrição completa)<textarea id="vtxt" rows="10" spellcheck="false" placeholder="Cole aqui a descrição da vaga…"></textarea></label>
+      <label class="f">Seu currículo<textarea id="ctxt" rows="10" spellcheck="false" placeholder="Cole o texto do currículo ou use o montado na aba Montar."></textarea></label>
+    </div>
+    <div class="row" style="margin-top:10px;justify-content:flex-start;flex-wrap:wrap">
+      <button class="btn primary" id="vgo" type="button">Comparar</button>
+      <button class="btn" id="vuse" type="button">Usar o currículo montado</button>
+      <span class="hint">A análise acontece aqui mesmo. Nada é enviado.</span>
+    </div>
+  </div>
+  <div id="vout"></div>
+</section>
+
+<section id="p-guia" class="hide">
+  <div class="card" id="guia"></div>
+</section>
+
+<footer>Esta página não emula nenhum ATS específico e não garante aprovação: ela aplica boas práticas de formatação e compara palavras. Cada empresa configura o seu sistema de um jeito, e uma pessoa costuma ler o currículo depois. Escreva só o que é verdade sobre você.</footer>
+</div>
+
+<script>
+/*__JSZIP__*/
+</script>
+<script>
+'use strict';
+const $=s=>document.querySelector(s);
+const el=(t,a={},...k)=>{const e=document.createElement(t);for(const[x,v]of Object.entries(a)){if(x==='class')e.className=v;else if(x.startsWith('on'))e.addEventListener(x.slice(2),v);else if(v===true)e.setAttribute(x,'');else if(v!==false&&v!=null)e.setAttribute(x,v);}for(const c of k.flat())e.append(c&&c.nodeType?c:document.createTextNode(c??''));return e;};
+const norm=s=>s.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
+
+/* ============ Dados ============ */
+const KEY='ferramentas-curriculo';
+const EXEMPLO=()=>({lang:'pt',nome:'Maria Souza Lima',titulo:'Analista de Dados',email:'maria.lima@email.com',tel:'(11) 91234-5678',cidade:'São Paulo, SP',linkedin:'linkedin.com/in/maria-souza-lima',site:'',
+ resumo:'Analista de dados com 4 anos de experiência em indicadores comerciais e financeiros. Constrói relatórios em Power BI e automatiza rotinas com SQL e Python, reduzindo o tempo de fechamento mensal.',
+ exps:[{cargo:'Analista de Dados Pleno',empresa:'Empresa Exemplo S.A.',local:'São Paulo, SP',ini:'03/2022',fim:'',atual:true,bullets:'Criei 12 painéis em Power BI usados por 5 áreas, substituindo planilhas manuais\nAutomatizei a carga de dados com SQL e Python, reduzindo o fechamento mensal de 3 dias para 1\nPadronizei 40 indicadores com a diretoria, eliminando divergências entre relatórios'},
+  {cargo:'Assistente Administrativo',empresa:'Comércio Modelo Ltda.',local:'Campinas, SP',ini:'02/2020',fim:'02/2022',atual:false,bullets:'Consolidei planilhas de vendas de 8 lojas em um único controle mensal\nReduzi em 30% o tempo de conferência de notas fiscais com fórmulas e tabelas dinâmicas'}],
+ forms:[{curso:'Bacharelado em Administração',inst:'Universidade Exemplo',fim:'12/2019'}],
+ skills:'Análise de dados: SQL, Python, Excel avançado, Power BI, DAX\nBancos e nuvem: SQL Server, Microsoft Fabric, Azure\nMetodologias: Scrum, Kanban',
+ idiomas:'Português (nativo), Inglês (intermediário)',
+ certs:'Microsoft Certified: Power BI Data Analyst Associate (2023)\nCurso de SQL para Análise de Dados, Plataforma Exemplo (2022)'});
+const VAZIO=()=>({lang:'pt',nome:'',titulo:'',email:'',tel:'',cidade:'',linkedin:'',site:'',resumo:'',exps:[{cargo:'',empresa:'',local:'',ini:'',fim:'',atual:false,bullets:''}],forms:[{curso:'',inst:'',fim:''}],skills:'',idiomas:'',certs:''});
+let S;
+try{const raw=localStorage.getItem(KEY);S=raw?Object.assign(VAZIO(),JSON.parse(raw)):EXEMPLO();}catch{S=EXEMPLO();}
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S));}catch{}};
+
+/* ============ Modelo do documento ============ */
+const TX={
+ pt:{resumo:'Resumo Profissional',exp:'Experiência Profissional',form:'Formação Acadêmica',skills:'Habilidades',idiomas:'Idiomas',certs:'Certificações e Cursos',atual:'Atual'},
+ en:{resumo:'Professional Summary',exp:'Professional Experience',form:'Education',skills:'Skills',idiomas:'Languages',certs:'Certifications',atual:'Present'}};
+const lines=s=>(s||'').split('\n').map(x=>x.replace(/^\s*[-•*–·]+\s*/,'').trim()).filter(Boolean);
+function model(S){
+  const t=TX[S.lang]||TX.pt,L=[];
+  const nome=S.nome.trim();
+  if(nome)L.push({k:'name',t:nome});
+  if(S.titulo.trim())L.push({k:'title',t:S.titulo.trim()});
+  const c=[S.email,S.tel,S.cidade,S.linkedin,S.site].map(x=>(x||'').trim()).filter(Boolean);
+  if(c.length)L.push({k:'contact',t:c.join(' | ')});
+  if(S.resumo.trim()){L.push({k:'h',t:t.resumo});L.push({k:'p',t:S.resumo.trim().replace(/\s*\n\s*/g,' ')});}
+  const exps=S.exps.filter(e=>e.cargo.trim()||e.empresa.trim());
+  if(exps.length){L.push({k:'h',t:t.exp});exps.forEach(e=>{
+    if(e.cargo.trim())L.push({k:'role',t:e.cargo.trim()});
+    const dt=[e.ini.trim(),e.atual?t.atual:e.fim.trim()].filter(Boolean).join(' – ');
+    const meta=[[e.empresa.trim(),e.local.trim()].filter(Boolean).join(', '),dt].filter(Boolean).join(' | ');
+    if(meta)L.push({k:'meta',t:meta});
+    lines(e.bullets).forEach(b=>L.push({k:'b',t:b}));});}
+  const forms=S.forms.filter(f=>f.curso.trim()||f.inst.trim());
+  if(forms.length){L.push({k:'h',t:t.form});forms.forEach(f=>{
+    if(f.curso.trim())L.push({k:'role',t:f.curso.trim()});
+    const m=[f.inst.trim(),f.fim.trim()].filter(Boolean).join(' | ');if(m)L.push({k:'meta',t:m});});}
+  if(lines(S.skills).length){L.push({k:'h',t:t.skills});lines(S.skills).forEach(x=>L.push({k:'p',t:x}));}
+  if(S.idiomas.trim()){L.push({k:'h',t:t.idiomas});L.push({k:'p',t:S.idiomas.trim().replace(/\s*\n\s*/g,', ')});}
+  if(lines(S.certs).length){L.push({k:'h',t:t.certs});lines(S.certs).forEach(x=>L.push({k:'b',t:x}));}
+  return L;
+}
+function toText(L){
+  return L.map(x=>x.k==='h'?'\n'+x.t.toUpperCase():x.k==='b'?'- '+x.t:x.t).join('\n').trim()+'\n';
+}
+
+/* ============ Prévia ============ */
+function renderCV(){
+  const L=model(S),cv=$('#cv');cv.replaceChildren();
+  if(!L.length){cv.append(el('p',{class:'vz'},'Preencha o formulário para ver o currículo aqui.'));return L;}
+  let ul=null;
+  L.forEach(x=>{
+    if(x.k!=='b')ul=null;
+    if(x.k==='name')cv.append(el('p',{class:'nm'},x.t));
+    else if(x.k==='title')cv.append(el('p',{class:'tt'},x.t));
+    else if(x.k==='contact')cv.append(el('p',{class:'ct'},x.t));
+    else if(x.k==='h')cv.append(el('h2',{},x.t));
+    else if(x.k==='role')cv.append(el('p',{class:'rl'},x.t));
+    else if(x.k==='meta')cv.append(el('p',{class:'mt'},x.t));
+    else if(x.k==='p')cv.append(el('p',{},x.t));
+    else if(x.k==='b'){if(!ul){ul=el('ul');cv.append(ul);}ul.append(el('li',{},x.t));}
+  });
+  return L;
+}
+
+/* ============ Verificações de formato ============ */
+const DATA_OK=/^(0[1-9]|1[0-2])\/\d{4}$/;
+function checks(L){
+  const out=[];const add=(lv,m)=>out.push([lv,m]);
+  const txt=toText(L);const words=(txt.match(/\S+/g)||[]).length;
+  if(!S.nome.trim())add('bd','Falta o nome.');
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(S.email.trim()))add('bd','O e-mail está vazio ou inválido. Ele precisa estar no corpo do currículo.');
+  else add('ok','E-mail válido, no corpo do texto.');
+  if((S.tel.match(/\d/g)||[]).length<10)add('wn','Telefone ausente ou incompleto. Use DDD: (11) 91234-5678.');
+  if(!S.cidade.trim())add('wn','Informe cidade e estado: muitas vagas filtram por localização.');
+  const rw=(S.resumo.match(/\S+/g)||[]).length;
+  if(!rw)add('wn','Sem resumo profissional. Um parágrafo curto com seu foco e anos de experiência ajuda a leitura.');
+  else if(rw<25||rw>90)add('wn',`O resumo tem ${rw} palavras. O ideal fica entre 30 e 80.`);
+  const exps=S.exps.filter(e=>e.cargo.trim()||e.empresa.trim());
+  if(!exps.length)add('bd','Nenhuma experiência preenchida.');
+  const datas=[];exps.forEach(e=>{datas.push(e.ini.trim());if(!e.atual)datas.push(e.fim.trim());});
+  S.forms.forEach(f=>{if(f.fim.trim())datas.push(f.fim.trim());});
+  const ruins=datas.filter(d=>d&&!DATA_OK.test(d));
+  if(datas.some(d=>!d))add('wn','Há experiências sem data. Datas de início e fim são lidas pelo ATS para calcular tempo de experiência.');
+  if(ruins.length)add('wn',`Datas fora do padrão MM/AAAA: ${[...new Set(ruins)].slice(0,4).join(', ')}. Use sempre o mesmo formato, como 03/2022.`);
+  else if(datas.length&&!datas.some(d=>!d))add('ok','Datas no padrão MM/AAAA.');
+  let nb=0,nq=0,longos=0;
+  exps.forEach(e=>{const bl=lines(e.bullets);nb+=bl.length;bl.forEach(b=>{if(/\d/.test(b))nq++;if(b.length>230)longos++;});
+    if(bl.length<2)add('wn',`"${e.cargo.trim()||e.empresa.trim()}": poucos itens (${bl.length}). Use de 3 a 6 realizações.`);
+    else if(bl.length>8)add('wn',`"${e.cargo.trim()||e.empresa.trim()}": ${bl.length} itens. Priorize os 3 a 6 mais relevantes.`);});
+  if(nb&&nq/nb<0.3)add('wn','Poucos resultados com números. Quantifique quando puder (%, valores, prazos, tamanhos de equipe).');
+  else if(nb)add('ok','Boa presença de resultados com números.');
+  if(longos)add('wn',`${longos} item(ns) com mais de 230 caracteres. Frases curtas são mais fáceis de ler.`);
+  if(!lines(S.skills).length)add('bd','Sem habilidades. Esta é a seção mais usada pelos filtros de palavra-chave.');
+  if(words>850)add('wn',`O texto tem ${words} palavras: provavelmente passa de 2 páginas.`);
+  else if(words&&words<180)add('wn',`O texto tem só ${words} palavras. Detalhe mais as realizações.`);
+  else if(words)add('ok',`${words} palavras: tamanho adequado.`);
+  if(/[←-⯿\u{1F300}-\u{1FAFF}•]{2,}|[│┃║╔╗╚╝]/u.test(txt)||/[\u{1F300}-\u{1FAFF}]/u.test(txt))add('wn','O texto tem emojis ou símbolos decorativos, que o ATS pode ler errado. Use só texto.');
+  const lk=S.linkedin.trim();if(lk&&!/linkedin\.com\/in\//i.test(lk))add('wn','O LinkedIn não parece um endereço de perfil (linkedin.com/in/…).');
+  return out;
+}
+function renderChecks(L){
+  const box=$('#checks');box.replaceChildren();
+  box.append(el('h3',{style:'margin:0 0 6px;font-size:15px'},'Conferência de formato'));
+  const items=checks(L);
+  const ord={bd:0,wn:1,ok:2};items.sort((a,b)=>ord[a[0]]-ord[b[0]]);
+  items.forEach(([lv,m])=>box.append(el('div',{class:'chk'},el('span',{class:lv+'2','aria-hidden':'true'},lv==='ok'?'✔':lv==='wn'?'●':'✖'),el('span',{},m))));
+  if(!items.length)box.append(el('p',{class:'hint'},'Preencha o formulário para ver a conferência.'));
+}
+function refresh(){save();const L=renderCV();renderChecks(L);}
+
+/* ============ Formulário ============ */
+function inp(label,get,set,o={}){
+  const tag=o.area?'textarea':'input';
+  const e=el(tag,{type:o.area?null:'text',rows:o.area?(o.rows||4):null,spellcheck:'false',placeholder:o.ph||'','aria-label':label});
+  e.value=get();
+  e.addEventListener('input',()=>{set(e.value);refresh();});
+  return el('label',{class:'f'},label,o.hint?el('small',{},o.hint):null,e);
+}
+function renderForm(){
+  const f=$('#form');f.replaceChildren();
+  const card=(title,...k)=>el('div',{class:'card'},el('h3',{style:'margin:0 0 10px;font-size:16px'},title),k);
+  const bind=k=>[()=>S[k],v=>{S[k]=v;}];
+  const I=(label,k,o)=>inp(label,...bind(k),o);
+
+  f.append(el('div',{class:'card'},el('div',{class:'row',style:'justify-content:flex-start;flex-wrap:wrap;gap:10px;align-items:center'},
+    el('label',{class:'f',style:'margin:0;min-width:200px'},'Idioma dos títulos das seções',(()=>{const s=el('select',{'aria-label':'Idioma'},el('option',{value:'pt'},'Português'),el('option',{value:'en'},'English'));s.value=S.lang;s.addEventListener('change',()=>{S.lang=s.value;refresh();});return s;})()),
+    el('button',{class:'btn sm',type:'button',onclick:()=>{S=EXEMPLO();renderForm();refresh();}},'Carregar exemplo'),
+    el('button',{class:'btn sm',type:'button',onclick:()=>{if(confirm('Apagar todos os dados do currículo deste navegador?')){S=VAZIO();renderForm();refresh();}}},'Limpar tudo')),
+    el('p',{class:'hint',style:'margin:8px 0 0'},'Os dados ficam salvos só neste navegador (localStorage) e nunca são enviados. O exemplo é fictício: troque pelos seus dados.')));
+
+  f.append(card('Dados pessoais',el('div',{class:'two'},I('Nome completo','nome'),I('Título profissional','titulo',{ph:'Ex.: Analista de Dados',hint:'igual ou parecido com o da vaga'}),I('E-mail','email'),I('Telefone','tel',{ph:'(11) 91234-5678'}),I('Cidade e estado','cidade',{ph:'São Paulo, SP'}),I('LinkedIn','linkedin',{ph:'linkedin.com/in/seu-perfil'}),I('Site ou portfólio (opcional)','site'))));
+  f.append(card('Resumo profissional',I('Resumo (30 a 80 palavras)','resumo',{area:true,rows:4,hint:'quem você é, anos de experiência, foco e uma conquista'})));
+
+  const expBox=el('div');
+  const drawExps=()=>{expBox.replaceChildren();S.exps.forEach((e,i)=>{
+    const b=(k)=>[()=>e[k],v=>{e[k]=v;}];
+    const atual=el('input',{type:'checkbox','aria-label':'Emprego atual'});atual.checked=!!e.atual;
+    atual.addEventListener('change',()=>{e.atual=atual.checked;refresh();});
+    expBox.append(el('div',{class:'item'},
+      el('h4',{},'Experiência '+(i+1),S.exps.length>1?el('button',{class:'btn sm',type:'button',onclick:()=>{S.exps.splice(i,1);drawExps();refresh();}},'Remover'):null),
+      el('div',{class:'two'},inp('Cargo',...b('cargo')),inp('Empresa',...b('empresa')),inp('Cidade',...b('local')),el('span'),inp('Início (MM/AAAA)',...b('ini'),{ph:'03/2022'}),inp('Fim (MM/AAAA)',...b('fim'),{ph:'02/2024'})),
+      el('label',{class:'chkrow',style:'margin:6px 0'},atual,'Trabalho aqui atualmente'),
+      inp('Realizações (um item por linha)',...b('bullets'),{area:true,rows:5,hint:'comece com um verbo de ação e inclua números: "Reduzi o prazo de 3 dias para 1"'})));
+  });};
+  drawExps();
+  f.append(card('Experiência profissional',expBox,el('button',{class:'btn sm',type:'button',onclick:()=>{S.exps.push({cargo:'',empresa:'',local:'',ini:'',fim:'',atual:false,bullets:''});drawExps();refresh();}},'+ Adicionar experiência')));
+
+  const fBox=el('div');
+  const drawForms=()=>{fBox.replaceChildren();S.forms.forEach((x,i)=>{
+    const b=(k)=>[()=>x[k],v=>{x[k]=v;}];
+    fBox.append(el('div',{class:'item'},el('h4',{},'Formação '+(i+1),S.forms.length>1?el('button',{class:'btn sm',type:'button',onclick:()=>{S.forms.splice(i,1);drawForms();refresh();}},'Remover'):null),
+      el('div',{class:'two'},inp('Curso',...b('curso')),inp('Instituição',...b('inst')),inp('Conclusão (MM/AAAA)',...b('fim'),{ph:'12/2019'}))));
+  });};
+  drawForms();
+  f.append(card('Formação acadêmica',fBox,el('button',{class:'btn sm',type:'button',onclick:()=>{S.forms.push({curso:'',inst:'',fim:''});drawForms();refresh();}},'+ Adicionar formação')));
+
+  f.append(card('Habilidades',I('Habilidades (um grupo por linha)','skills',{area:true,rows:5,hint:'ex.: "Análise de dados: SQL, Python, Power BI". Use os nomes exatos das ferramentas, como aparecem nas vagas.'})));
+  f.append(card('Idiomas e certificações',I('Idiomas','idiomas',{ph:'Português (nativo), Inglês (intermediário)'}),I('Certificações e cursos (um por linha)','certs',{area:true,rows:4})));
+}
+
+/* ============ Downloads ============ */
+function baixar(blob,nome){const a=el('a',{href:URL.createObjectURL(blob),download:nome});document.body.append(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},500);}
+const slug=()=>(S.nome.trim()?norm(S.nome).replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,''):'curriculo');
+const X=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+function docxBlob(L){
+  const W='xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"';
+  const run=(t,rp='')=>`<w:r>${rp?`<w:rPr>${rp}</w:rPr>`:''}<w:t xml:space="preserve">${X(t)}</w:t></w:r>`;
+  const par=(inner,ppr='')=>`<w:p>${ppr?`<w:pPr>${ppr}</w:pPr>`:''}${inner}</w:p>`;
+  const body=L.map(x=>{
+    if(x.k==='name')return par(run(x.t),'<w:pStyle w:val="Title"/>');
+    if(x.k==='title')return par(run(x.t,'<w:b/>'));
+    if(x.k==='h')return par(run(x.t),'<w:pStyle w:val="Heading1"/>');
+    if(x.k==='role')return par(run(x.t,'<w:b/>'),'<w:keepNext/><w:spacing w:before="120" w:after="0"/>');
+    if(x.k==='b')return par(run(x.t),'<w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr><w:spacing w:after="20"/>');
+    return par(run(x.t));
+  }).join('');
+  const doc=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document ${W}><w:body>${body}<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1000" w:right="1000" w:bottom="1000" w:left="1000" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr></w:body></w:document>`;
+  const font='<w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:cs="Arial" w:eastAsia="Arial"/>';
+  const styles=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:styles ${W}><w:docDefaults><w:rPrDefault><w:rPr>${font}<w:sz w:val="21"/><w:szCs w:val="21"/><w:lang w:val="${S.lang==='en'?'en-US':'pt-BR'}"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="60" w:line="264" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults>`+
+   `<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:qFormat/></w:style>`+
+   `<w:style w:type="paragraph" w:styleId="Title"><w:name w:val="Title"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:qFormat/><w:pPr><w:spacing w:after="40"/></w:pPr><w:rPr><w:b/><w:sz w:val="40"/><w:szCs w:val="40"/></w:rPr></w:style>`+
+   `<w:style w:type="paragraph" w:styleId="Heading1"><w:name w:val="heading 1"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:qFormat/><w:pPr><w:keepNext/><w:pBdr><w:bottom w:val="single" w:sz="6" w:space="1" w:color="999999"/></w:pBdr><w:spacing w:before="280" w:after="80"/><w:outlineLvl w:val="0"/></w:pPr><w:rPr><w:b/><w:caps/><w:sz w:val="23"/><w:szCs w:val="23"/></w:rPr></w:style></w:styles>`;
+  const numbering=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:numbering ${W}><w:abstractNum w:abstractNumId="0"><w:multiLevelType w:val="hybridMultilevel"/><w:lvl w:ilvl="0"><w:start w:val="1"/><w:numFmt w:val="bullet"/><w:lvlText w:val="•"/><w:lvlJc w:val="left"/><w:pPr><w:ind w:left="360" w:hanging="260"/></w:pPr><w:rPr><w:rFonts w:ascii="Arial" w:hAnsi="Arial" w:hint="default"/></w:rPr></w:lvl></w:abstractNum><w:num w:numId="1"><w:abstractNumId w:val="0"/></w:num></w:numbering>`;
+  const ct=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/><Override PartName="/word/numbering.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/></Types>`;
+  const rels=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`;
+  const drels=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering" Target="numbering.xml"/></Relationships>`;
+  const z=new JSZip(),o={createFolders:false};
+  z.file('[Content_Types].xml',ct,o);z.file('_rels/.rels',rels,o);z.file('word/document.xml',doc,o);z.file('word/styles.xml',styles,o);z.file('word/numbering.xml',numbering,o);z.file('word/_rels/document.xml.rels',drels,o);
+  return z.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',compression:'DEFLATE'});
+}
+$('#bdocx').addEventListener('click',async()=>{const L=model(S);if(!L.length)return;baixar(await docxBlob(L),'curriculo-'+slug()+'.docx');});
+$('#btxt').addEventListener('click',()=>{const L=model(S);if(!L.length)return;baixar(new Blob([toText(L)],{type:'text/plain;charset=utf-8'}),'curriculo-'+slug()+'.txt');});
+$('#bpdf').addEventListener('click',()=>{const t=document.title;document.title='curriculo-'+slug();setTab('montar');window.print();setTimeout(()=>document.title=t,500);});
+
+/* ============ Comparar com a vaga ============ */
+const STOP=new Set(('a o as os um uma uns umas de do da dos das em no na nos nas por para com sem sob sobre entre ate ao aos à às e ou mas que se como quando onde qual quais seu sua seus suas nosso nossa nossos nossas voce voces ele ela eles elas isso isto esse essa esses essas este esta estes estas ser sera sao era foi tem ter tenha tenham temos ha mais menos muito muita muitos muitas bem ja nao sim tambem so apenas cada outro outra outros outras todo toda todos todas qualquer ser estar fazer faz podem pode poder deve devem sobre sendo atraves durante apos antes entao '+
+ 'the and for with you your our are was were will that this from have has had not but all any can per via into over under more most such who what when where their they them its his her our to of in on at by an as be or it is if we us '+
+ 'vaga empresa buscamos procuramos oportunidade candidato candidata candidatos requisitos desejavel desejaveis diferencial diferenciais responsabilidades atividades beneficios beneficio conhecimento conhecimentos experiencia experiencias area areas time equipe equipes trabalho profissional profissionais perfil local modelo regime contratacao salario remuneracao horario carga horaria anos ano nivel superior completo cursando formacao atuar atuacao ter possuir habilidade habilidades capacidade proativo proativa job role position team work years year experience required requirements preferred responsibilities skills ability strong knowledge good excellent etc essencial essenciais importante diversos varias'
+).split(/\s+/));
+const SHORT=new Set(['bi','ui','ux','qa','ai','ml','go','r','c','it','sap','erp','crm','sql','etl','aws','gcp','api','rh','dp','ti','sla','kpi','ci','cd','vba','dax','sas','bpo','pmo','b2b','b2c']);
+function tokens(s){
+  s=norm(s).replace(/\.net\b/g,'dotnet').replace(/c\+\+/g,'cpp').replace(/c#/g,'csharp');
+  return (s.match(/[a-z0-9][a-z0-9+#.]*/g)||[]).map(w=>w.replace(/\.+$/,'')).filter(Boolean);
+}
+const okTok=w=>!STOP.has(w)&&!/^\d+$/.test(w)&&(w.length>=3||SHORT.has(w));
+const stem=w=>w.length>=7?w.slice(0,6):w;
+function analisar(vaga,cv){
+  const vt=tokens(vaga).filter(okTok);
+  const cnt=new Map();vt.forEach(w=>cnt.set(w,(cnt.get(w)||0)+1));
+  const all=tokens(vaga);const bg=new Map();
+  for(let i=0;i<all.length-1;i++){const a=all[i],b=all[i+1];if(okTok(a)&&okTok(b)){const k=a+' '+b;bg.set(k,(bg.get(k)||0)+1);}}
+  const terms=[...cnt.entries()].sort((a,b)=>b[1]-a[1]||b[0].length-a[0].length).slice(0,30).map(([t,n])=>({t,n,bi:false}));
+  [...bg.entries()].filter(([,n])=>n>=2).sort((a,b)=>b[1]-a[1]).slice(0,8).forEach(([t,n])=>terms.push({t,n,bi:true}));
+  const ct=tokens(cv);const cset=new Set(ct.map(stem));const cjoin=' '+ct.join(' ')+' ';
+  terms.forEach(x=>{x.hit=x.bi?cjoin.includes(' '+x.t+' '):cset.has(stem(x.t));});
+  return terms;
+}
+function pretty(t){return t.replace(/csharp/g,'c#').replace(/cpp/g,'c++').replace(/dotnet/g,'.net');}
+function renderVaga(){
+  const out=$('#vout');out.replaceChildren();
+  const v=$('#vtxt').value,c=$('#ctxt').value;
+  if(!v.trim()||!c.trim()){out.append(el('p',{class:'hint'},'Cole o texto da vaga e o do currículo (ou use o montado) e clique em Comparar.'));return;}
+  const terms=analisar(v,c);
+  if(!terms.length){out.append(el('p',{class:'hint'},'Não encontrei termos relevantes na vaga.'));return;}
+  const hit=terms.filter(x=>x.hit),miss=terms.filter(x=>!x.hit);
+  const pct=Math.round(100*hit.length/terms.length);
+  const card=el('div',{class:'card'});
+  card.append(el('div',{class:'row',style:'justify-content:flex-start;gap:18px;align-items:baseline;flex-wrap:wrap'},el('span',{class:'score'},pct+'%'),el('span',{class:'note',style:'margin:0'},`${hit.length} de ${terms.length} termos mais repetidos na vaga aparecem no currículo.`)));
+  card.append(el('p',{class:'hint'},'É uma medida aproximada de coincidência de palavras, não a nota de nenhum ATS. Termos genéricos podem entrar; use o seu julgamento.'));
+  card.append(el('h3',{style:'margin:14px 0 2px;font-size:15px'},'Já estão no currículo'),el('div',{class:'kw hit'},hit.map(x=>el('span',{},pretty(x.t)+(x.n>1?' ×'+x.n:'')))));
+  card.append(el('h3',{style:'margin:14px 0 2px;font-size:15px'},'Aparecem na vaga e não no currículo'),el('div',{class:'kw miss'},miss.length?miss.map(x=>el('span',{},pretty(x.t)+(x.n>1?' ×'+x.n:''))):[el('span',{},'nenhum')]));
+  card.append(el('div',{class:'tip'},'💡 Acrescente um termo ausente somente se você realmente tem essa experiência, e use o mesmo nome que a vaga usa (ex.: "Power BI", não "painéis"). Citar ferramentas que você não domina costuma aparecer na entrevista.'));
+  out.append(card);
+}
+$('#vgo').addEventListener('click',renderVaga);
+$('#vuse').addEventListener('click',()=>{$('#ctxt').value=toText(model(S));renderVaga();});
+
+/* ============ Guia ============ */
+function renderGuia(){
+  const g=$('#guia');
+  const sec=(t,items)=>[el('h3',{style:'margin:18px 0 6px;font-size:16px'},t),el('ul',{style:'margin:0;padding-left:20px;display:grid;gap:5px'},items.map(i=>el('li',{},i)))];
+  g.append(el('p',{class:'note',style:'margin:0'},'ATS (Applicant Tracking System) é o software que as empresas usam para receber, organizar e filtrar candidaturas. Ele extrai o texto do seu arquivo e o separa em campos (nome, cargos, datas, habilidades). Quanto mais simples o arquivo, menor a chance de a extração errar.'),
+   sec('O que fazer',[
+    'Coluna única, de cima para baixo. Sem tabelas, caixas de texto, colunas lado a lado ou gráficos de nível de habilidade.',
+    'Títulos de seção padrão: Experiência Profissional, Formação Acadêmica, Habilidades. Títulos criativos ("Minha jornada") podem não ser reconhecidos.',
+    'Fonte comum (Arial, Calibri, Times) entre 10 e 12 pt. Marcadores simples (•).',
+    'Contato no corpo do texto, não em cabeçalho ou rodapé do arquivo: alguns sistemas ignoram essas áreas.',
+    'Datas sempre no mesmo formato (03/2022 – 02/2024) e em ordem cronológica inversa (a mais recente primeiro).',
+    'Palavras da vaga, escritas como a vaga escreve, nas suas habilidades e realizações, desde que sejam verdadeiras.',
+    'Itens que começam com verbo de ação e trazem números: "Reduzi o fechamento de 3 dias para 1".',
+    'Um currículo por vaga, ajustando título, resumo e habilidades ao que foi pedido.']),
+   sec('O que evitar',[
+    'Foto, ícones, emojis, barras de progresso, estrelas e infográficos: viram lixo ou somem na extração.',
+    'Texto dentro de imagem ou PDF escaneado (sem texto selecionável).',
+    'Modelos muito elaborados com colunas, linhas decorativas e fundo colorido.',
+    'Siglas sem explicação na primeira vez, quando a vaga usa o nome por extenso (ou o contrário).',
+    'Mais de 2 páginas, a não ser que a trajetória exija.']),
+   sec('Qual formato enviar',[
+    'Se a vaga pedir um formato, siga. Sem pedido, .docx e PDF com texto selecionável costumam funcionar. Para testar o PDF, abra e tente selecionar e copiar o texto: se copiar bem, o ATS lê.',
+    'O PDF gerado aqui sai do navegador com texto real. O Word (.docx) usa títulos e listas de verdade, que os sistemas reconhecem.']),
+   sec('Para ter em mente',[
+    'Nem todo ATS elimina candidatos sozinho: muitos só organizam e deixam um recrutador buscar e ler. Mesmo assim, um arquivo bem estruturado é mais fácil de achar e de ler.',
+    'Não existe nota universal de ATS. Esta página aplica boas práticas e compara palavras; use como guia, não como garantia.',
+    'Seus dados ficam só neste navegador. Se usar um computador compartilhado, clique em Limpar tudo depois de baixar.']));
+}
+
+/* ============ Abas ============ */
+const TABS=['montar','vaga','guia'];
+function setTab(id){TABS.forEach(t=>{$('#p-'+t).classList.toggle('hide',t!==id);$('#tab-'+t).setAttribute('aria-selected',String(t===id));});try{history.replaceState(null,'','#'+id);}catch{}}
+document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>setTab(b.dataset.tab)));
+renderForm();refresh();renderGuia();
+{const t=location.hash.slice(1);if(TABS.includes(t))setTab(t);}
+</script>
+<script>(function(){var b=document.getElementById('themeBtn');if(!b)return;var r=document.documentElement;function lab(){var l=r.dataset.theme==='light';b.textContent=l?'☾ Modo escuro':'☀ Modo claro';b.setAttribute('aria-label',l?'Mudar para o modo escuro':'Mudar para o modo claro');var m=document.querySelector('meta[name=theme-color]');if(m)m.content=l?'#f7f6fa':'#030305'}b.addEventListener('click',function(){var n=r.dataset.theme==='light'?'dark':'light';r.dataset.theme=n;try{localStorage.setItem('ferramentas-tema',n)}catch(e){}lab()});lab()})();</script>
+</body>
+</html>
