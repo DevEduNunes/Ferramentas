@@ -8,7 +8,7 @@ Ferramentas gratuitas que rodam **100% no navegador**: sem upload, sem cadastro,
 |---|---|
 | **Privacidade** | Nada sai do seu computador. Cada página bloqueia requisições de rede (veja [Privacidade](#privacidade)). |
 | **Tecnologia** | HTML, CSS e JavaScript puros, sem framework e sem etapa de build (exceto o PDF Local). |
-| **Hospedagem** | GitHub Pages, no caminho `/Ferramentas`. |
+| **Hospedagem** | VPS com Dokploy (nginx em contêiner), no caminho `/Ferramentas` de eduardonunes.dev. |
 
 ## Ferramentas
 
@@ -124,17 +124,17 @@ Arquivos únicos: edite `excel/index.html`, `dax/index.html`, `sql/index.html`, 
 2. Carregue `../assets/tema.css` (com a mesma versão `?v=`), use o cabeçalho `header.topbar` e o "kicker" das outras e deixe o logo apontando para `../`.
 3. Em `index.html`, adicione um `<a class="tool" href="nome/">…</a>` copiando o formato dos existentes e inclua o link no menu (`header.topbar`) da landing, de Excel, DAX, SQL e Power Query.
 4. Atualize a numeração dos kickers (`02 / 05` e semelhantes) e este README.
+5. Inclua a pasta nova no `Dockerfile` (`COPY nome /usr/share/nginx/html/nome`): só as pastas listadas lá entram na imagem.
 
-## Publicar (GitHub Pages)
+## Publicar (Dokploy)
 
-Pré-requisito: o site principal já é servido pelo GitHub Pages com o domínio eduardonunes.dev.
+O site roda num contêiner nginx (`Dockerfile` + `nginx.conf`, porta 8080) no Dokploy da VPS. O app `ferramentas` fica no mesmo projeto do portfólio e usa o domínio `eduardonunes.dev` com o caminho `/Ferramentas` (o Traefik remove o prefixo antes de repassar ao contêiner, então os links relativos funcionam sem mudança).
 
-1. Repositório chamado exatamente **`Ferramentas`** (a maiúscula vira parte da URL).
-2. *Settings → Pages → Deploy from a branch → `main` / `(root)`*. Em conta gratuita, o repositório precisa ser público.
-3. **Não crie `CNAME` aqui**: o repositório herda o domínio do site principal.
-4. No menu do site principal, link para `/Ferramentas/`.
-
-Cada `git push` na `main` republica o site em cerca de 1 a 3 minutos. Evite abrir uma URL nova antes do deploy terminar: a CDN pode guardar o 404 por alguns minutos (teste com `?x=aleatório`).
+- **Origem:** repositório `DevEduNunes/Ferramentas`, branch `main`, build por Dockerfile.
+- **Imagem:** só entram `index.html` e as pastas listadas no `Dockerfile`; `src/` (scripts de build) e este README ficam de fora (`.dockerignore`).
+- **Deploy manual:** depois de um `git push` na `main`, abra o app no Dokploy → *General* → **Deploy**. Não há deploy automático (o painel fica atrás do Cloudflare Access).
+- **DNS/SSL:** Cloudflare com proxy; o modo SSL/TLS do domínio é Completo.
+- No menu do site principal há um link para `/Ferramentas/`.
 
 ## Limitações conhecidas
 
